@@ -202,9 +202,8 @@ done < "$NEW_FILE"
 # Process removed keys
 #######################################
 
-echo "" >> "$MERGED_FILE"
-echo "# Removed keys" >> "$MERGED_FILE"
-
+# First check if there are any removed keys
+REMOVED_COUNT=0
 while IFS= read -r key; do
     if ! grep -q "^$key$" "$KEYS_NEW"; then
         # Get original value
@@ -212,10 +211,23 @@ while IFS= read -r key; do
         original_value=$(echo "$original_line" | sed "s/^$key=//")
         # Save removed key
         echo "Key '$key'='$original_value'" >> "$REMOVED_KEYS"
-        # Add as comment to file
-        echo "# $original_line" >> "$MERGED_FILE"
+        REMOVED_COUNT=$((REMOVED_COUNT + 1))
     fi
 done < "$KEYS_ORIGINAL"
+
+# Only add removed keys section if there are any
+if [ $REMOVED_COUNT -gt 0 ]; then
+    echo "" >> "$MERGED_FILE"
+    echo "# Removed keys" >> "$MERGED_FILE"
+    
+    # Process again to add to the file
+    while IFS= read -r key; do
+        if ! grep -q "^$key$" "$KEYS_NEW"; then
+            original_line=$(grep -E "^$key=" "$ORIGINAL_FILE")
+            echo "# $original_line" >> "$MERGED_FILE"
+        fi
+    done < "$KEYS_ORIGINAL"
+fi
 
 #######################################
 # Create result file
