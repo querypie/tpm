@@ -40,9 +40,9 @@ MYSQL_CLIENT_AVAILABLE=false
 # DB and Redis connection variables
 DB_HOST=""
 DB_PORT=""
-DB_USER=""
+DB_USERNAME=""
 DB_PASSWORD=""
-DB_NAME=""
+DB_CATALOG=""
 REDIS_HOST=""
 REDIS_PORT=""
 REDIS_PASSWORD=""
@@ -159,9 +159,9 @@ function load_environment_variables() {
     # Extract DB connection info from compose-env file
     DB_HOST=$(grep "^DB_HOST=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
     DB_PORT=$(grep "^DB_PORT=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
-    DB_USER=$(grep "^DB_USERNAME=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
+    DB_USERNAME=$(grep "^DB_USERNAME=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
     DB_PASSWORD=$(grep "^DB_PASSWORD=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
-    DB_NAME=$(grep "^DB_CATALOG=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
+    DB_CATALOG=$(grep "^DB_CATALOG=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
     REDIS_HOST=$(grep "^REDIS_HOST=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
     REDIS_PORT=$(grep "^REDIS_PORT=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
     REDIS_PASSWORD=$(grep "^REDIS_PASSWORD=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
