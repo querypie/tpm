@@ -22,6 +22,23 @@ MySQL과 Redis 연결을 테스트하는 도구입니다. 로컬 환경과 Docke
   - 네트워크 I/O
   - 디스크 사용량
 
+## 파일명
+`scanner.sh`
+
+## 사전 준비
+1. 신규버전 디렉토리로 이동
+   ```bash
+   cd ./querypie/버전  # compose-env 파일이 존재하는 디렉토리로 이동
+   ```
+2. scanner.sh 다운로드
+   ```bash
+   curl -l https://raw.githubusercontent.com/querypie/tpm/refs/heads/main/scanner/scanner.sh -o scanner.sh
+   ```
+3. 실행 권한 추가
+   ```bash
+   chmod +x scanner.sh
+   ```
+
 ## 사용법
 
 ```bash
