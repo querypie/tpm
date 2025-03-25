@@ -46,6 +46,8 @@ MySQL과 Redis 연결을 테스트하는 도구입니다. 로컬 환경과 Docke
 ./scanner.sh -v          # 상세 모드로 실행
 ./scanner.sh <container> # 특정 컨테이너 지정하여 실행
 ./scanner.sh -h          # 도움말 표시
+
+주의사항) querypie-tools 나 querypie-app 이 도커 인스턴스로 떠 있어야 함.
 ```
 
 ## 테스트 순서
