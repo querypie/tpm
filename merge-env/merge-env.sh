@@ -243,10 +243,22 @@ handle_config_files() {
                 echo -e "${YELLOW}Skipping $file handling${NC}\n"
                 continue
             fi
+            
+            # Check if files are identical
+            if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+                echo -e "${GREEN}✓  Files are identical, skipping $file handling${NC}\n"
+                continue
+            fi
         else  # skip_command_config.json
             if [ ! -s "$src" ] || [ "$(cat "$src" | tr -d ' \n\t')" = "{}" ]; then
                 echo -e "${YELLOW}Source file $src is empty or contains only {}${NC}"
                 echo -e "${YELLOW}Skipping $file handling${NC}\n"
+                continue
+            fi
+            
+            # Check if files are identical
+            if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+                echo -e "${GREEN}✓  Files are identical, skipping $file handling${NC}\n"
                 continue
             fi
         fi
