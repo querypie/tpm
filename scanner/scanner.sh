@@ -5,6 +5,7 @@
 # Usage:
 #   ./scanner.sh              - Basic execution
 #   ./scanner.sh -v           - Verbose mode
+#   ./scanner.sh -b           - Basic connection test only (using /dev/tcp)
 #   ./scanner.sh <container>  - Specify container ID or name
 #
 
@@ -53,6 +54,9 @@ LOCAL_REDIS_RESULT=1
 MYSQL_RESULT=1
 REDIS_RESULT=1
 
+# Add BASIC_TEST_ONLY variable to global variables section
+BASIC_TEST_ONLY=false
+
 # =============================================================================
 # Utility Functions
 # =============================================================================
@@ -93,6 +97,7 @@ function show_help() {
     echo "Usage:"
     echo "  ./scanner.sh              - Basic execution"
     echo "  ./scanner.sh -v           - Verbose mode"
+    echo "  ./scanner.sh -b           - Basic connection test only (using /dev/tcp)"
     echo "  ./scanner.sh <container>  - Specify container ID or name"
     echo "  ./scanner.sh -h           - Show help"
     echo ""
@@ -103,7 +108,7 @@ function show_help() {
 function convert_docker_host() {
     local host="$1"
     case "${host}" in
-        "host.docker.internal"|"docker.for.mac.localhost"|"docker.for.win.localhost"|"docker.localhost"|"localhost")
+        "host.docker.internal"|"localhost")
             echo "127.0.0.1"
             ;;
         *)
@@ -133,16 +138,34 @@ function parse_arguments() {
         show_help
     fi
 
-    # Check verbose mode
-    if [ "$1" = "-v" ] || [ "$2" = "-v" ]; then
-        VERBOSE=true
-        log_debug "Verbose mode activated"
-    fi
+    # Process all arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -v|--verbose)
+                VERBOSE=true
+                shift
+                ;;
+            -b|--basic)
+                BASIC_TEST_ONLY=true
+                shift
+                ;;
+            -h|--help)
+                show_help
+                ;;
+            *)
+                if [ -z "$CONTAINER_PARAM" ]; then
+                    CONTAINER_PARAM="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
 
-    # If container ID or name is provided as parameter
-    if [ "$1" != "" ] && [ "$1" != "-v" ]; then
-        CONTAINER_PARAM="$1"
-        log_debug "Container specified: ${CONTAINER_PARAM}"
+    if [ "$VERBOSE" = true ]; then
+        log_debug "Verbose mode activated"
+        if [ "$BASIC_TEST_ONLY" = true ]; then
+            log_debug "Basic test only mode activated"
+        fi
     fi
 }
 
@@ -307,146 +330,324 @@ function check_container_resources() {
 # MySQL Test Functions
 # =============================================================================
 
+# Simple connection test using only /dev/tcp
+function test_basic_connection() {
+    local host=$1
+    local port=$2
+    local service_type=$3
+    local is_local=$4
+    
+    if $is_local; then
+        # Local connection test
+        if timeout 3 bash -c "< /dev/tcp/${host}/${port}" 2>/dev/null; then
+            echo -e "${GREEN}✓ ${service_type} port ${port} is OPEN (basic connection test)${NC}"
+            return 0
+        else
+            echo -e "${RED}✗ ${service_type} port ${port} is CLOSED or unreachable (basic connection test)${NC}"
+            return 1
+        fi
+    else
+        # Docker container connection test
+        if docker exec ${CONTAINER_ID} bash -c "timeout 3 bash -c '< /dev/tcp/${host}/${port}'" 2>/dev/null; then
+            echo -e "${GREEN}✓ ${service_type} port ${port} is OPEN (basic connection test)${NC}"
+            return 0
+        else
+            echo -e "${RED}✗ ${service_type} port ${port} is CLOSED or unreachable (basic connection test)${NC}"
+            return 1
+        fi
+    fi
+}
+
+# Common function to test service connection
+function test_service_connection() {
+    local host=$1
+    local port=$2
+    local password=$3
+    local service_type=$4  # "MySQL" or "Redis"
+    local is_local=$5      # true or false
+    local client_type=""
+    
+    # First try basic connection test
+    if ! test_basic_connection "${host}" "${port}" "${service_type}" "${is_local}"; then
+        if [ "$VERBOSE" = true ]; then
+            show_troubleshooting "${host}" "${port}" "${service_type}"
+        fi
+        echo -e ""
+        return 1
+    fi
+
+    # If basic connection succeeds and we don't need detailed testing, we can stop here
+    if [ "$BASIC_TEST_ONLY" = "true" ]; then
+        echo -e ""
+        return 0
+    fi
+    
+    # Set client type based on service type
+    if [ "$service_type" = "MySQL" ]; then
+        client_type="mysql"
+    else
+        client_type="redis"
+    fi
+
+    # If port is open, proceed with detailed connection tests
+    # Test with client
+    if test_with_client "${host}" "${port}" "${password}" "${service_type}" "${is_local}"; then
+        echo -e "${GREEN}✅ ${service_type} connection test: SUCCESS (using ${client_type} client)${NC}"
+        if [ "$VERBOSE" = true ] && [ -n "$SERVICE_VERSION" ]; then
+            echo -e "   Server version: $SERVICE_VERSION"
+        fi
+        echo -e ""
+        return 0
+    fi
+
+    # Test with netcat
+    if [ "$VERBOSE" = true ]; then
+        echo -e "${service_type} client failed, trying netcat..."
+    fi
+    
+    if test_with_netcat "${host}" "${port}" "${password}" "${service_type}" "${is_local}"; then
+        echo -e "${GREEN}✅ ${service_type} connection test: SUCCESS (using netcat)${NC}"
+        if [ "$VERBOSE" = true ] && [ -n "$SERVICE_VERSION" ]; then
+            echo -e "   Server version: $SERVICE_VERSION"
+            echo -e "Command: nc -w 3 ${host} ${port}"
+            echo -e "Server response detected: ${service_type} server is responding"
+        fi
+        echo -e ""
+        return 0
+    fi
+
+    echo -e "${RED}❌ ${service_type} connection test: FAILED${NC}"
+    if [ "$VERBOSE" = true ]; then
+        show_troubleshooting "${host}" "${port}" "${service_type}"
+    fi
+    echo -e ""
+    return 1
+}
+
+# Test using client (MySQL client or Redis-cli)
+function test_with_client() {
+    local host=$1
+    local port=$2
+    local password=$3
+    local service_type=$4
+    local is_local=$5
+    
+    if [ "$service_type" = "MySQL" ]; then
+        if $is_local; then
+            if ! command -v mysql &>/dev/null; then
+                return 1
+            fi
+            # Local MySQL test
+            MYSQL_VERSION=$(mysql \
+                -h "${host}" \
+                -P "${port}" \
+                -u "${DB_USERNAME}" \
+                -p"${password}" \
+                ${DB_CATALOG:+-D "${DB_CATALOG}"} \
+                --protocol=TCP \
+                --default-auth=mysql_native_password \
+                --ssl \
+                -e "SELECT VERSION() as 'MySQL Server Version';" 2>/dev/null | grep -v "MySQL Server Version" | tr -d "\r\n ")
+            SERVICE_VERSION=$MYSQL_VERSION
+            
+            mysql \
+                -h "${host}" \
+                -P "${port}" \
+                -u "${DB_USERNAME}" \
+                -p"${password}" \
+                ${DB_CATALOG:+-D "${DB_CATALOG}"} \
+                --protocol=TCP \
+                --default-auth=mysql_native_password \
+                --ssl \
+                -e "SELECT 'MySQL connection successful!' as Status;" &>/dev/null
+            return $?
+        else
+            # Docker container MySQL test
+            if ! docker exec $CONTAINER_ID which mysql &>/dev/null; then
+                return 1
+            fi
+            MYSQL_VERSION=$(docker exec ${CONTAINER_ID} mysql \
+                -h "${host}" \
+                -P "${port}" \
+                -u "${DB_USERNAME}" \
+                -p"${password}" \
+                ${DB_CATALOG:+-D "${DB_CATALOG}"} \
+                --protocol=TCP \
+                --default-auth=mysql_native_password \
+                --ssl \
+                -e "SELECT VERSION() as 'MySQL Server Version';" 2>/dev/null | grep -v "MySQL Server Version" | tr -d "\r\n ")
+            SERVICE_VERSION=$MYSQL_VERSION
+            
+            docker exec ${CONTAINER_ID} mysql \
+                -h "${host}" \
+                -P "${port}" \
+                -u "${DB_USERNAME}" \
+                -p"${password}" \
+                ${DB_CATALOG:+-D "${DB_CATALOG}"} \
+                --protocol=TCP \
+                --default-auth=mysql_native_password \
+                --ssl \
+                -e "SELECT 'MySQL connection successful!' as Status;" &>/dev/null
+            return $?
+        fi
+    else  # Redis
+        if $is_local; then
+            if ! command -v redis-cli &>/dev/null; then
+                return 1
+            fi
+            # Local Redis test
+            if [ -z "${password}" ]; then
+                REDIS_TEST_OUTPUT=$(redis-cli -h "${host}" -p "${port}" PING 2>/dev/null)
+                REDIS_SERVER_INFO=$(redis-cli -h "${host}" -p "${port}" INFO SERVER 2>/dev/null)
+            else
+                REDIS_TEST_OUTPUT=$(redis-cli -h "${host}" -p "${port}" -a "${password}" PING 2>/dev/null)
+                REDIS_SERVER_INFO=$(redis-cli -h "${host}" -p "${port}" -a "${password}" INFO SERVER 2>/dev/null)
+            fi
+        else
+            # Docker container Redis test
+            if ! docker exec $CONTAINER_ID which redis-cli &>/dev/null; then
+                return 1
+            fi
+            if [ -z "${password}" ]; then
+                REDIS_TEST_OUTPUT=$(docker exec ${CONTAINER_ID} redis-cli -h "${host}" -p "${port}" PING 2>/dev/null)
+                REDIS_SERVER_INFO=$(docker exec ${CONTAINER_ID} redis-cli -h "${host}" -p "${port}" INFO SERVER 2>/dev/null)
+            else
+                REDIS_TEST_OUTPUT=$(docker exec ${CONTAINER_ID} redis-cli -h "${host}" -p "${port}" -a "${password}" PING 2>/dev/null)
+                REDIS_SERVER_INFO=$(docker exec ${CONTAINER_ID} redis-cli -h "${host}" -p "${port}" -a "${password}" INFO SERVER 2>/dev/null)
+            fi
+        fi
+        
+        if [ "$REDIS_TEST_OUTPUT" = "PONG" ]; then
+            if echo "$REDIS_SERVER_INFO" | grep -q "redis_version"; then
+                REDIS_VERSION=$(echo "$REDIS_SERVER_INFO" | grep "redis_version" | cut -d ":" -f2 | tr -d "\r\n ")
+                SERVICE_VERSION=$REDIS_VERSION
+            fi
+            return 0
+        fi
+        return 1
+    fi
+}
+
+# Test using netcat
+function test_with_netcat() {
+    local host=$1
+    local port=$2
+    local password=$3
+    local service_type=$4
+    local is_local=$5
+    local cmd=""
+    local result=""
+    
+    if [ "$service_type" = "MySQL" ]; then
+        cmd="{ 
+            sleep 1
+            printf '\x4a\x00\x00\x00\x0a'
+            printf '8.4.4\x00'
+            printf '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            printf '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        } | nc -w 3 ${host} ${port} | tr -d '\0'"
+    else  # Redis
+        if [ -z "${password}" ]; then
+            cmd="echo -e 'PING\r\n' | nc -w 3 ${host} ${port}"
+        else
+            cmd="{ echo -e \"AUTH ${password}\r\nPING\r\nQUIT\r\n\"; } | nc -w 3 ${host} ${port}"
+        fi
+    fi
+    
+    if $is_local; then
+        result=$(bash -c "$cmd" 2>/dev/null)
+    else
+        result=$(docker exec ${CONTAINER_ID} bash -c "$cmd" 2>/dev/null)
+    fi
+    
+    if [ "$service_type" = "MySQL" ]; then
+        if echo "$result" | grep -q "mysql\|8\."; then
+            SERVICE_VERSION=$(echo "$result" | grep -o -E "([0-9]+\.)+[0-9]+" | head -1)
+            return 0
+        fi
+    else  # Redis
+        if echo "$result" | grep -q "+PONG"; then
+            # Try to get Redis version
+            if [ -z "${password}" ]; then
+                cmd="echo -e 'INFO SERVER\r\n' | nc -w 3 ${host} ${port}"
+            else
+                cmd="{ echo -e \"AUTH ${password}\r\nINFO SERVER\r\nQUIT\r\n\"; } | nc -w 3 ${host} ${port}"
+            fi
+            
+            if $is_local; then
+                REDIS_SERVER_INFO=$(bash -c "$cmd" 2>/dev/null)
+            else
+                REDIS_SERVER_INFO=$(docker exec ${CONTAINER_ID} bash -c "$cmd" 2>/dev/null)
+            fi
+            
+            if echo "$REDIS_SERVER_INFO" | grep -q "redis_version"; then
+                SERVICE_VERSION=$(echo "$REDIS_SERVER_INFO" | grep "redis_version" | cut -d ":" -f2 | tr -d "\r\n ")
+            fi
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Show troubleshooting information
+function show_troubleshooting() {
+    local host=$1
+    local port=$2
+    local service_type=$3
+    
+    echo -e "\n${service_type} Troubleshooting:"
+    echo "1. Check if the ${service_type} server is running on ${host}:${port}"
+    if [ "$service_type" = "Redis" ]; then
+        echo "2. If using a password, verify it is correct"
+        echo "3. Make sure Redis allows external connections (bind to 0.0.0.0)"
+        echo "4. Check if protected-mode is set to 'no' in redis.conf"
+    else  # MySQL
+        echo "2. Verify that the user has proper permissions"
+        echo "3. Try removing SSL options if you're getting SSL-related errors"
+    fi
+    if [[ "$host" =~ "host.docker.internal" ]]; then
+        echo "5. If using 'host.docker.internal', make sure your Docker version supports it"
+    fi
+}
+
 # Test MySQL connection from local environment
 function test_mysql_local() {
     if [ "$VERBOSE" = true ]; then
         echo -e "${BLUE}====== TESTING MYSQL CONNECTION FROM LOCAL ENVIRONMENT ======${NC}"
         echo -e "Using MySQL connection info:"
-        echo -e "DB_HOST: 127.0.0.1 (original: $DB_HOST)"
+        local converted_host=$(convert_docker_host "$DB_HOST")
+        if [ "$converted_host" = "127.0.0.1" ]; then
+            echo -e "DB_HOST: ${converted_host} (original: $DB_HOST)"
+        else
+            echo -e "DB_HOST: ${DB_HOST}"
+        fi
         echo -e "DB_PORT: $DB_PORT"
         echo -e "DB_USERNAME: $DB_USERNAME"
         echo -e "DB_CATALOG: $DB_CATALOG"
         echo -e "DB_PASSWORD: ******** (hidden)"
     fi
 
-    # Check if the MySQL port is open
-    if nc -z -w 3 127.0.0.1 $DB_PORT 2>/dev/null; then
-        echo -e "${GREEN}✓ MySQL port $DB_PORT is OPEN${NC}"
-        
-        local mysql_client_available=false
-        # Check if mysql client is available locally
-        if command -v mysql &>/dev/null; then
-            mysql_client_available=true
-            if [ "$VERBOSE" = true ]; then
-                echo -e "Using MySQL client for testing..."
-            fi
-            
-            # Test with local mysql client
-            MYSQL_VERSION=$(mysql \
-                -h "127.0.0.1" \
-                -P "${DB_PORT}" \
-                -u "${DB_USERNAME}" \
-                -p"${DB_PASSWORD}" \
-                ${DB_CATALOG:+-D "${DB_CATALOG}"} \
-                --protocol=TCP \
-                --default-auth=mysql_native_password \
-                --ssl \
-                -e "SELECT VERSION() as 'MySQL Server Version';" 2>/dev/null | grep -v "MySQL Server Version" | tr -d "\r\n ")
-            
-            if mysql \
-                -h "127.0.0.1" \
-                -P "${DB_PORT}" \
-                -u "${DB_USERNAME}" \
-                -p"${DB_PASSWORD}" \
-                ${DB_CATALOG:+-D "${DB_CATALOG}"} \
-                --protocol=TCP \
-                --default-auth=mysql_native_password \
-                --ssl \
-                -e "SELECT 'MySQL connection successful!' as Status;" &>/dev/null; then
-                
-                echo -e "${GREEN}✅ MySQL connection test: SUCCESS (using mysql client)${NC}"
-                if [ "$VERBOSE" = true ]; then
-                    echo -e "   Server version: $MYSQL_VERSION"
-                fi
-                LOCAL_MYSQL_RESULT=0
-                echo -e ""
-                return 0
-            fi
+    test_service_connection "$(convert_docker_host "$DB_HOST")" "$DB_PORT" "$DB_PASSWORD" "MySQL" true
+    return $?
+}
+
+# Test Redis connection from local environment
+function test_redis_local() {
+    if [ "$VERBOSE" = true ]; then
+        echo -e "${BLUE}====== TESTING REDIS CONNECTION FROM LOCAL ENVIRONMENT ======${NC}"
+        echo -e "Using Redis connection info:"
+        local converted_host=$(convert_docker_host "$REDIS_HOST")
+        if [ "$converted_host" = "127.0.0.1" ]; then
+            echo -e "REDIS_HOST: ${converted_host} (original: $REDIS_HOST)"
+        else
+            echo -e "REDIS_HOST: ${REDIS_HOST}"
         fi
-        
-        # Try netcat as a fallback or if mysql client failed
-        if [ "$mysql_client_available" = false ] || [ $LOCAL_MYSQL_RESULT -ne 0 ]; then
-            if [ "$VERBOSE" = true ]; then
-                echo -e "Testing MySQL connection using netcat..."
-            fi
-            
-            # Try to connect and capture the server greeting
-            MYSQL_GREETING=$(bash -c "{ 
-                sleep 1
-                printf '\x4a\x00\x00\x00\x0a'
-                printf '8.4.4\x00'
-                printf '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                printf '\x00'
-                printf '\x00'
-                printf '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                printf '\x00'
-                printf '\x00\x00'
-                printf '\x00\x00\x00\x00'
-                printf '\x00'
-                printf '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                printf '\x00'
-                printf '\x00'
-            } | nc -w 3 127.0.0.1 ${DB_PORT} | tr -d '\0'" 2>/dev/null)
-            
-            # Check if we got a MySQL server greeting
-            if echo "$MYSQL_GREETING" | grep -q "mysql\|8\."; then
-                echo -e "${GREEN}✅ MySQL connection test: SUCCESS (using netcat)${NC}"
-                
-                # Try to extract version from greeting
-                MYSQL_VERSION=$(echo "$MYSQL_GREETING" | grep -o -E "([0-9]+\.)+[0-9]+" | head -1)
-                if [ "$VERBOSE" = true ]; then
-                    echo -e "   Server version: $MYSQL_VERSION (estimated from greeting)"
-                    echo -e "Command: nc -w 3 127.0.0.1 $DB_PORT"
-                    echo -e "Server greeting detected: MySQL server is responding"
-                    echo -e "Raw server response: $MYSQL_GREETING"
-                fi
-                LOCAL_MYSQL_RESULT=0
-                echo -e ""
-                return 0
-            else
-                if [ "$VERBOSE" = true ]; then
-                    echo -e "Netcat test failed, trying SSH..."
-                fi
-                
-                # Try SSH as a last resort
-                if command -v ssh &>/dev/null; then
-                    if run_mysql_test_with_ssh "127.0.0.1"; then
-                        echo -e "${GREEN}✅ MySQL connection test: SUCCESS (using SSH)${NC}"
-                        if [ "$VERBOSE" = true ]; then
-                            echo -e "   Server version: $MYSQL_VERSION (estimated from greeting)"
-                            echo -e "Command: ssh root@127.0.0.1 'nc -w 3 127.0.0.1 $DB_PORT'"
-                            echo -e "Server greeting detected: MySQL server is responding"
-                        fi
-                        LOCAL_MYSQL_RESULT=0
-                        echo -e ""
-                        return 0
-                    fi
-                fi
-                
-                echo -e "${RED}❌ MySQL connection test: FAILED${NC}"
-                if [ "$VERBOSE" = true ]; then
-                    echo -e "Command: nc -w 3 127.0.0.1 $DB_PORT"
-                    echo -e "No valid MySQL server greeting detected"
-                    
-                    echo -e "\nMySQL Troubleshooting:"
-                    echo "1. Check if the MySQL server is running on 127.0.0.1:${DB_PORT}"
-                    echo "2. Verify that the user has proper permissions"
-                    echo "3. Try removing SSL options if you're getting SSL-related errors"
-                fi
-                echo -e ""
-            fi
-        fi
-    else
-        echo -e "${RED}✗ MySQL port $DB_PORT is CLOSED or unreachable${NC}"
-        if [ "$VERBOSE" = true ]; then
-            echo -e "\nMySQL Troubleshooting:"
-            echo "1. Check if the MySQL server is running on 127.0.0.1:${DB_PORT}"
-            echo "2. Make sure the MySQL server is binding to the correct interface"
-        fi
-        echo -e ""
+        echo -e "REDIS_PORT: $REDIS_PORT"
+        echo -e "REDIS_PASSWORD: ******** (hidden)"
     fi
-    
-    return 1
+
+    test_service_connection "$(convert_docker_host "$REDIS_HOST")" "$REDIS_PORT" "$REDIS_PASSWORD" "Redis" true
+    return $?
 }
 
 # Test MySQL connection from Docker container
@@ -461,339 +662,8 @@ function test_mysql_connection() {
         echo -e "DB_PASSWORD: ******** (hidden)"
     fi
 
-    # Check if the port is open
-    if is_port_open "$DB_HOST" "$DB_PORT"; then
-        echo -e "${GREEN}✓ MySQL port $DB_PORT is OPEN${NC}"
-        
-        # Test with mysql client
-        if run_mysql_test_with_client "$DB_HOST"; then
-            echo -e "${GREEN}✅ MySQL connection test: SUCCESS (using mysql client)${NC}"
-            if [ "$VERBOSE" = true ]; then
-                echo -e "   Server version: $MYSQL_VERSION"
-            fi
-            MYSQL_RESULT=0
-            echo -e ""
-        else
-            # If mysql client fails, try netcat
-            if [ "$VERBOSE" = true ]; then
-                echo -e "MySQL client failed, trying netcat..."
-            fi
-            
-            if run_mysql_test_with_netcat "$DB_HOST"; then
-                echo -e "${GREEN}✅ MySQL connection test: SUCCESS (using netcat)${NC}"
-                if [ "$VERBOSE" = true ]; then
-                    echo -e "   Server version: $MYSQL_VERSION (estimated from greeting)"
-                    echo -e "Command: nc -w 3 $DB_HOST $DB_PORT"
-                    echo -e "Server greeting detected: MySQL server is responding"
-                fi
-                MYSQL_RESULT=0
-                echo -e ""
-            else
-                # If netcat fails, try SSH
-                if [ "$VERBOSE" = true ]; then
-                    echo -e "Netcat test failed, trying SSH..."
-                fi
-                
-                if docker exec ${CONTAINER_ID} which ssh >/dev/null 2>&1; then
-                    if run_mysql_test_with_ssh "$DB_HOST"; then
-                        echo -e "${GREEN}✅ MySQL connection test: SUCCESS (using SSH)${NC}"
-                        if [ "$VERBOSE" = true ]; then
-                            echo -e "   Server version: $MYSQL_VERSION (estimated from greeting)"
-                            echo -e "Command: ssh root@$DB_HOST 'nc -w 3 127.0.0.1 $DB_PORT'"
-                            echo -e "Server greeting detected: MySQL server is responding"
-                        fi
-                        MYSQL_RESULT=0
-                        echo -e ""
-                    else
-                        echo -e "${RED}❌ MySQL connection test: FAILED${NC}"
-                        if [ "$VERBOSE" = true ]; then
-                            show_mysql_troubleshooting "$DB_HOST"
-                        fi
-                        echo -e ""
-                    fi
-                else
-                    echo -e "${RED}❌ MySQL connection test: FAILED (SSH not available in container)${NC}"
-                    if [ "$VERBOSE" = true ]; then
-                        show_mysql_troubleshooting "$DB_HOST"
-                    fi
-                    echo -e ""
-                fi
-            fi
-        fi
-    else
-        echo -e "${RED}✗ MySQL port $DB_PORT is CLOSED or unreachable${NC}"
-        if [ "$VERBOSE" = true ]; then
-            show_mysql_troubleshooting "$DB_HOST"
-        fi
-        echo -e ""
-    fi
-}
-
-# Test MySQL using the client
-function run_mysql_test_with_client() {
-    local host=$1
-    
-    # Get MySQL version
-    MYSQL_VERSION=$(docker exec ${CONTAINER_ID} mysql \
-        -h "${host}" \
-        -P "${DB_PORT}" \
-        -u "${DB_USERNAME}" \
-        -p"${DB_PASSWORD}" \
-        ${DB_CATALOG:+-D "${DB_CATALOG}"} \
-        --protocol=TCP \
-        --default-auth=mysql_native_password \
-        --ssl \
-        -e "SELECT VERSION() as 'MySQL Server Version';" 2>/dev/null | grep -v "MySQL Server Version" | tr -d "\r\n ")
-    
-    # Test connection
-    if docker exec ${CONTAINER_ID} mysql \
-        -h "${host}" \
-        -P "${DB_PORT}" \
-        -u "${DB_USERNAME}" \
-        -p"${DB_PASSWORD}" \
-        ${DB_CATALOG:+-D "${DB_CATALOG}"} \
-        --protocol=TCP \
-        --default-auth=mysql_native_password \
-        --ssl \
-        -e "SELECT 'MySQL connection successful!' as Status;" &>/dev/null; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-# Test MySQL using netcat
-function run_mysql_test_with_netcat() {
-    local host=$1
-    
-    # Try to connect and capture the server greeting
-    MYSQL_GREETING=$(docker exec ${CONTAINER_ID} bash -c "{ 
-        sleep 1
-        printf '\x4a\x00\x00\x00\x0a'
-        printf '8.4.4\x00'
-        printf '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        printf '\x00'
-        printf '\x00'
-        printf '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        printf '\x00'
-        printf '\x00\x00'
-        printf '\x00\x00\x00\x00'
-        printf '\x00'
-        printf '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        printf '\x00'
-        printf '\x00'
-    } | nc -w 3 ${host} ${DB_PORT} | tr -d '\0'" 2>/dev/null)
-    
-    # Check if we got a MySQL server greeting
-    if echo "$MYSQL_GREETING" | grep -q "mysql\|8\."; then
-        # Try to extract version from greeting
-        MYSQL_VERSION=$(echo "$MYSQL_GREETING" | grep -o -E "([0-9]+\.)+[0-9]+" | head -1)
-        return 0
-    else
-        return 1
-    fi
-}
-
-# Test MySQL using SSH
-function run_mysql_test_with_ssh() {
-    local host=$1
-    
-    # Try to connect and capture the server greeting using SSH
-    MYSQL_GREETING=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 -p 22 root@${host} "bash -c '{ 
-        sleep 1
-        printf '\x4a\x00\x00\x00\x0a'
-        printf '8.4.4\x00'
-        printf '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        printf '\x00'
-        printf '\x00'
-        printf '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        printf '\x00'
-        printf '\x00\x00'
-        printf '\x00\x00\x00\x00'
-        printf '\x00'
-        printf '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        printf '\x00'
-        printf '\x00'
-    } | nc -w 3 127.0.0.1 ${DB_PORT} | tr -d '\0'" 2>/dev/null)
-    
-    # Check if we got a MySQL server greeting
-    if echo "$MYSQL_GREETING" | grep -q "mysql\|8\."; then
-        # Try to extract version from greeting
-        MYSQL_VERSION=$(echo "$MYSQL_GREETING" | grep -o -E "([0-9]+\.)+[0-9]+" | head -1)
-        return 0
-    else
-        return 1
-    fi
-}
-
-# Show MySQL troubleshooting info
-function show_mysql_troubleshooting() {
-    local host=$1
-    
-    echo -e "\nMySQL Troubleshooting:"
-    echo "1. Check if the MySQL server is running on ${host}:${DB_PORT}"
-    echo "2. Verify that the user has proper permissions"
-    echo "3. If using 'host.docker.internal', make sure your Docker version supports it"
-    echo "4. Try removing SSL options if you're getting SSL-related errors"
-}
-
-# =============================================================================
-# Redis Test Functions
-# =============================================================================
-
-# Test Redis connection from local environment
-function test_redis_local() {
-    if [ "$VERBOSE" = true ]; then
-        echo -e "${BLUE}====== TESTING REDIS CONNECTION FROM LOCAL ENVIRONMENT ======${NC}"
-        echo -e "Using Redis connection info:"
-        echo -e "REDIS_HOST: 127.0.0.1 (original: $REDIS_HOST)"
-        echo -e "REDIS_PORT: $REDIS_PORT"
-        echo -e "REDIS_PASSWORD: ******** (hidden)"
-    fi
-
-    # Check if the Redis port is open
-    if nc -z -w 3 127.0.0.1 $REDIS_PORT 2>/dev/null; then
-        echo -e "${GREEN}✓ Redis port $REDIS_PORT is OPEN${NC}"
-        
-        local redis_cli_available=false
-        # Try redis-cli first if available
-        if command -v redis-cli &>/dev/null; then
-            redis_cli_available=true
-            if [ "$VERBOSE" = true ]; then
-                echo -e "Using redis-cli for testing..."
-            fi
-            
-            # Test Redis connection with redis-cli
-            if [ -z "${REDIS_PASSWORD}" ]; then
-                # No password
-                REDIS_TEST_OUTPUT=$(redis-cli -h "127.0.0.1" -p "${REDIS_PORT}" PING 2>/dev/null)
-                REDIS_SERVER_INFO=$(redis-cli -h "127.0.0.1" -p "${REDIS_PORT}" INFO SERVER 2>/dev/null)
-            else
-                # With password
-                REDIS_TEST_OUTPUT=$(redis-cli -h "127.0.0.1" -p "${REDIS_PORT}" -a "${REDIS_PASSWORD}" PING 2>/dev/null)
-                REDIS_SERVER_INFO=$(redis-cli -h "127.0.0.1" -p "${REDIS_PORT}" -a "${REDIS_PASSWORD}" INFO SERVER 2>/dev/null)
-            fi
-            
-            if [ "$REDIS_TEST_OUTPUT" = "PONG" ]; then
-                echo -e "${GREEN}✅ Redis connection test: SUCCESS (using redis-cli)${NC}"
-                
-                # Try to extract version from server info
-                if echo "$REDIS_SERVER_INFO" | grep -q "redis_version"; then
-                    REDIS_VERSION=$(echo "$REDIS_SERVER_INFO" | grep "redis_version" | cut -d ":" -f2 | tr -d "\r\n ")
-                    if [ "$VERBOSE" = true ]; then
-                        echo -e "   Server version: $REDIS_VERSION"
-                    fi
-                fi
-                
-                LOCAL_REDIS_RESULT=0
-                echo -e ""
-                return 0
-            else
-                if [ "$VERBOSE" = true ]; then
-                    echo -e "${RED}❌ Redis connection test: FAILED (using redis-cli)${NC}"
-                    echo -e "Falling back to netcat..."
-                fi
-            fi
-        else
-            if [ "$VERBOSE" = true ]; then
-                echo -e "Redis CLI not found in local environment, trying netcat..."
-            fi
-        fi
-        
-        # If redis-cli failed or isn't available, try netcat
-        if [ "$redis_cli_available" = false ] || [ $LOCAL_REDIS_RESULT -ne 0 ]; then
-            if [ "$VERBOSE" = true ]; then
-                echo -e "Testing Redis connection using netcat..."
-            fi
-            
-            # Handle cases with and without password
-            local redis_test_output=""
-            if [ -z "${REDIS_PASSWORD}" ]; then
-                # No password - simple PING test
-                redis_test_output=$(bash -c "echo -e 'PING\r\n' | nc -w 3 127.0.0.1 ${REDIS_PORT}" 2>/dev/null)
-                
-                # Try to get version info if successful
-                if echo "$redis_test_output" | grep -q "+PONG"; then
-                    REDIS_SERVER_INFO=$(bash -c "echo -e 'INFO SERVER\r\n' | nc -w 3 127.0.0.1 ${REDIS_PORT}" 2>/dev/null)
-                fi
-            else
-                # With password - AUTH command followed by PING
-                redis_test_output=$(bash -c "{ echo -e \"AUTH ${REDIS_PASSWORD}\r\nPING\r\nQUIT\r\n\"; } | nc -w 3 127.0.0.1 ${REDIS_PORT}" 2>/dev/null)
-                
-                # Try to get version info if successful
-                if echo "$redis_test_output" | grep -q "+PONG"; then
-                    REDIS_SERVER_INFO=$(bash -c "{ echo -e \"AUTH ${REDIS_PASSWORD}\r\nINFO SERVER\r\nQUIT\r\n\"; } | nc -w 3 127.0.0.1 ${REDIS_PORT}" 2>/dev/null)
-                fi
-            fi
-            
-            # Check for successful PING response
-            if echo "$redis_test_output" | grep -q "+PONG"; then
-                echo -e "${GREEN}✅ Redis connection test: SUCCESS (using netcat with AUTH)${NC}"
-                
-                # Try to extract version from server info
-                if echo "$REDIS_SERVER_INFO" | grep -q "redis_version"; then
-                    REDIS_VERSION=$(echo "$REDIS_SERVER_INFO" | grep "redis_version" | cut -d ":" -f2 | tr -d "\r\n ")
-                    if [ "$VERBOSE" = true ]; then
-                        echo -e "   Server version: $REDIS_VERSION"
-                        echo -e "Command: AUTH ... | PING | nc -w 3 127.0.0.1 $REDIS_PORT"
-                        echo -e "Result: $redis_test_output"
-                    fi
-                fi
-                
-                LOCAL_REDIS_RESULT=0
-                echo -e ""
-                return 0
-            else
-                if [ "$VERBOSE" = true ]; then
-                    echo -e "Netcat test failed, trying SSH..."
-                fi
-                
-                # Try SSH as a last resort
-                if command -v ssh &>/dev/null; then
-                    if run_redis_test_with_ssh "127.0.0.1"; then
-                        echo -e "${GREEN}✅ Redis connection test: SUCCESS (using SSH)${NC}"
-                        
-                        # Try to extract version from server info
-                        if echo "$REDIS_SERVER_INFO" | grep -q "redis_version"; then
-                            REDIS_VERSION=$(echo "$REDIS_SERVER_INFO" | grep "redis_version" | cut -d ":" -f2 | tr -d "\r\n ")
-                            if [ "$VERBOSE" = true ]; then
-                                echo -e "   Server version: $REDIS_VERSION"
-                                echo -e "Command: ssh root@127.0.0.1 'nc -w 3 127.0.0.1 $REDIS_PORT'"
-                                echo -e "Result: $redis_test_output"
-                            fi
-                        fi
-                        
-                        LOCAL_REDIS_RESULT=0
-                        echo -e ""
-                        return 0
-                    fi
-                fi
-                
-                echo -e "${RED}❌ Redis connection test: FAILED${NC}"
-                if [ "$VERBOSE" = true ]; then
-                    echo -e "Command: AUTH ... | PING | nc -w 3 127.0.0.1 $REDIS_PORT"
-                    echo -e "Result: $redis_test_output"
-                    
-                    echo -e "\nRedis Troubleshooting:"
-                    echo "1. Check if the Redis server is running on 127.0.0.1:${REDIS_PORT}"
-                    echo "2. If using a password, verify it is correct"
-                    echo "3. Make sure Redis allows external connections (bind to 0.0.0.0)"
-                    echo "4. Check if protected-mode is set to 'no' in redis.conf"
-                fi
-                echo -e ""
-            fi
-        fi
-    else
-        echo -e "${RED}✗ Redis port $REDIS_PORT is CLOSED or unreachable${NC}"
-        if [ "$VERBOSE" = true ]; then
-            echo -e "\nRedis Troubleshooting:"
-            echo "1. Check if the Redis server is running on 127.0.0.1:${REDIS_PORT}"
-            echo "2. Make sure the Redis server is binding to the correct interface"
-        fi
-        echo -e ""
-    fi
-    
-    return 1
+    test_service_connection "$DB_HOST" "$DB_PORT" "$DB_PASSWORD" "MySQL" false
+    return $?
 }
 
 # Test Redis connection from Docker container
@@ -806,217 +676,8 @@ function test_redis_connection() {
         echo -e "REDIS_PASSWORD: ******** (hidden)"
     fi
 
-    # Check if the Redis port is open
-    if is_port_open "$REDIS_HOST" "$REDIS_PORT"; then
-        echo -e "${GREEN}✓ Redis port $REDIS_PORT is OPEN${NC}"
-        
-        # Try redis-cli first
-        if [ "$VERBOSE" = true ]; then
-            echo -e "Testing Redis connection using redis-cli..."
-        fi
-        
-        local redis_output
-        redis_output=$(docker exec ${CONTAINER_ID} redis-cli -h "${REDIS_HOST}" -p "${REDIS_PORT}" ${REDIS_PASSWORD:+-a "${REDIS_PASSWORD}"} PING 2>&1)
-        
-        if echo "$redis_output" | grep -q "PONG"; then
-            echo -e "${GREEN}✅ Redis connection test: SUCCESS (using redis-cli)${NC}"
-            if [ "$VERBOSE" = true ]; then
-                echo -e "   Host: $REDIS_HOST:$REDIS_PORT, Auth: ${REDIS_PASSWORD:+Yes}"
-                if echo "$redis_output" | grep -q "AUTH failed"; then
-                    echo -e "${RED}   Note: AUTH warning received but connection successful${NC}"
-                fi
-                # Get server version
-                REDIS_SERVER_INFO=$(docker exec ${CONTAINER_ID} redis-cli -h "${REDIS_HOST}" -p "${REDIS_PORT}" ${REDIS_PASSWORD:+-a "${REDIS_PASSWORD}"} INFO SERVER 2>&1)
-                if echo "$REDIS_SERVER_INFO" | grep -q "redis_version"; then
-                    REDIS_VERSION=$(echo "$REDIS_SERVER_INFO" | grep "redis_version" | cut -d ":" -f2 | tr -d "\r\n ")
-                    echo -e "   Server version: $REDIS_VERSION"
-                fi
-            fi
-            REDIS_RESULT=0
-            echo -e ""
-        else
-            # If redis-cli fails, try netcat
-            if [ "$VERBOSE" = true ]; then
-                echo -e "Redis CLI failed, trying netcat..."
-                echo -e "Testing Redis connection using netcat..."
-            fi
-            
-            local auth_result
-            auth_result=$(run_redis_test_with_netcat "$REDIS_HOST")
-            local success=$?
-            
-            if [ $success -eq 0 ]; then
-                echo -e "${GREEN}✅ Redis connection test: SUCCESS (using netcat)${NC}"
-                if [ "$VERBOSE" = true ]; then
-                    echo -e "   Server version: $REDIS_VERSION"
-                    echo -e "Command: AUTH ... | PING | nc -w 3 $REDIS_HOST $REDIS_PORT"
-                    echo -e "Result: $auth_result"
-                fi
-                REDIS_RESULT=0
-                echo -e ""
-            else
-                # If netcat fails, try SSH
-                if [ "$VERBOSE" = true ]; then
-                    echo -e "Netcat test failed, trying SSH..."
-                fi
-                
-                if docker exec ${CONTAINER_ID} which ssh >/dev/null 2>&1; then
-                    if run_redis_test_with_ssh "$REDIS_HOST"; then
-                        echo -e "${GREEN}✅ Redis connection test: SUCCESS (using SSH)${NC}"
-                        if [ "$VERBOSE" = true ]; then
-                            echo -e "   Server version: $REDIS_VERSION"
-                            echo -e "Command: ssh root@$REDIS_HOST 'nc -w 3 127.0.0.1 $REDIS_PORT'"
-                            echo -e "Result: $auth_result"
-                        fi
-                        REDIS_RESULT=0
-                        echo -e ""
-                    else
-                        echo -e "${RED}❌ Redis connection test: FAILED${NC}"
-                        if [ "$VERBOSE" = true ]; then
-                            echo -e "Command: AUTH ... | PING | nc -w 3 $REDIS_HOST $REDIS_PORT"
-                            echo -e "Result: $auth_result"
-                            show_redis_troubleshooting "$REDIS_HOST"
-                        fi
-                        echo -e ""
-                    fi
-                else
-                    echo -e "${RED}❌ Redis connection test: FAILED (SSH not available in container)${NC}"
-                    if [ "$VERBOSE" = true ]; then
-                        echo -e "Command: AUTH ... | PING | nc -w 3 $REDIS_HOST $REDIS_PORT"
-                        echo -e "Result: $auth_result"
-                        show_redis_troubleshooting "$REDIS_HOST"
-                    fi
-                    echo -e ""
-                fi
-            fi
-        fi
-    else
-        echo -e "${RED}✗ Redis port $REDIS_PORT is CLOSED or unreachable${NC}"
-        if [ "$VERBOSE" = true ]; then
-            show_redis_troubleshooting "$REDIS_HOST"
-        fi
-        echo -e ""
-    fi
-}
-
-# Test Redis using redis-cli
-function run_redis_test_with_cli() {
-    local host=$1
-    
-    # Test Redis connection with redis-cli
-    if [ -z "${REDIS_PASSWORD}" ]; then
-        # No password
-        REDIS_TEST_OUTPUT=$(docker exec ${CONTAINER_ID} redis-cli -h "${host}" -p "${REDIS_PORT}" PING 2>&1)
-        if [ "$REDIS_TEST_OUTPUT" = "PONG" ]; then
-            REDIS_SERVER_INFO=$(docker exec ${CONTAINER_ID} redis-cli -h "${host}" -p "${REDIS_PORT}" INFO SERVER 2>&1)
-            if echo "$REDIS_SERVER_INFO" | grep -q "redis_version"; then
-                REDIS_VERSION=$(echo "$REDIS_SERVER_INFO" | grep "redis_version" | cut -d ":" -f2 | tr -d "\r\n ")
-            fi
-            return 0
-        else
-            if echo "$REDIS_TEST_OUTPUT" | grep -q "AUTH failed"; then
-                # Even with AUTH failed warning, if we get PONG, connection is successful
-                if echo "$REDIS_TEST_OUTPUT" | grep -q "PONG"; then
-                    REDIS_SERVER_INFO=$(docker exec ${CONTAINER_ID} redis-cli -h "${host}" -p "${REDIS_PORT}" INFO SERVER 2>&1)
-                    if echo "$REDIS_SERVER_INFO" | grep -q "redis_version"; then
-                        REDIS_VERSION=$(echo "$REDIS_SERVER_INFO" | grep "redis_version" | cut -d ":" -f2 | tr -d "\r\n ")
-                    fi
-                    return 0
-                fi
-            fi
-            return 1
-        fi
-    else
-        # With password
-        REDIS_TEST_OUTPUT=$(docker exec ${CONTAINER_ID} redis-cli -h "${host}" -p "${REDIS_PORT}" -a "${REDIS_PASSWORD}" PING 2>&1)
-        if [ "$REDIS_TEST_OUTPUT" = "PONG" ]; then
-            REDIS_SERVER_INFO=$(docker exec ${CONTAINER_ID} redis-cli -h "${host}" -p "${REDIS_PORT}" -a "${REDIS_PASSWORD}" INFO SERVER 2>&1)
-            if echo "$REDIS_SERVER_INFO" | grep -q "redis_version"; then
-                REDIS_VERSION=$(echo "$REDIS_SERVER_INFO" | grep "redis_version" | cut -d ":" -f2 | tr -d "\r\n ")
-            fi
-            return 0
-        else
-            if echo "$REDIS_TEST_OUTPUT" | grep -q "AUTH failed"; then
-                # If password is required and AUTH failed, connection is not successful
-                echo -e "${RED}Redis authentication failed: $REDIS_TEST_OUTPUT${NC}"
-            fi
-            return 1
-        fi
-    fi
-}
-
-# Test Redis using netcat
-function run_redis_test_with_netcat() {
-    local host=$1
-    
-    # Handle cases with and without password
-    if [ -z "${REDIS_PASSWORD}" ]; then
-        # No password - simple PING test
-        REDIS_TEST_OUTPUT=$(docker exec ${CONTAINER_ID} bash -c "echo -e 'PING\r\n' | nc -w 3 ${host} ${REDIS_PORT}" 2>/dev/null)
-        # Try to get version info
-        REDIS_SERVER_INFO=$(docker exec ${CONTAINER_ID} bash -c "echo -e 'INFO SERVER\r\n' | nc -w 3 ${host} ${REDIS_PORT}" 2>/dev/null)
-    else
-        # With password - AUTH command followed by PING and INFO
-        REDIS_TEST_OUTPUT=$(docker exec ${CONTAINER_ID} bash -c "{ echo -e \"AUTH ${REDIS_PASSWORD}\r\nPING\r\nQUIT\r\n\"; } | nc -w 3 ${host} ${REDIS_PORT}" 2>/dev/null)
-        # Try to get version info
-        REDIS_SERVER_INFO=$(docker exec ${CONTAINER_ID} bash -c "{ echo -e \"AUTH ${REDIS_PASSWORD}\r\nINFO SERVER\r\nQUIT\r\n\"; } | nc -w 3 ${host} ${REDIS_PORT}" 2>/dev/null)
-    fi
-    
-    # Check for successful PING response
-    if echo "$REDIS_TEST_OUTPUT" | grep -q "+PONG"; then
-        # Try to extract version from server info
-        if echo "$REDIS_SERVER_INFO" | grep -q "redis_version"; then
-            REDIS_VERSION=$(echo "$REDIS_SERVER_INFO" | grep "redis_version" | cut -d ":" -f2 | tr -d "\r\n ")
-        fi
-        echo "$REDIS_TEST_OUTPUT"
-        return 0
-    else
-        echo "$REDIS_TEST_OUTPUT"
-        return 1
-    fi
-}
-
-# Test Redis using SSH
-function run_redis_test_with_ssh() {
-    local host=$1
-    
-    # Handle cases with and without password
-    if [ -z "${REDIS_PASSWORD}" ]; then
-        # No password - simple PING test
-        REDIS_TEST_OUTPUT=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 -p 22 root@${host} "echo -e 'PING\r\n' | nc -w 3 127.0.0.1 ${REDIS_PORT}" 2>/dev/null)
-        # Try to get version info
-        REDIS_SERVER_INFO=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 -p 22 root@${host} "echo -e 'INFO SERVER\r\n' | nc -w 3 127.0.0.1 ${REDIS_PORT}" 2>/dev/null)
-    else
-        # With password - AUTH command followed by PING and INFO
-        REDIS_TEST_OUTPUT=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 -p 22 root@${host} "{ echo -e \"AUTH ${REDIS_PASSWORD}\r\nPING\r\nQUIT\r\n\"; } | nc -w 3 127.0.0.1 ${REDIS_PORT}" 2>/dev/null)
-        # Try to get version info
-        REDIS_SERVER_INFO=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 -p 22 root@${host} "{ echo -e \"AUTH ${REDIS_PASSWORD}\r\nINFO SERVER\r\nQUIT\r\n\"; } | nc -w 3 127.0.0.1 ${REDIS_PORT}" 2>/dev/null)
-    fi
-    
-    # Check for successful PING response
-    if echo "$REDIS_TEST_OUTPUT" | grep -q "+PONG"; then
-        # Try to extract version from server info
-        if echo "$REDIS_SERVER_INFO" | grep -q "redis_version"; then
-            REDIS_VERSION=$(echo "$REDIS_SERVER_INFO" | grep "redis_version" | cut -d ":" -f2 | tr -d "\r\n ")
-        fi
-        echo "$REDIS_TEST_OUTPUT"
-        return 0
-    else
-        echo "$REDIS_TEST_OUTPUT"
-        return 1
-    fi
-}
-
-# Show Redis troubleshooting info
-function show_redis_troubleshooting() {
-    local host=$1
-    
-    echo -e "\nRedis Troubleshooting:"
-    echo "1. Check if the Redis server is running on ${host}:${REDIS_PORT}"
-    echo "2. If using a password, verify it is correct"
-    echo "3. Make sure Redis allows external connections (bind to 0.0.0.0)"
-    echo "4. Check if protected-mode is set to 'no' in redis.conf"
-    echo "5. If using 'host.docker.internal', make sure your Docker version supports it"
+    test_service_connection "$REDIS_HOST" "$REDIS_PORT" "$REDIS_PASSWORD" "Redis" false
+    return $?
 }
 
 # =============================================================================

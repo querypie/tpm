@@ -1,0 +1,11 @@
+DB_HOST=host.docker.internal
+DB_PORT=3306
+DB_USERNAME=root
+DB_CATALOG=querypie
+DB_PASSWORD=querypie
+
+# Redis
+## In 10.2.1 or higher it should be replaced by REDIS_NODES, but both REDIS_HOST/PORT and REDIS_NODES are supported for a while.
+REDIS_HOST=host.docker.internal
+REDIS_PORT=6379
+REDIS_PASSWORD=querypie
