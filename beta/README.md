@@ -6,6 +6,12 @@
 
 정식 배포될 시에는 별도 공지와 위치도 변경 됩니다.
 
+## 사전준비 예시
+```
+- curl -L https://raw.githubusercontent.com/querypie/tpm/refs/heads/main/beta/ChangeImages.sh -o ChangeImages.sh
+- chmod +x ChangeImages.sh
+```
+
 ## QueryPie.sh
 - **용도**: QueryPie 서비스와 도구들의 실행, 중지, 재시작, 로그 확인
 - **실행 위치**: `{유저홈} 혹은 setup.sh 저장 위치`
