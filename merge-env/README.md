@@ -2,6 +2,8 @@
 
 QueryPie 업그레이드 시 compose-env의 빈 값을 채워주고 필요한 파일들(certs, novac-compose.yml, skip_command_config.json)을 복사하는 스크립트 (from: 이전버전, to: 신규버전)
 
+QueryPie Redis Cluster 설정 지원
+
 
 # 파일명
 - merge-env.sh

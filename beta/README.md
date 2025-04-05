@@ -59,4 +59,28 @@
   ```bash
   ./ChangeImages.sh 10.2.7             # QueryPie 이미지만 교체
   ./ChangeImages.sh 10.2.7 --with-tools  # QueryPie와 Tools 이미지 모두 교체
+  ```
+
+## QueryPieDownloadImages.sh
+- **용도**: QueryPie 도커 이미지를 로컬에 다운로드 (폐쇄망 설치를 위한 이미지 다운로드)
+- **실행 위치**: `{유저홈} 혹은 setup.sh 저장 위치`
+- **사용법**: `./QueryPieDownloadImages.sh <major.minor.patch> [app_name]`
+  - app_name: 'querypie' 또는 'tools' (선택 사항, 없으면 둘 다 처리)
+- **예시**:
+  ```bash
+  ./QueryPieDownloadImages.sh 10.2.1          # QueryPie와 Tools 이미지 모두 다운로드
+  ./QueryPieDownloadImages.sh 10.2.1 querypie  # QueryPie 이미지만 다운로드
+  ./QueryPieDownloadImages.sh 10.2.1 tools     # Tools 이미지만 다운로드
+  ```
+
+## QueryPieLoadImages.sh
+- **용도**: 로컬에 저장된 QueryPie 도커 이미지를 로드 (QueryPieDownloadImages.sh로 만든 파일과 같이 두고 실행)
+- **실행 위치**: `{유저홈} 혹은 setup.sh 저장 위치`
+- **사용법**: `./QueryPieLoadImages.sh <major.minor.patch> [app_name]`
+  - app_name: 'querypie' 또는 'tools' (선택 사항, 없으면 둘 다 처리)
+- **예시**:
+  ```bash
+  ./QueryPieLoadImages.sh 10.2.1          # QueryPie와 Tools 이미지 모두 로드
+  ./QueryPieLoadImages.sh 10.2.1 querypie  # QueryPie 이미지만 로드
+  ./QueryPieLoadImages.sh 10.2.1 tools     # Tools 이미지만 로드
   ``` 
