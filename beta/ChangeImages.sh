@@ -52,10 +52,13 @@ download_image() {
     local after_id
     after_id=$(docker images -q harbor.chequer.io/querypie/$image_name:$version)
     
-    # 이미지 ID가 다르거나 이전에 이미지가 없었다면 새로운 이미지로 판단
-    if [ "$before_id" != "$after_id" ] || [ -z "$before_id" ]; then
-        NEEDS_RESTART=true
-        echo -e "${GREEN}새로운 이미지가 다운로드되었습니다.${NC}"
+    # querypie 이미지일 때만 NEEDS_RESTART 값을 변경
+    if [ "$image_name" = "querypie" ]; then
+        # 이미지 ID가 다르거나 이전에 이미지가 없었다면 새로운 이미지로 판단
+        if [ "$before_id" != "$after_id" ] || [ -z "$before_id" ]; then
+            NEEDS_RESTART=true
+            echo -e "${GREEN}새로운 이미지가 다운로드되었습니다.${NC}"
+        fi
     fi
     
     return 0
@@ -152,7 +155,7 @@ if [ "$NEEDS_RESTART" = true ]; then
     # 로그 프로세스가 종료될 때까지 대기
     wait $LOGS_PID || true
 else
-    echo -e "${GREEN}이미지가 이미 최신 상태입니다. 서비스 재시작이 필요하지 않습니다.${NC}"
+    echo -e "${GREEN}querypie 이미지가 이미 최신 상태입니다. 서비스 재시작이 필요하지 않습니다.${NC}"
 fi
 
 # 원래 디렉토리로 복귀
