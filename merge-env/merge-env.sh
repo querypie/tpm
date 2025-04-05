@@ -267,6 +267,59 @@ handle_config_files() {
     done
 }
 
+# Function to check and handle REDIS_CONNECTION_MODE
+handle_redis_connection_mode() {
+    local new_mode_value=$(grep "^REDIS_CONNECTION_MODE=" "$NEW_FILE" | sed 's/^REDIS_CONNECTION_MODE=//')
+    local old_mode_exists=$(grep -c "^REDIS_CONNECTION_MODE=" "$ORIGINAL_FILE")
+    
+    # Check conditions for REDIS_NODES update
+    if [[ -n "$(grep '^REDIS_CONNECTION_MODE=' "$NEW_FILE")" ]] && \
+       [[ -z "$new_mode_value" ]] && \
+       [[ "$old_mode_exists" -eq 0 ]]; then
+        # Get REDIS_HOST and REDIS_PORT from original file
+        local redis_host=$(grep "^REDIS_HOST=" "$ORIGINAL_FILE" | sed 's/^REDIS_HOST=//')
+        local redis_port=$(grep "^REDIS_PORT=" "$ORIGINAL_FILE" | sed 's/^REDIS_PORT=//')
+        
+        if [[ -n "$redis_host" ]] && [[ -n "$redis_port" ]]; then
+            local redis_nodes="$redis_host:$redis_port"
+            
+            echo -e "\n${BLUE}[Redis Configuration Update]${NC}"
+            echo "REDIS_CONNECTION_MODE is empty in new version and not present in old version"
+            echo "Setting REDIS_NODES=$redis_nodes based on old REDIS_HOST and REDIS_PORT"
+            echo "Setting REDIS_CONNECTION_MODE=STANDALONE"
+            echo -e "${YELLOW}Note: REDIS_HOST and REDIS_PORT will be marked as removed keys${NC}"
+            
+            if [ "$DRY_RUN" = false ]; then
+                # Update REDIS_NODES in the new file
+                if grep -q "^REDIS_NODES=" "$NEW_FILE"; then
+                    sed -i '' "s|^REDIS_NODES=.*|REDIS_NODES=$redis_nodes|" "$NEW_FILE"
+                else
+                    echo "REDIS_NODES=$redis_nodes" >> "$NEW_FILE"
+                fi
+                
+                # Update REDIS_CONNECTION_MODE to STANDALONE
+                sed -i '' "s|^REDIS_CONNECTION_MODE=.*|REDIS_CONNECTION_MODE=STANDALONE|" "$NEW_FILE"
+                
+                echo -e "${GREEN}✓ Successfully updated REDIS_NODES and REDIS_CONNECTION_MODE${NC}"
+            fi
+            
+            # Print the new keys section
+            echo -e "\n${BLUE}[New Keys]${NC}"
+            echo "Key 'REDIS_CONNECTION_MODE'=STANDALONE (automatically set)"
+            echo "Key 'REDIS_NODES'=$redis_nodes (generated from REDIS_HOST:REDIS_PORT)"
+            
+            # Print the removed keys section
+            echo -e "\n${YELLOW}[Removed Redis Keys]${NC}"
+            echo "Following keys have been merged into REDIS_NODES=$redis_nodes:"
+            echo "REDIS_HOST=$redis_host"
+            echo "REDIS_PORT=$redis_port"
+            
+            return 0
+        fi
+    fi
+    return 1
+}
+
 #######################################
 # Temporary file setup
 #######################################
@@ -330,7 +383,44 @@ process_key_value() {
     local key=$1
     local value=$2
     
-    # Check if key exists in original file
+    # Special handling for Redis configuration only when REDIS_CONNECTION_MODE is empty
+    if [[ "$key" == "REDIS_CONNECTION_MODE" ]] && [[ -z "$value" ]]; then
+        local old_mode_exists=$(grep -c "^REDIS_CONNECTION_MODE=" "$ORIGINAL_FILE")
+        if [[ "$old_mode_exists" -eq 0 ]]; then
+            # Get REDIS_HOST and REDIS_PORT from original file
+            local redis_host=$(grep "^REDIS_HOST=" "$ORIGINAL_FILE" | sed 's/^REDIS_HOST=//')
+            local redis_port=$(grep "^REDIS_PORT=" "$ORIGINAL_FILE" | sed 's/^REDIS_PORT=//')
+            
+            if [[ -n "$redis_host" ]] && [[ -n "$redis_port" ]]; then
+                local redis_nodes="$redis_host:$redis_port"
+                # Add REDIS_CONNECTION_MODE
+                echo "REDIS_CONNECTION_MODE=STANDALONE" >> "$MERGED_FILE"
+                echo "Key 'REDIS_CONNECTION_MODE'=STANDALONE (automatically set)" >> "$NEW_KEYS"
+                
+                # Add REDIS_NODES
+                echo "REDIS_NODES=$redis_nodes" >> "$MERGED_FILE"
+                echo "Key 'REDIS_NODES'=$redis_nodes (generated from REDIS_HOST:REDIS_PORT)" >> "$NEW_KEYS"
+                
+                # Add REDIS_HOST and REDIS_PORT to removed keys
+                echo "Key 'REDIS_HOST'='$redis_host'" >> "$REMOVED_KEYS"
+                echo "Key 'REDIS_PORT'='$redis_port'" >> "$REMOVED_KEYS"
+                
+                # Skip adding these keys to the general removed keys section
+                echo "REDIS_HOST" >> "$TEMP_DIR/skip_removed_keys.txt"
+                echo "REDIS_PORT" >> "$TEMP_DIR/skip_removed_keys.txt"
+                
+                return
+            fi
+        fi
+    fi
+    
+    # Skip REDIS_NODES only if it's already been handled by REDIS_CONNECTION_MODE
+    if [[ "$key" == "REDIS_NODES" ]] && \
+       grep -q "^REDIS_NODES=" "$MERGED_FILE"; then
+        return
+    fi
+    
+    # Regular key processing
     if grep -q "^$key$" "$KEYS_ORIGINAL"; then
         # Get original value
         local original_value=$(grep -E "^$key=" "$ORIGINAL_FILE" | sed "s/^$key=//")
@@ -352,7 +442,7 @@ process_key_value() {
             echo "$key=$value" >> "$MERGED_FILE"
             # Show if different from original
             if [[ "$value" != "$original_value" ]]; then
-                echo "Key '$key' value changed: [Original:'$original_value'] -> [New:'$value']" >> "$CHANGED_KEYS"
+                echo "Key '$key' value differs: [Previous:'$original_value'] -> [Current:'$value'] (keeping current value)" >> "$CHANGED_KEYS"
             else
                 echo "Key '$key' value unchanged: '$value'" >> "$UNCHANGED_KEYS"
             fi
@@ -367,6 +457,11 @@ process_key_value() {
 #######################################
 # New file processing
 #######################################
+
+# Handle Redis configuration first
+if handle_redis_connection_mode; then
+    echo -e "${GREEN}Redis configuration has been processed${NC}"
+fi
 
 # Process based on new file
 while IFS= read -r line || [[ -n "$line" ]]; do
@@ -398,6 +493,11 @@ done < "$NEW_FILE"
 # First check if there are any removed keys
 REMOVED_COUNT=0
 while IFS= read -r key; do
+    # Skip keys that are already handled by Redis configuration
+    if [ -f "$TEMP_DIR/skip_removed_keys.txt" ] && grep -q "^$key$" "$TEMP_DIR/skip_removed_keys.txt"; then
+        continue
+    fi
+    
     if ! grep -q "^$key$" "$KEYS_NEW"; then
         # Get original value
         original_line=$(grep -E "^$key=" "$ORIGINAL_FILE")
@@ -415,6 +515,11 @@ if [ $REMOVED_COUNT -gt 0 ]; then
     
     # Process again to add to the file
     while IFS= read -r key; do
+        # Skip keys that are already handled by Redis configuration
+        if [ -f "$TEMP_DIR/skip_removed_keys.txt" ] && grep -q "^$key$" "$TEMP_DIR/skip_removed_keys.txt"; then
+            continue
+        fi
+        
         if ! grep -q "^$key$" "$KEYS_NEW"; then
             original_line=$(grep -E "^$key=" "$ORIGINAL_FILE")
             echo "# $original_line" >> "$MERGED_FILE"
