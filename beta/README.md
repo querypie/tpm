@@ -63,7 +63,7 @@
 
 ## QueryPieDownloadImages.sh
 - **용도**: QueryPie 도커 이미지를 로컬에 다운로드 (폐쇄망 설치를 위한 이미지 다운로드)
-- **실행 위치**: `{유저홈} 혹은 setup.sh 저장 위치`
+- **실행 위치**: `이미지 다운로드 받을 장비`
 - **사용법**: `./QueryPieDownloadImages.sh <major.minor.patch> [app_name]`
   - app_name: 'querypie' 또는 'tools' (선택 사항, 없으면 둘 다 처리)
 - **예시**:
