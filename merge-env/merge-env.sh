@@ -3,7 +3,7 @@
 # merge-env.sh - Configuration file comparison and merge script
 # Created: March 5, 2025 18:42:30
 # 
-# Usage: ./merge-env.sh <previous_version> [--dry-run] [-y] | undo
+# Usage: ./merge-env.sh <previous_version> [--dry-run] [-y] [--force-update] | undo
 
 #######################################
 # Initial setup and error checking
@@ -11,10 +11,11 @@
 
 # Usage check
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <previous_version> [--dry-run] [-y] | undo"
+    echo "Usage: $0 <previous_version> [--dry-run] [-y] [--force-update] | undo"
     echo "  <previous_version>  Version number in major.minor.patch format (e.g., 10.2.4)"
     echo "  --dry-run          Display comparison results without making changes"
     echo "  -y                 Auto-confirm all operations (ignored in dry-run mode)"
+    echo "  --force-update     Force update with values from previous version (cannot be used with --dry-run)"
     echo "  undo               Restore from backup file"
     exit 1
 fi
@@ -39,6 +40,7 @@ fi
 # Initialize flags
 DRY_RUN=false
 AUTO_CONFIRM=false
+FORCE_UPDATE=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -51,13 +53,17 @@ while [[ $# -gt 0 ]]; do
             AUTO_CONFIRM=true
             shift
             ;;
+        --force-update)
+            FORCE_UPDATE=true
+            shift
+            ;;
         -dry-run|-dryrun|-d)
             echo "Error: Invalid option format. Use '--dry-run' instead of '$1'"
             exit 1
             ;;
         -*)
             echo "Error: Unknown option '$1'"
-            echo "Valid options are: --dry-run, -y"
+            echo "Valid options are: --dry-run, -y, --force-update"
             exit 1
             ;;
         *)
@@ -70,6 +76,12 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Check if both dry-run and force-update are specified
+if [ "$DRY_RUN" = true ] && [ "$FORCE_UPDATE" = true ]; then
+    echo "Error: --dry-run and --force-update cannot be used together"
+    exit 1
+fi
 
 # If in dry-run mode, ignore auto-confirm flag
 if [ "$DRY_RUN" = true ]; then
@@ -276,9 +288,9 @@ handle_redis_connection_mode() {
     if [[ -n "$(grep '^REDIS_CONNECTION_MODE=' "$NEW_FILE")" ]] && \
        [[ -z "$new_mode_value" ]] && \
        [[ "$old_mode_exists" -eq 0 ]]; then
-        # Get REDIS_HOST and REDIS_PORT from original file
-        local redis_host=$(grep "^REDIS_HOST=" "$ORIGINAL_FILE" | sed 's/^REDIS_HOST=//')
-        local redis_port=$(grep "^REDIS_PORT=" "$ORIGINAL_FILE" | sed 's/^REDIS_PORT=//')
+        # Get REDIS_HOST and REDIS_PORT from original file and trim spaces
+        local redis_host=$(trim "$(grep "^REDIS_HOST=" "$ORIGINAL_FILE" | sed 's/^REDIS_HOST=//')")
+        local redis_port=$(trim "$(grep "^REDIS_PORT=" "$ORIGINAL_FILE" | sed 's/^REDIS_PORT=//')")
         
         if [[ -n "$redis_host" ]] && [[ -n "$redis_port" ]]; then
             local redis_nodes="$redis_host:$redis_port"
@@ -378,6 +390,15 @@ grep -E "^[A-Za-z0-9_]+=" "$NEW_FILE" | sed 's/=.*//' > "$KEYS_NEW"
 # File processing functions
 #######################################
 
+# 문자열 앞뒤 공백 제거 함수
+trim() {
+    local var="$*"
+    # 앞뒤 공백 제거
+    var="${var#"${var%%[![:space:]]*}"}"
+    var="${var%"${var##*[![:space:]]}"}"
+    echo "$var"
+}
+
 # Key/value processing function
 process_key_value() {
     local key=$1
@@ -387,9 +408,9 @@ process_key_value() {
     if [[ "$key" == "REDIS_CONNECTION_MODE" ]] && [[ -z "$value" ]]; then
         local old_mode_exists=$(grep -c "^REDIS_CONNECTION_MODE=" "$ORIGINAL_FILE")
         if [[ "$old_mode_exists" -eq 0 ]]; then
-            # Get REDIS_HOST and REDIS_PORT from original file
-            local redis_host=$(grep "^REDIS_HOST=" "$ORIGINAL_FILE" | sed 's/^REDIS_HOST=//')
-            local redis_port=$(grep "^REDIS_PORT=" "$ORIGINAL_FILE" | sed 's/^REDIS_PORT=//')
+            # Get REDIS_HOST and REDIS_PORT from original file and trim spaces
+            local redis_host=$(trim "$(grep "^REDIS_HOST=" "$ORIGINAL_FILE" | sed 's/^REDIS_HOST=//')")
+            local redis_port=$(trim "$(grep "^REDIS_PORT=" "$ORIGINAL_FILE" | sed 's/^REDIS_PORT=//')")
             
             if [[ -n "$redis_host" ]] && [[ -n "$redis_port" ]]; then
                 local redis_nodes="$redis_host:$redis_port"
@@ -438,13 +459,22 @@ process_key_value() {
                 echo "Key '$key' empty value replaced with original: '$original_value'" >> "$FILLED_KEYS"
             fi
         else
-            # Value exists, keep new value
-            echo "$key=$value" >> "$MERGED_FILE"
-            # Show if different from original
-            if [[ "$value" != "$original_value" ]]; then
-                echo "Key '$key' value differs: [Previous:'$original_value'] -> [Current:'$value'] (keeping current value)" >> "$CHANGED_KEYS"
+            # Value exists, decide based on force-update flag
+            if [ "$FORCE_UPDATE" = true ]; then
+                echo "$key=$original_value" >> "$MERGED_FILE"
+                if [[ "$value" != "$original_value" ]]; then
+                    echo "Key '$key' value force updated: [Current:'$value'] -> [Previous:'$original_value'] (force update mode)" >> "$CHANGED_KEYS"
+                else
+                    echo "Key '$key' value unchanged: '$value'" >> "$UNCHANGED_KEYS"
+                fi
             else
-                echo "Key '$key' value unchanged: '$value'" >> "$UNCHANGED_KEYS"
+                # Keep new value (default behavior)
+                echo "$key=$value" >> "$MERGED_FILE"
+                if [[ "$value" != "$original_value" ]]; then
+                    echo "Key '$key' value differs: [Previous:'$original_value'] -> [Current:'$value'] (keeping current value)" >> "$CHANGED_KEYS"
+                else
+                    echo "Key '$key' value unchanged: '$value'" >> "$UNCHANGED_KEYS"
+                fi
             fi
         fi
     else
@@ -560,6 +590,9 @@ print_category() {
 # Print summary
 echo ""
 echo -e "${BLUE}===== Key Comparison Results =====${NC}"
+if [ "$FORCE_UPDATE" = true ]; then
+    echo -e "${YELLOW}Force Update Mode: Values from previous version will override current values${NC}"
+fi
 echo "Original file: $ORIGINAL_FILE"
 echo "New file: $NEW_FILE"
 

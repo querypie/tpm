@@ -45,6 +45,13 @@ QueryPie Redis Cluster 설정 지원
   - 모든 파일 복사 시 사용자 확인 없이 자동으로 진행
   - certs, novac-compose.yml, skip_command_config.json 파일 복사 시 확인 메시지 없이 자동 복사
 ```
+./merge-env.sh 이전버전 --force-update
+```
+  - 신규버전의 값이 있더라도 이전버전의 값으로 강제 업데이트
+  - 이전버전의 값이 신규버전의 값을 덮어씀
+  - --dry-run 옵션과 함께 사용할 수 없음
+  - 콘솔 출력에 force update 모드로 변경된 내용 표시
+```
 ./merge-env.sh undo
 ```   
   - 초기 compose-env 로 원복
@@ -170,7 +177,21 @@ querypie/
   - 신규 추가된 키
   - 제거된 키
 
-### 2.2 실제 실행 모드
+### 2.2 강제 업데이트 모드 (--force-update)
+```bash
+./merge-env.sh 이전버전 --force-update
+```
+- 신규버전의 값이 있더라도 이전버전의 값으로 강제 업데이트
+- --dry-run 옵션과 함께 사용할 수 없음
+- 다음 작업 수행:
+  1. 신규버전에 값이 있는 키도 이전버전의 값으로 덮어씀
+  2. 신규버전에만 있는 키는 그대로 유지
+  3. 이전버전에만 있는 키는 주석으로 표시
+- 콘솔 출력에서 force update로 변경된 내용 확인 가능:
+  - [Changed Keys] 섹션에 "(force update mode)" 표시
+  - 이전 값과 현재 값을 명확히 구분하여 표시
+
+### 2.3 실제 실행 모드
 ```bash
 ./merge-env.sh 이전버전
 ```
@@ -189,8 +210,13 @@ querypie/
      - `novac-compose.yml` 복사 (백업 생성)
      - `skip_command_config.json` 복사 (백업 생성)
 
-### 2.3 되돌리기 모드 (undo)
+### 2.4 자동 확인 모드 (-y)
 ```bash
+./merge-env.sh 이전버전 -y
+```
+  - 모든 파일 복사 시 사용자 확인 없이 자동으로 진행
+  - certs, novac-compose.yml, skip_command_config.json 파일 복사 시 확인 메시지 없이 자동 복사
+```
 ./merge-env.sh undo
 ```
 - 마지막 백업 파일에서 복원
