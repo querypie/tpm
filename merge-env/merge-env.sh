@@ -390,9 +390,12 @@ grep -E "^[A-Za-z0-9_]+=" "$NEW_FILE" | sed 's/=.*//' > "$KEYS_NEW"
 # File processing functions
 #######################################
 
-# 문자열 앞뒤 공백 제거 함수
+# 문자열 앞뒤 공백과 따옴표 제거 함수
 trim() {
     local var="$*"
+    # 앞뒤 따옴표 제거 (작은따옴표와 큰따옴표 모두)
+    var="${var#[\"\']}"
+    var="${var%[\"\']}"
     # 앞뒤 공백 제거
     var="${var#"${var%%[![:space:]]*}"}"
     var="${var%"${var##*[![:space:]]}"}"
@@ -408,7 +411,7 @@ process_key_value() {
     if [[ "$key" == "REDIS_CONNECTION_MODE" ]] && [[ -z "$value" ]]; then
         local old_mode_exists=$(grep -c "^REDIS_CONNECTION_MODE=" "$ORIGINAL_FILE")
         if [[ "$old_mode_exists" -eq 0 ]]; then
-            # Get REDIS_HOST and REDIS_PORT from original file and trim spaces
+            # Get REDIS_HOST and REDIS_PORT from original file and trim spaces and quotes
             local redis_host=$(trim "$(grep "^REDIS_HOST=" "$ORIGINAL_FILE" | sed 's/^REDIS_HOST=//')")
             local redis_port=$(trim "$(grep "^REDIS_PORT=" "$ORIGINAL_FILE" | sed 's/^REDIS_PORT=//')")
             
