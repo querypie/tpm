@@ -163,6 +163,12 @@ validate_value() {
     local key=$1
     local value=$2
 
+    # 영문, 숫자, 특수문자만 허용
+    if [[ ! $value =~ ^[a-zA-Z0-9[:punct:][:space:]]*$ ]]; then
+        echo -e "${RED}오류: 영문, 숫자, 특수문자만 입력 가능합니다.${NC}"
+        return 1
+    fi
+
     # REDIS_PASSWORD 빈 값 확인
     if [ "$key" = "REDIS_PASSWORD" ]; then
         if [ -z "$value" ]; then
@@ -347,6 +353,17 @@ while true; do
     if [ "$license_file" = "querypie" ]; then
         echo -e "\n${YELLOW}QueryPie 내부 라이선스를 추가합니다...${NC}"
         docker exec -it querypie-tools-1 /app/script/license.sh add
+        license_status=$?
+        
+        if [ $license_status -ne 0 ]; then
+            echo -e "${RED}라이선스 추가 중 오류가 발생했습니다. 다시 시도하시겠습니까? (y/n)${NC}"
+            read -r retry
+            if [[ ! "$retry" =~ ^[Yy]$ ]]; then
+                echo -e "${RED}설치를 중단합니다.${NC}"
+                exit 1
+            fi
+            continue
+        fi
         break
     elif [ -f "$license_file" ]; then
         echo -e "\n${YELLOW}라이선스 파일을 업로드합니다...${NC}"
@@ -356,6 +373,10 @@ while true; do
         echo -e "${RED}파일을 찾을 수 없습니다. 다시 시도하세요.${NC}"
     fi
 done
+
+# 라이선스 추가 완료 확인
+echo -e "\n${GREEN}라이선스 추가가 완료되었습니다.${NC}"
+read -p "계속하려면 Enter를 누르세요..."
 
 echo -e "\n${YELLOW}tools를 종료합니다...${NC}"
 docker-compose --env-file compose-env --profile tools down
