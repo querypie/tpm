@@ -54,17 +54,22 @@
 ## ChangeImages.sh
 - **용도**: QueryPie 도커 이미지 교체 및 서비스 재시작
 - **실행 위치**: `{유저홈} 혹은 setup.sh 저장 위치`
-- **사용법**: `./ChangeImages.sh <version> [--with-tools]`
+- **사용법**: `./ChangeImages.sh <version> [--with-tools] [--force-restart]`
+  - `version`: 버전 번호 (예: 10.2.7)
+  - `--with-tools`: QueryPie Tools 이미지도 함께 업데이트
+  - `--force-restart`: 이미지 업데이트 여부와 관계없이 서비스 강제 재시작
 - **예시**:
   ```bash
-  ./ChangeImages.sh 10.2.7             # QueryPie 이미지만 교체
-  ./ChangeImages.sh 10.2.7 --with-tools  # QueryPie와 Tools 이미지 모두 교체
+  ./ChangeImages.sh 10.2.7                    # QueryPie 이미지만 교체
+  ./ChangeImages.sh 10.2.7 --with-tools       # QueryPie와 Tools 이미지 모두 교체
+  ./ChangeImages.sh 10.2.7 --force-restart    # QueryPie 이미지 교체 후 강제 재시작
+  ./ChangeImages.sh 10.2.7 --with-tools --force-restart  # 모든 이미지 교체 후 강제 재시작
   ```
 
 ## QueryPieDownloadImages.sh
 - **용도**: QueryPie 도커 이미지를 로컬에 다운로드 (폐쇄망 설치를 위한 이미지 다운로드)
 - **실행 위치**: `이미지 다운로드 받을 장비`
-- **사용법**: `./QueryPieDownloadImages.sh <major.minor.patch> [app_name]`
+- **사용법**: `./QueryPieDownloadImages.sh <version> [app_name]`
   - app_name: 'querypie' 또는 'tools' (선택 사항, 없으면 둘 다 처리)
 - **예시**:
   ```bash
@@ -76,11 +81,21 @@
 ## QueryPieLoadImages.sh
 - **용도**: 로컬에 저장된 QueryPie 도커 이미지를 로드 (QueryPieDownloadImages.sh로 만든 파일과 같이 두고 실행)
 - **실행 위치**: `{유저홈} 혹은 setup.sh 저장 위치`
-- **사용법**: `./QueryPieLoadImages.sh <major.minor.patch> [app_name]`
+- **사용법**: `./QueryPieLoadImages.sh <version> [app_name]`
   - app_name: 'querypie' 또는 'tools' (선택 사항, 없으면 둘 다 처리)
 - **예시**:
   ```bash
   ./QueryPieLoadImages.sh 10.2.1          # QueryPie와 Tools 이미지 모두 로드
   ./QueryPieLoadImages.sh 10.2.1 querypie  # QueryPie 이미지만 로드
   ./QueryPieLoadImages.sh 10.2.1 tools     # Tools 이미지만 로드
+  ```
+
+## QueryPieSimpleInstaller.sh
+- **용도**: QueryPie 서비스의 간편 설치 및 초기 설정
+- **실행 위치**: `{유저홈} 혹은 setup.sh 저장 위치`
+- **사용법**: `./QueryPieSimpleInstaller.sh <version>`
+  - `version`: 버전 번호 (예: 10.2.7)
+- **예시**:
+  ```bash
+  ./QueryPieSimpleInstaller.sh 10.2.7    # 10.2.7 버전의 QueryPie 설치 및 설정
   ``` 

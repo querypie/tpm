@@ -67,13 +67,15 @@ download_image() {
 # 버전 및 옵션 인자 확인
 if [ $# -lt 1 ]; then
     echo -e "${RED}버전을 인자로 전달해주세요.${NC}"
-    echo "사용법: $0 <버전> [--with-tools]"
+    echo "사용법: $0 <버전> [--with-tools] [--force-restart]"
     echo "  버전: major.minor.patch 형식 (예: 10.2.7)"
     echo "  --with-tools: querypie-tools 이미지도 함께 업데이트합니다."
+    echo "  --force-restart: 이미지 업데이트 여부와 관계없이 서비스를 재시작합니다."
     exit 1
 fi
 
 VERSION=$1
+shift  # 첫 번째 인자(버전) 제거
 
 # 버전 형식 검증
 if ! validate_version "$VERSION"; then
@@ -82,12 +84,28 @@ fi
 
 UPDATE_TOOLS=false
 NEEDS_RESTART=false
+FORCE_RESTART=false
 
 # 옵션 확인
-if [ $# -eq 2 ] && [ "$2" == "--with-tools" ]; then
-    UPDATE_TOOLS=true
-    echo -e "${YELLOW}querypie-tools 이미지도 함께 업데이트합니다.${NC}"
-fi
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --with-tools)
+            UPDATE_TOOLS=true
+            echo -e "${YELLOW}querypie-tools 이미지도 함께 업데이트합니다.${NC}"
+            shift
+            ;;
+        --force-restart)
+            FORCE_RESTART=true
+            echo -e "${YELLOW}서비스 강제 재시작이 설정되었습니다.${NC}"
+            shift
+            ;;
+        *)
+            echo -e "${RED}오류: 알 수 없는 옵션 '$1'${NC}"
+            echo "사용법: $0 <버전> [--with-tools] [--force-restart]"
+            exit 1
+            ;;
+    esac
+done
 
 # 현재 디렉토리 저장
 ORIGINAL_DIR=$(pwd)
@@ -130,8 +148,12 @@ if [ "$UPDATE_TOOLS" = true ]; then
     fi
 fi
 
-if [ "$NEEDS_RESTART" = true ]; then
-    echo -e "${GREEN}새로운 이미지가 다운로드되어 서비스를 재시작합니다.${NC}"
+if [ "$NEEDS_RESTART" = true ] || [ "$FORCE_RESTART" = true ]; then
+    if [ "$FORCE_RESTART" = true ]; then
+        echo -e "${YELLOW}강제 재시작 옵션이 설정되어 서비스를 재시작합니다.${NC}"
+    else
+        echo -e "${GREEN}새로운 이미지가 다운로드되어 서비스를 재시작합니다.${NC}"
+    fi
     
     echo -e "${YELLOW}QueryPie 서비스를 재시작하는 중...${NC}"
     docker-compose --env-file compose-env --profile querypie down
