@@ -80,7 +80,11 @@ echo -e "\n${YELLOW}설치 스크립트를 실행합니다...${NC}"
 if ! check_docker_permission; then
     echo -e "\n${YELLOW}도커 실행 권한이 필요합니다. 권한을 추가합니다...${NC}"
     sudo usermod -aG docker $USER
-    echo -e "${RED}터미널에 다시 로그인한 후 스크립트를 다시 실행해주세요.${NC}"
+    echo -e "${GREEN}도커 실행 권한이 추가되었습니다.${NC}"
+    echo -e "${YELLOW}권한 적용을 위해 터미널에서 로그아웃 후 다시 로그인이 필요합니다.${NC}"
+    echo -e "${YELLOW}로그인 후 다음 명령어를 다시 실행해주세요:${NC}"
+    echo -e "${GREEN}$0 $NEW_VERSION${NC}"
+    echo -e "${RED}스크립트를 종료합니다. 로그아웃 후 다시 실행해주세요.${NC}"
     exit 1
 fi
 
@@ -152,11 +156,16 @@ REQUIRED_KEYS=(
     "REDIS_PASSWORD"
 )
 
-# 임시 파일 생성
-tmp_file=$(mktemp)
-
-# compose-env 파일의 모든 줄을 임시 파일로 복사
-cp compose-env "$tmp_file"
+# compose-env 파일에서 키 목록 읽기
+get_compose_env_keys() {
+    local compose_env_file="$1"
+    if [ ! -f "$compose_env_file" ]; then
+        echo -e "${RED}오류: compose-env 파일을 찾을 수 없습니다.${NC}"
+        exit 1
+    fi
+    # compose-env 파일에서 키 목록 추출 (키=값 형식에서 키만 추출)
+    grep -v '^#' "$compose_env_file" | grep '=' | cut -d'=' -f1
+}
 
 # 값 검증 함수
 validate_value() {
@@ -224,79 +233,140 @@ validate_value() {
     return 0
 }
 
-# 각 필수 키에 대해 값 입력 받기
-for key in "${REQUIRED_KEYS[@]}"; do
-    # compose-env 파일에 키가 있는지 확인
-    if ! grep -q "^$key=" "compose-env"; then
-        continue
-    fi
+# 환경 변수 입력 처리 함수
+handle_env_input() {
+    local compose_env_file="compose-env"
+    local temp_file="compose-env.temp"
+    
+    # compose-env 파일의 모든 내용을 임시 파일로 복사 (주석 포함)
+    cp "$compose_env_file" "$temp_file"
 
-    while true; do
-        # 현재 값 확인
-        current_value=$(grep "^$key=" "$tmp_file" | cut -d'=' -f2- || echo "")
-        
-        # 키에 대한 설명 출력
-        case $key in
-            "AGENT_SECRET")
-                echo -e "\n${YELLOW}AGENT_SECRET${NC}"
-                echo "QueryPie 클라이언트 에이전트와 QueryPie 간의 통신을 암호화하기 위한 비밀 키"
-                echo "정확히 32자여야 합니다."
-                ;;
-            "KEY_ENCRYPTION_KEY")
-                echo -e "\n${YELLOW}KEY_ENCRYPTION_KEY${NC}"
-                echo "데이터베이스 연결 문자열 및 SSH 개인 키와 같은 중요한 정보를 암호화하는 데 사용되는 키"
-                echo "한 번 설정하면 변경할 수 없습니다."
-                ;;
-            "QUERYPIE_WEB_URL")
-                echo -e "\n${YELLOW}QUERYPIE_WEB_URL${NC}"
-                echo "QueryPie의 기본 URL (http:// 또는 https://로 시작)"
-                ;;
-            "REDIS_PASSWORD")
-                echo -e "\n${YELLOW}REDIS_PASSWORD${NC}"
-                echo "Redis 연결을 위한 비밀번호 (빈 값 허용)"
-                ;;
-            "REDIS_CONNECTION_MODE")
-                echo -e "\n${YELLOW}REDIS_CONNECTION_MODE${NC}"
-                echo "Redis 연결 모드 (STANDALONE 또는 CLUSTER)"
-                ;;
-            *)
-                echo -e "\n${YELLOW}$key${NC}"
-                ;;
-        esac
+    # compose-env 파일에서 키 목록 가져오기
+    local compose_env_keys=($(get_compose_env_keys "$compose_env_file"))
 
-        # 현재 값이 있으면 표시
-        if [ -n "$current_value" ]; then
-            echo -e "현재 값: ${RED}$current_value${NC}"
+    # REQUIRED_KEYS와 compose-env 파일 모두에 있는 키들만 처리
+    for key in "${REQUIRED_KEYS[@]}"; do
+        # compose-env에 없는 키는 건너뛰기
+        if [[ ! " ${compose_env_keys[@]} " =~ " ${key} " ]]; then
+            continue
         fi
 
-        # 새 값 입력 받기
-        read -p "새 값을 입력하세요 (현재 값 유지: Enter): " new_value
+        echo "" # 각 키 입력 전 빈 줄 추가
+        local value=""
+        local existing_value=""
+        local key_exists=false
+        
+        # 기존 compose-env 파일에서 키가 있는지 확인
+        if grep -q "^$key=" "$compose_env_file" 2>/dev/null; then
+            key_exists=true
+            # 값 읽어오기
+            existing_value=$(grep "^$key=" "$compose_env_file" 2>/dev/null | cut -d'=' -f2-)
+        fi
 
-        # 입력값이 없으면 현재 값 검증
-        if [ -z "$new_value" ]; then
-            if [ -n "$current_value" ]; then
-                new_value=$current_value
-            elif [ "$key" = "REDIS_PASSWORD" ]; then
-                new_value=""
+        # QUERYPIE_WEB_URL에 대한 안내 메시지
+        if [ "$key" = "QUERYPIE_WEB_URL" ]; then
+            echo -e "${YELLOW}QUERYPIE_WEB_URL은 http:// 또는 https://로 시작해야 합니다.${NC}"
+        fi
+        
+        # 키가 있고 값이 있는 경우
+        if [ "$key_exists" = true ] && [ -n "$existing_value" ]; then
+            echo -e "현재 ${key} 값 ${RED}[${existing_value}]${NC}"
+            echo -n "새 값을 입력하세요 (Enter를 누르면 현재 값 유지): "
+            read -r value
+
+            # Enter를 누른 경우 기존 값 유지
+            if [ -z "$value" ]; then
+                value="$existing_value"
             else
-                echo -e "${RED}값이 입력되지 않았습니다. 새로운 값을 입력해주세요.${NC}"
-                continue
+                # 새로운 값이 입력된 경우 검증
+                while ! validate_value "$key" "$value"; do
+                    echo -n "새 값을 입력하세요: "
+                    read -r value
+                    # Enter를 누른 경우 기존 값으로 복귀
+                    if [ -z "$value" ]; then
+                        value="$existing_value"
+                        break
+                    fi
+                done
+            fi
+
+            # 값이 변경된 경우에만 임시 파일 업데이트
+            if [ "$value" != "$existing_value" ]; then
+                # 임시 파일 업데이트
+                awk -v key="$key" -v val="$value" '
+                    $0 ~ "^"key"=" { print key"="val; next }
+                    { print }
+                ' "$temp_file" > "$temp_file.new" 2>/dev/null && mv "$temp_file.new" "$temp_file"
+            fi
+        else
+            # 키는 있지만 값이 없는 경우 또는 키만 있는 경우
+            if [ "$key_exists" = true ]; then
+                echo -e "현재 ${key} 값이 비어 있습니다."
+            fi
+            
+            # 새로운 값 입력 받기
+            while true; do
+                echo -n "$key 값을 입력하세요: "
+                read -r value
+                
+                if validate_value "$key" "$value"; then
+                    break
+                fi
+            done
+
+            # 임시 파일에서 해당 키 라인을 새 값으로 교체
+            if [ "$key_exists" = true ]; then
+                awk -v key="$key" -v val="$value" '
+                    $0 ~ "^"key"=" { print key"="val; next }
+                    { print }
+                ' "$temp_file" > "$temp_file.new" 2>/dev/null && mv "$temp_file.new" "$temp_file"
             fi
         fi
-
-        # 값 검증
-        if validate_value "$key" "$new_value"; then
-            # 파일에서 해당 키의 값 업데이트
-            sed -i.bak "s|^$key=.*|$key=$new_value|" "$tmp_file" && rm -f "$tmp_file.bak"
-            break
-        fi
     done
-done
 
-# 임시 파일을 원본으로 이동
-mv "$tmp_file" compose-env
+    # 임시 파일을 compose-env 파일로 이동
+    mv "$temp_file" "$compose_env_file" 2>/dev/null
+    echo -e "\n${GREEN}compose-env 파일이 성공적으로 생성되었습니다.${NC}"
+}
 
-echo -e "${GREEN}환경 변수 설정이 완료되었습니다.${NC}"
+# 메인 실행 부분
+echo -e "${YELLOW}compose-env 파일 설정 테스트를 시작합니다...${NC}"
+
+# compose-env 파일 존재 확인
+if [ ! -f "compose-env" ]; then
+    echo -e "${RED}오류: compose-env 파일이 존재하지 않습니다.${NC}"
+    exit 1
+fi
+
+# compose-env 파일 백업 (있는 경우)
+if [ ! -f "compose-env.backup" ]; then
+    cp compose-env compose-env.backup
+    echo -e "${GREEN}compose-env 파일이 백업되었습니다.${NC}"
+fi
+
+while true; do
+    # 환경 변수 입력 받기
+    handle_env_input
+    
+    # 설정된 내용 확인
+    echo -e "\n${YELLOW}현재 설정된 compose-env 파일 내용입니다:${NC}"
+    echo -e "${BLUE}----------------------------------------${NC}"
+    cat compose-env
+    echo -e "${BLUE}----------------------------------------${NC}"
+    
+    echo -e "\n${YELLOW}설정을 종료하시겠습니까? (y/n)${NC}"
+    read -p "> " confirm
+    
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        echo -e "${GREEN}설정된 값으로 진행합니다.${NC}"
+        break
+    elif [[ "$confirm" =~ ^[Nn]$ ]]; then
+        echo -e "${YELLOW}환경 변수를 다시 설정합니다...${NC}"
+        continue
+    else
+        echo -e "${RED}잘못된 입력입니다. y 또는 n을 입력해주세요.${NC}"
+    fi
+done 
 
 echo -e "\n${YELLOW}데이터베이스를 시작합니다...${NC}"
 docker-compose --env-file compose-env --profile database up -d
@@ -376,7 +446,7 @@ done
 
 # 라이선스 추가 완료 확인
 echo -e "\n${GREEN}라이선스 추가가 완료되었습니다.${NC}"
-read -p "계속하려면 Enter를 누르세요..."
+# read -p "계속하려면 Enter를 누르세요..."
 
 echo -e "\n${YELLOW}tools를 종료합니다...${NC}"
 docker-compose --env-file compose-env --profile tools down
