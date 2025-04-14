@@ -47,6 +47,8 @@ DB_CATALOG=""
 REDIS_HOST=""
 REDIS_PORT=""
 REDIS_PASSWORD=""
+REDIS_CONNECTION_MODE=""
+REDIS_NODES=""
 
 # Test results
 LOCAL_MYSQL_RESULT=1
@@ -188,6 +190,8 @@ function load_environment_variables() {
     REDIS_HOST=$(grep "^REDIS_HOST=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
     REDIS_PORT=$(grep "^REDIS_PORT=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
     REDIS_PASSWORD=$(grep "^REDIS_PASSWORD=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
+    REDIS_CONNECTION_MODE=$(grep "^REDIS_CONNECTION_MODE=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
+    REDIS_NODES=$(grep "^REDIS_NODES=" ${COMPOSE_ENV_FILE} | cut -d '=' -f2)
     
     log_debug "Environment variables loaded"
 }
@@ -340,19 +344,19 @@ function test_basic_connection() {
     if $is_local; then
         # Local connection test
         if timeout 3 bash -c "< /dev/tcp/${host}/${port}" 2>/dev/null; then
-            echo -e "${GREEN}✓ ${service_type} port ${port} is OPEN (basic connection test)${NC}"
+            echo -e "${GREEN}✓ ${service_type} connection to ${host}:${port} is OPEN (basic connection test)${NC}"
             return 0
         else
-            echo -e "${RED}✗ ${service_type} port ${port} is CLOSED or unreachable (basic connection test)${NC}"
+            echo -e "${RED}✗ ${service_type} connection to ${host}:${port} is CLOSED or unreachable (basic connection test)${NC}"
             return 1
         fi
     else
         # Docker container connection test
         if docker exec ${CONTAINER_ID} bash -c "timeout 3 bash -c '< /dev/tcp/${host}/${port}'" 2>/dev/null; then
-            echo -e "${GREEN}✓ ${service_type} port ${port} is OPEN (basic connection test)${NC}"
+            echo -e "${GREEN}✓ ${service_type} connection to ${host}:${port} is OPEN (basic connection test)${NC}"
             return 0
         else
-            echo -e "${RED}✗ ${service_type} port ${port} is CLOSED or unreachable (basic connection test)${NC}"
+            echo -e "${RED}✗ ${service_type} connection to ${host}:${port} is CLOSED or unreachable (basic connection test)${NC}"
             return 1
         fi
     fi
@@ -635,19 +639,41 @@ function test_mysql_local() {
 function test_redis_local() {
     if [ "$VERBOSE" = true ]; then
         echo -e "${BLUE}====== TESTING REDIS CONNECTION FROM LOCAL ENVIRONMENT ======${NC}"
-        echo -e "Using Redis connection info:"
-        local converted_host=$(convert_docker_host "$REDIS_HOST")
-        if [ "$converted_host" = "127.0.0.1" ]; then
-            echo -e "REDIS_HOST: ${converted_host} (original: $REDIS_HOST)"
+        if [ -n "$REDIS_CONNECTION_MODE" ]; then
+            echo -e "Using Redis connection info:"
+            echo -e "REDIS_CONNECTION_MODE: $REDIS_CONNECTION_MODE"
+            echo -e "REDIS_NODES: $REDIS_NODES"
         else
-            echo -e "REDIS_HOST: ${REDIS_HOST}"
+            echo -e "Using Redis connection info:"
+            local converted_host=$(convert_docker_host "$REDIS_HOST")
+            if [ "$converted_host" = "127.0.0.1" ]; then
+                echo -e "REDIS_HOST: ${converted_host} (original: $REDIS_HOST)"
+            else
+                echo -e "REDIS_HOST: ${REDIS_HOST}"
+            fi
+            echo -e "REDIS_PORT: $REDIS_PORT"
         fi
-        echo -e "REDIS_PORT: $REDIS_PORT"
         echo -e "REDIS_PASSWORD: ******** (hidden)"
     fi
 
-    test_service_connection "$(convert_docker_host "$REDIS_HOST")" "$REDIS_PORT" "$REDIS_PASSWORD" "Redis" true
-    return $?
+    # Validate Redis configuration
+    if ! validate_redis_config; then
+        return 1
+    fi
+
+    # Get Redis nodes to test
+    local nodes=($(parse_redis_nodes))
+    local all_success=true
+
+    for node in "${nodes[@]}"; do
+        IFS=':' read -r host port <<< "$node"
+        local converted_host=$(convert_docker_host "$host")
+        if ! test_service_connection "$converted_host" "$port" "$REDIS_PASSWORD" "Redis" true; then
+            all_success=false
+        fi
+    done
+
+    return $([ "$all_success" = true ] && echo 0 || echo 1)
 }
 
 # Test MySQL connection from Docker container
@@ -666,18 +692,98 @@ function test_mysql_connection() {
     return $?
 }
 
-# Test Redis connection from Docker container
+# Redis configuration validation function
+function validate_redis_config() {
+    # Check if both old and new configuration styles exist
+    if [ -n "$REDIS_HOST" ] && [ -n "$REDIS_PORT" ] && [ -n "$REDIS_CONNECTION_MODE" ]; then
+        log_error "Error: Both old (REDIS_HOST/REDIS_PORT) and new (REDIS_CONNECTION_MODE/REDIS_NODES) Redis configurations exist. Please use only one style."
+        exit 1
+    fi
+
+    # If using new configuration style
+    if [ -n "$REDIS_CONNECTION_MODE" ]; then
+        # Validate connection mode
+        if [ "$REDIS_CONNECTION_MODE" != "STANDALONE" ] && [ "$REDIS_CONNECTION_MODE" != "CLUSTER" ]; then
+            log_error "Error: REDIS_CONNECTION_MODE must be either 'STANDALONE' or 'CLUSTER'"
+            exit 1
+        fi
+
+        # Validate nodes format
+        if [ -z "$REDIS_NODES" ]; then
+            log_error "Error: REDIS_NODES is required when using REDIS_CONNECTION_MODE"
+            exit 1
+        fi
+
+        # Parse nodes based on connection mode
+        if [ "$REDIS_CONNECTION_MODE" = "STANDALONE" ]; then
+            # For standalone, expect single host:port
+            if ! [[ "$REDIS_NODES" =~ ^[^:]+:[0-9]+$ ]]; then
+                log_error "Error: Invalid REDIS_NODES format for STANDALONE mode. Expected format: host:port"
+                exit 1
+            fi
+        else  # CLUSTER mode
+            # For cluster, expect multiple host:port pairs separated by commas
+            IFS=',' read -ra NODES <<< "$REDIS_NODES"
+            for node in "${NODES[@]}"; do
+                if ! [[ "$node" =~ ^[^:]+:[0-9]+$ ]]; then
+                    log_error "Error: Invalid node format in REDIS_NODES: $node. Expected format: host:port"
+                    exit 1
+                fi
+            done
+        fi
+    fi
+
+    return 0
+}
+
+# Parse Redis nodes into array
+function parse_redis_nodes() {
+    local nodes=()
+    if [ -n "$REDIS_CONNECTION_MODE" ]; then
+        if [ "$REDIS_CONNECTION_MODE" = "STANDALONE" ]; then
+            nodes=("$REDIS_NODES")
+        else  # CLUSTER mode
+            IFS=',' read -ra nodes <<< "$REDIS_NODES"
+        fi
+    else
+        nodes=("$REDIS_HOST:$REDIS_PORT")
+    fi
+    echo "${nodes[@]}"
+}
+
+# Test Redis connection with new configuration
 function test_redis_connection() {
     if [ "$VERBOSE" = true ]; then
-        echo -e "${BLUE}====== TESTING REDIS CONNECTION FROM DOCKER CONTAINER ======${NC}"
-        echo -e "Using Redis connection info:"
-        echo -e "REDIS_HOST: $REDIS_HOST"
-        echo -e "REDIS_PORT: $REDIS_PORT"
+        echo -e "${BLUE}====== TESTING REDIS CONNECTION ======${NC}"
+        if [ -n "$REDIS_CONNECTION_MODE" ]; then
+            echo -e "Using Redis connection info:"
+            echo -e "REDIS_CONNECTION_MODE: $REDIS_CONNECTION_MODE"
+            echo -e "REDIS_NODES: $REDIS_NODES"
+        else
+            echo -e "Using Redis connection info:"
+            echo -e "REDIS_HOST: $REDIS_HOST"
+            echo -e "REDIS_PORT: $REDIS_PORT"
+        fi
         echo -e "REDIS_PASSWORD: ******** (hidden)"
     fi
 
-    test_service_connection "$REDIS_HOST" "$REDIS_PORT" "$REDIS_PASSWORD" "Redis" false
-    return $?
+    # Validate Redis configuration
+    if ! validate_redis_config; then
+        return 1
+    fi
+
+    # Get Redis nodes to test
+    local nodes=($(parse_redis_nodes))
+    local all_success=true
+
+    for node in "${nodes[@]}"; do
+        IFS=':' read -r host port <<< "$node"
+        if ! test_service_connection "$host" "$port" "$REDIS_PASSWORD" "Redis" false; then
+            all_success=false
+        fi
+    done
+
+    return $([ "$all_success" = true ] && echo 0 || echo 1)
 }
 
 # =============================================================================
