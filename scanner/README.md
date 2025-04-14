@@ -117,6 +117,8 @@ MySQL과 Redis 연결을 테스트하는 도구입니다. 로컬 환경과 Docke
 - Redis 설정
   - `REDIS_HOST`: Redis 서버 호스트
   - `REDIS_PORT`: Redis 서버 포트
+  - `REDIS_CONNECTION_MODE`: STANDALONE or CLUSTER
+  - `REDIS_NODES`: Redis node
   - `REDIS_PASSWORD`: Redis 비밀번호 (선택사항)
 
 ## 출력 형식
