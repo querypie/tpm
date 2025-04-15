@@ -12,7 +12,7 @@
 - chmod +x ChangeImages.sh
 ```
 
-## QueryPieSimpleInstaller.sh
+## QueryPieSimpleInstaller.sh  (poc-install.sh 로 이동됨)
 - **용도**: QueryPie 서비스의 간편 설치 및 초기 설정
 - **다운로드**: `curl -L https://raw.githubusercontent.com/querypie/tpm/refs/heads/main/beta/QueryPieSimpleInstaller.sh -o QueryPieSimpleInstaller.sh`
 - **실행 위치**: `{유저홈} 혹은 setup.sh 저장 위치`
