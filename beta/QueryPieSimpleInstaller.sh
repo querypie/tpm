@@ -206,6 +206,22 @@ validate_value() {
         return 0
     fi
 
+    # REDIS_NODES 검증
+    if [ "$key" = "REDIS_NODES" ]; then
+        # 마지막 쉼표 제거
+        value=$(echo "$value" | sed 's/,$//')
+        
+        # host:port 형식 또는 쉼표로 연결된 host:port 형식 검증
+        IFS=',' read -ra nodes <<< "$value"
+        for node in "${nodes[@]}"; do
+            if ! [[ "$node" =~ ^[^:]+:[0-9]+$ ]]; then
+                echo -e "${RED}Error: REDIS_NODES must be in host:port format (e.g., localhost:6379) or comma-separated host:port format (e.g., localhost:6379,redis2:6379).${NC}"
+                return 1
+            fi
+        done
+        return 0
+    fi
+
     # AGENT_SECRET 검증
     if [ "$key" = "AGENT_SECRET" ]; then
         if [ ${#value} -ne 32 ]; then
@@ -290,6 +306,11 @@ handle_env_input() {
                 done
             fi
 
+            # REDIS_NODES의 경우 마지막 쉼표 제거
+            if [ "$key" = "REDIS_NODES" ]; then
+                value=$(echo "$value" | sed 's/,$//')
+            fi
+
             # 값이 변경된 경우에만 임시 파일 업데이트
             if [ "$value" != "$existing_value" ]; then
                 # 임시 파일 업데이트
@@ -313,6 +334,11 @@ handle_env_input() {
                     break
                 fi
             done
+
+            # REDIS_NODES의 경우 마지막 쉼표 제거
+            if [ "$key" = "REDIS_NODES" ]; then
+                value=$(echo "$value" | sed 's/,$//')
+            fi
 
             # 임시 파일에서 해당 키 라인을 새 값으로 교체
             if [ "$key_exists" = true ]; then
