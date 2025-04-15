@@ -9,6 +9,24 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
+# 서버 IP 주소 가져오기 함수
+get_server_ip() {
+    # eth0, ens, enp 인터페이스 중 활성화된 인터페이스의 IP 주소를 찾음
+    local ip=$(ip addr show | grep -E 'inet.*(eth|ens|enp)' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d'/' -f1 | head -n1)
+    
+    # 위 방법으로 IP를 찾지 못한 경우, 기본 네트워크 인터페이스에서 IP를 찾음
+    if [ -z "$ip" ]; then
+        ip=$(hostname -I | awk '{print $1}')
+    fi
+    
+    # 여전히 IP를 찾지 못한 경우 기본값 반환
+    if [ -z "$ip" ]; then
+        ip="192.168.1.100"
+    fi
+    
+    echo "$ip"
+}
+
 # 버전 형식 검증 함수
 validate_version() {
     local version=$1
@@ -253,6 +271,7 @@ validate_value() {
 handle_env_input() {
     local compose_env_file="compose-env"
     local temp_file="compose-env.temp"
+    local server_ip=$(get_server_ip)
     
     # compose-env 파일의 모든 내용을 임시 파일로 복사 (주석 포함)
     cp "$compose_env_file" "$temp_file"
@@ -322,7 +341,29 @@ handle_env_input() {
         else
             # 키는 있지만 값이 없는 경우 또는 키만 있는 경우
             if [ "$key_exists" = true ]; then
-                echo -e "Current ${key} value is empty."
+                case "$key" in
+                    "DB_HOST")
+                        echo -e "Current ${key} value is empty. (ex: ${server_ip})"
+                        ;;
+                    "REDIS_HOST")
+                        echo -e "Current ${key} value is empty. (ex: ${server_ip})"
+                        ;;
+                    "REDIS_NODES")
+                        echo -e "Current ${key} value is empty. (ex: ${server_ip}:6379)"
+                        ;;
+                    "REDIS_CONNECTION_MODE")
+                        echo -e "Current ${key} value is empty. (ex: STANDALONE or CLUSTER)"
+                        ;;
+                    "QUERYPIE_WEB_URL")
+                        echo -e "Current ${key} value is empty. (ex: http://${server_ip})"
+                        ;;
+                    "AGENT_SECRET")
+                        echo -e "Current ${key} value is empty. (ex: openssl rand -hex 16)"
+                        ;;
+                    *)
+                        echo -e "Current ${key} value is empty."
+                        ;;
+                esac
             fi
             
             # 새로운 값 입력 받기
