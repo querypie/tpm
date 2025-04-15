@@ -318,5 +318,324 @@ querypie/
    - novac-compose.yml 수동 복원
    - skip_command_config.json 수동 복원
 
-# License
-This project is licensed under the MIT License - see the LICENSE file for details.
+
+
+---
+
+# Introduction (English)
+
+A script that fills empty values in compose-env and copies necessary files (certs, novac-compose.yml, skip_command_config.json) during QueryPie upgrades (from: previous version, to: new version)
+
+Supports QueryPie Redis Cluster configuration
+
+# File Name
+- merge-env.sh
+
+# Prerequisites
+### Move to New Version Directory
+
+    cd ./querypie/new_version or move to the directory where the new version's compose-env file exists
+
+### Download merge-env.sh
+
+    curl -l https://raw.githubusercontent.com/querypie/tpm/refs/heads/main/merge-env/merge-env.sh -o merge-env.sh
+
+### Add Execution Permission
+    chmod +x merge-env.sh
+
+# Usage
+```
+./merge-env.sh previous_version --dry-run
+```  
+  - Console output of comparison results without file changes
+```
+./merge-env.sh previous_version
+```
+  - Fill empty values in the new version's compose-env file with previous version's content (save existing file as backup)
+  - Copy necessary files (certs, novac-compose.yml, skip_command_config.json)
+  - Console output
+  - Original compose-env copy to compose-env.backup (copy only once)
+  - New compose-env copy to compose-env.backup.timestamp (copy on each execution)
+  - Modify compose-env values (based on new compose-env key values)
+    - Key exists & value exists: Keep new value
+    - Key exists & value empty: Copy value from previous version
+    - Key doesn't exist: Mark as comment (exists only in previous version)
+```
+./merge-env.sh previous_version -y
+```
+  - Automatically proceed without user confirmation for all file copies
+  - Automatically copy certs, novac-compose.yml, skip_command_config.json files without confirmation messages
+```
+./merge-env.sh previous_version --force-update
+```
+  - Force update with previous version's values even if new version has values
+  - Previous version's values overwrite new version's values
+  - Cannot be used with --dry-run option
+  - Console output shows changes made in force update mode
+```
+./merge-env.sh undo
+```   
+  - Restore to initial compose-env
+
+## Example) 10.1.9 -> 10.2.4 (Execute in 10.2.4 directory)
+    ./merge-env.sh 10.1.9 --dry-run  
+
+    ./merge-env.sh 10.1.9  
+
+    ./merge-env.sh 10.1.9 -y  # Automatically copy all files without user confirmation
+
+    ./merge-env.sh undo
+
+## Console Output
+```  
+./merge-env.sh 10.2.4 
+Timestamp backup file created: ./compose-env.backup_20250328095209
+✅  Starting merge process. Files will be modified.
+
+Result file: ./compose-env
+
+===== Key Comparison Results =====
+Original file: ../10.2.4/compose-env
+New file: ./compose-env
+
+[Unchanged Keys]
+Key 'VERSION' value unchanged: '10.2.4'
+Key 'AWS_ACCOUNT_ID' value unchanged (both empty)
+Key 'DB_PORT' value unchanged: '3306'
+Key 'DB_CATALOG' value unchanged: 'querypie'
+Key 'LOG_DB_CATALOG' value unchanged: 'querypie_log'
+Key 'ENG_DB_CATALOG' value unchanged: 'querypie_snapshot'
+Key 'DB_MAX_CONNECTION_SIZE' value unchanged: '20'
+Key 'DB_DRIVER_CLASS' value unchanged: 'org.mariadb.jdbc.Driver'
+Key 'REDIS_PORT' value unchanged: '6379'
+Key 'DAC_SKIP_SQL_COMMAND_RULE_FILE' value unchanged: 'skip_command_config.json'
+Key 'CABINET_DATA_DIR' value unchanged: '/data'
+
+[Keys Filled with Original Values]
+Key 'AGENT_SECRET' empty value replaced with original: '12345678901234567890123456789012'
+Key 'KEY_ENCRYPTION_KEY' empty value replaced with original: 'querypie'
+Key 'QUERYPIE_WEB_URL' empty value replaced with original: 'http://172.31.54.186'
+Key 'DB_HOST' empty value replaced with original: '172.31.54.186'
+Key 'DB_USERNAME' empty value replaced with original: 'querypie'
+Key 'DB_PASSWORD' empty value replaced with original: 'xxxxxx'
+Key 'REDIS_HOST' empty value replaced with original: '172.31.54.186'
+Key 'REDIS_PASSWORD' empty value replaced with original: 'xxxxxx'
+
+✅  Key comparison complete. Proceeding with file operations.
+
+===== File Operations =====
+
+⚙️  About to handle certs directory
+
+Copy certs from ../10.2.4/certs to ./certs
+Do you want to proceed? (y/Enter for yes, any other key for no): 
+Copying new certs:
+  - Source: ../10.2.4/certs
+  - Destination: ./certs
+  ✓ Successfully copied certs directory
+
+
+⚙️  About to handle novac-compose.yml
+
+Copy ../10.2.4/novac-compose.yml to ./novac-compose.yml
+Do you want to proceed? (y/Enter for yes, any other key for no): 
+Created backup: ./novac-compose.yml.backup_20250328095210
+Successfully copied ../10.2.4/novac-compose.yml to ./novac-compose.yml
+
+
+⚙️  About to handle skip_command_config.json
+
+Copy ../10.2.4/skip_command_config.json to ./skip_command_config.json
+Do you want to proceed? (y/Enter for yes, any other key for no): 
+Created backup: ./skip_command_config.json.backup_20250328095210
+Successfully copied ../10.2.4/skip_command_config.json to ./skip_command_config.json
+
+✅  All operations completed successfully
+```  
+
+# Detailed Usage Guide
+
+## 1. Pre-execution Requirements
+
+### 1.1 Directory Structure
+```
+querypie/
+├── 10.1.9/              # Previous version directory
+│   ├── compose-env      # Previous version environment configuration file
+│   ├── certs/           # Certificate directory
+│   ├── novac-compose.yml # Nova configuration file
+│   └── skip_command_config.json # SQL command skip configuration
+└── 10.2.4/              # New version directory
+    ├── merge-env.sh     # Script file
+    ├── compose-env      # New version environment configuration file
+    ├── certs/           # Certificate directory (copied)
+    ├── novac-compose.yml # Nova configuration file (copied)
+    └── skip_command_config.json # SQL command skip configuration (copied)
+```
+
+### 1.2 Required Conditions
+- `compose-env` file must exist in the new version directory
+- `compose-env` file must exist in the previous version directory
+- Script execution permission is required
+- The following files must exist in the previous version directory:
+  - `certs/` directory
+  - `novac-compose.yml`
+  - `skip_command_config.json`
+
+## 2. Execution Mode Description
+
+### 2.1 Dry Run Mode (--dry-run)
+```bash
+./merge-env.sh previous_version --dry-run
+```
+- Check comparison results without actual file changes
+- No backup files created
+- Safely preview changes
+- Outputs the following information:
+  - Unchanged keys
+  - Keys to be filled with previous version's values
+  - Changed keys
+  - Newly added keys
+  - Removed keys
+
+### 2.2 Force Update Mode (--force-update)
+```bash
+./merge-env.sh previous_version --force-update
+```
+- Force update with previous version's values even if new version has values
+- Cannot be used with --dry-run option
+- Performs the following operations:
+  1. Overwrite new version's values with previous version's values
+  2. Keep keys that exist only in new version
+  3. Mark keys that exist only in previous version as comments
+- Console output shows changes made in force update mode:
+  - "(force update mode)" marked in [Changed Keys] section
+  - Clearly distinguishes between previous and current values
+
+### 2.3 Actual Execution Mode
+```bash
+./merge-env.sh previous_version
+```
+- Perform actual file changes
+- Create automatic backups
+- Apply changes and output results
+- Performs the following operations:
+  1. First execution: Copy `compose-env` → `compose-env.backup`
+  2. Each execution: Copy `compose-env` → `compose-env.backup.timestamp`
+  3. Merge environment configuration values:
+     - If key and value both exist: Keep new value
+     - If key exists but value is empty: Fill with previous version's value
+     - If key exists only in previous version: Mark as comment
+  4. Copy additional files:
+     - Copy `certs/` directory
+     - Copy `novac-compose.yml` (create backup)
+     - Copy `skip_command_config.json` (create backup)
+
+### 2.4 Automatic Confirmation Mode (-y)
+```bash
+./merge-env.sh previous_version -y
+```
+  - Automatically proceed without user confirmation for all file copies
+  - Automatically copy certs, novac-compose.yml, skip_command_config.json files without confirmation messages
+```
+./merge-env.sh undo
+```
+- Restore from the last backup file
+- `compose-env.backup` file must exist
+- Restore all changes to original state
+
+## 3. Output Result Interpretation
+
+### 3.1 Key Comparison Result Categories
+1. **Unchanged Keys**
+   - List of unchanged keys
+   - Values are identical or both empty
+
+2. **Keys Filled with Original Values**
+   - List of keys filled with previous version's values
+   - Keys that were empty in new version
+
+3. **Changed Keys**
+   - List of keys with changed values
+   - Values differ between previous and new versions
+
+4. **New Keys**
+   - List of keys that exist only in new version
+   - New settings not present in previous version
+
+5. **Removed Keys**
+   - List of keys that exist only in previous version
+   - Settings removed in new version
+
+### 3.2 File Operation Results
+1. **certs directory**
+   - Display source and destination paths
+   - Verify copy success
+
+2. **novac-compose.yml**
+   - Backup file creation information
+   - Verify copy success
+
+3. **skip_command_config.json**
+   - Backup file creation information
+   - Verify copy success
+
+### 3.3 Output Format
+- Color-coded output for better readability
+- Separated sections by category
+- Clearly display before/after values of changes
+- Use emojis for operation status display
+- User confirmation request messages
+
+## 4. Precautions
+
+### 4.1 Before Execution
+- Always run in dry run mode first to check changes
+- Ensure sufficient disk space (backup file creation)
+- Verify execution permissions
+- Check existence of required files
+
+### 4.2 During Execution
+- Stop immediately if backup file creation fails
+- Check for file access permission issues
+- Ensure sufficient system resources
+- User confirmation required for each file copy
+
+### 4.3 After Execution
+- Preserve backup files
+- Verify changes
+- Can restore using undo mode if problems occur
+- Verify normal operation of copied files
+
+## 5. Troubleshooting
+
+### 5.1 Common Issues
+1. **Execution Permission Error**
+   ```bash
+   chmod +x merge-env.sh
+   ```
+
+2. **File Not Found Error**
+   - Check previous version directory
+   - Verify compose-env file existence
+   - Verify certs directory existence
+   - Verify novac-compose.yml file existence
+   - Verify skip_command_config.json file existence
+
+3. **Backup Failure**
+   - Check disk space
+   - Verify file permissions
+
+### 5.2 Recovery Methods
+1. **Undo Execution**
+   ```bash
+   ./merge-env.sh undo
+   ```
+
+2. **Manual Recovery**
+   - Manual restore from backup files
+   - Use backup files with timestamps
+   - Manual restore of certs directory
+   - Manual restore of novac-compose.yml
+   - Manual restore of skip_command_config.json
+

@@ -140,6 +140,149 @@ MySQL과 Redis 연결을 테스트하는 도구입니다. 로컬 환경과 Docke
 - MySQL 클라이언트 또는 netcat (MySQL 테스트용)
 - redis-cli 또는 netcat (Redis 테스트용)
 
-## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+---
+
+# QueryPie Scanner (English)
+
+A tool for testing MySQL and Redis connections. It can verify the connection status of MySQL and Redis servers in both local environments and Docker containers.
+
+## Features
+
+- MySQL Connection Testing
+  - Local environment connection testing
+  - Docker container connection testing
+  - Connection verification using MySQL client or netcat
+  - Server version information check (verbose mode)
+
+- Redis Connection Testing
+  - Local environment connection testing
+  - Docker container connection testing
+  - Connection verification using redis-cli or netcat
+  - Server version information check (verbose mode)
+
+- Docker Container Resource Monitoring (verbose mode)
+  - CPU usage
+  - Memory usage
+  - Network I/O
+  - Disk usage
+
+## File Name
+`scanner.sh`
+
+## Prerequisites
+1. Move to new version directory
+   ```bash
+   cd ./querypie/version  # Move to directory containing compose-env file
+   ```
+2. Download scanner.sh
+   ```bash
+   curl -l https://raw.githubusercontent.com/querypie/tpm/refs/heads/main/scanner/scanner.sh -o scanner.sh
+   ```
+3. Add execution permission
+   ```bash
+   chmod +x scanner.sh
+   ```
+
+## Usage
+
+```bash
+./scanner.sh              # Basic execution
+./scanner.sh -v          # Execute in verbose mode
+./scanner.sh <container> # Execute for specific container
+./scanner.sh -h          # Display help
+
+Note: querypie-tools or querypie-app must be running as Docker instances.
+```
+
+## Test Sequence
+
+### 1. Local Environment Testing
+- MySQL Connection Testing
+  1. mysql client
+  2. netcat
+  3. SSH
+
+- Redis Connection Testing
+  1. redis-cli
+  2. netcat
+  3. SSH
+
+### 2. Docker Container Testing
+- MySQL Connection Testing
+  1. mysql client
+  2. netcat
+  3. SSH
+
+- Redis Connection Testing
+  1. redis-cli
+  2. netcat
+  3. SSH
+
+## Success/Failure Conditions
+
+### MySQL Connection Testing
+- Success Conditions:
+  - mysql client: Successful connection and version verification
+  - netcat: MySQL server response verification
+  - SSH: MySQL server response verification
+
+- Failure Conditions:
+  - Port closed or inaccessible
+  - Authentication failure
+  - Connection timeout
+
+### Redis Connection Testing
+- Success Conditions:
+  - redis-cli: Receiving PONG response
+  - netcat: Receiving PONG response
+  - SSH: Receiving PONG response
+
+- Failure Conditions:
+  - Port closed or inaccessible
+  - Authentication failure (when password is required)
+  - Connection timeout
+
+## Precautions
+- For Redis, connection is considered successful if PONG response is received, even if AUTH warning is displayed
+- Docker container testing is executed even if local testing fails
+- SSH testing is only executed if all previous methods fail
+
+## Environment Configuration
+
+The script reads the following environment variables from the `compose-env` file:
+
+- MySQL Settings
+  - `DB_HOST`: MySQL server host
+  - `DB_PORT`: MySQL server port
+  - `DB_USERNAME`: MySQL username
+  - `DB_PASSWORD`: MySQL password
+  - `DB_CATALOG`: MySQL database name
+
+- Redis Settings
+  - `REDIS_HOST`: Redis server host
+  - `REDIS_PORT`: Redis server port
+  - `REDIS_CONNECTION_MODE`: STANDALONE or CLUSTER
+  - `REDIS_NODES`: Redis node
+  - `REDIS_PASSWORD`: Redis password (optional)
+
+## Output Format
+
+- Success messages: Green
+- Warning messages: Yellow
+- Error messages: Red
+- Information messages: Light cyan
+
+## Exit Codes
+
+- 0: All connection tests successful
+- 1: One or more connection tests failed
+
+## Requirements
+
+- bash
+- Docker (for Docker container testing)
+- MySQL client or netcat (for MySQL testing)
+- redis-cli or netcat (for Redis testing)
+
+
