@@ -4,14 +4,16 @@
 
 ## 스크립트 목록
 
-*   `agent_diag_mac.sh`: **macOS**용 진단 스크립트 (Bash/zsh 사용)
-*   `agent_diag_win.ps1`: **Windows**용 진단 스크립트 (PowerShell 사용)
+*   `agent_diag_mac.sh`: **macOS**용 특정 엔드포인트 대상 네트워크 진단 스크립트 (Bash/zsh 사용)
+*   `agent_diag_win.ps1`: **Windows**용 특정 엔드포인트 대상 네트워크 진단 스크립트 (PowerShell 사용)
+*   `querypie_cs_report.sh`: **macOS/Linux**용 종합 진단 정보 수집 스크립트 (Bash/zsh 사용)
 
 ## 목적
 
-이 스크립트들은 사용자가 지정한 웹 도메인(설치 파일, 버전 정보 등이 위치할 수 있는 곳)과 호스트 도메인(일반적으로 API 또는 서비스 엔드포인트)에 대해 일련의 네트워크 검사를 수행합니다. 이를 통해 DNS 해석, 프록시 설정, 방화벽 차단, TLS 인증서 문제 등 잠재적인 연결 문제를 식별하는 데 도움을 줍니다.
+*   `agent_diag_*` 스크립트: 사용자가 지정한 웹 도메인과 호스트 도메인에 대해 네트워크 검사를 수행하여 DNS, 프록시, 방화벽, TLS 인증서 등 특정 연결 문제를 식별합니다.
+*   `querypie_cs_report.sh`: 시스템 및 네트워크 환경 전반에 대한 진단 정보를 수집하여 문제 해결에 필요한 종합적인 데이터를 제공합니다.
 
-## 주요 기능
+## 주요 기능 (`agent_diag_*` 스크립트)
 
 두 스크립트 모두 다음과 같은 검사를 수행합니다:
 
@@ -24,17 +26,18 @@
 
 ## 사전 요구 사항
 
-*   **macOS (`agent_diag_mac.sh`):**
+*   **macOS (`agent_diag_mac.sh`, `querypie_cs_report.sh`):**
     *   Bash 또는 zsh 호환 셸 (macOS 기본)
     *   `dig` 명령어 (macOS 네트워크 도구에 포함되어 있거나 `brew install bind`로 설치 가능)
     *   `openssl` 명령어 (macOS에 기본 포함)
+    *   (`querypie_cs_report.sh`의 경우 추가적인 시스템 명령어가 필요할 수 있습니다.)
 *   **Windows (`agent_diag_win.ps1`):**
     *   PowerShell (최신 Windows 버전에 기본 포함)
     *   .NET Framework (일반적으로 기본 포함)
 
 ## 사용 방법
 
-### macOS
+### agent_diag_mac.sh (macOS 특정 엔드포인트 진단)
 
 1.  스크립트에 실행 권한을 부여합니다:
     ```bash
@@ -50,7 +53,7 @@
     ./cs-reporter/agent_diag_mac.sh querypie.example.com querypie-proxy.example.com
     ```
 
-### Windows
+### agent_diag_win.ps1 (Windows 특정 엔드포인트 진단)
 
 1.  **파일로 저장하여 실행 (권장):**
     *   PowerShell을 실행합니다. **(참고: 일부 네트워크 작업이나 권한 문제 발생 시, '관리자 권한으로 실행' 옵션을 사용하여 PowerShell 창을 여는 것이 도움이 될 수 있습니다.)**
@@ -79,6 +82,32 @@
         *   `HostDomain:` 프롬프트가 나타나면 호스트 도메인을 입력하고 Enter 키를 누릅니다.
     *   이후 스크립트가 진단을 시작합니다.
 
+### querypie_cs_report.sh (서버 종합 진단 정보 수집)
+
+이 스크립트는 시스템 및 네트워크 관련 상세 진단 정보를 수집하여 결과 디렉토리에 저장합니다.
+
+1.  스크립트에 실행 권한을 부여합니다:
+    ```bash
+    chmod +x cs-reporter/querypie_cs_report.sh
+    ```
+2.  터미널에서 스크립트를 실행합니다.
+    *(참고: 스크립트에 따라 특정 파라미터(예: 출력 디렉토리 이름)가 필요할 수 있습니다. 스크립트 내부 주석이나 별도 안내를 확인하세요. 아래는 파라미터가 없는 경우의 예시입니다.)*
+    ```bash
+    ./cs-reporter/querypie_cs_report.sh # 자동으로 QueryPie docker container 이름을 찾습니다.
+    ./cs-reporter/querypie_cs_report.sh querypie-app-1    
+    ```
+3.  스크립트 실행이 완료되면 현재 디렉토리에 `querypie_cs_report/YYYYMMDD` 와 같은 형식의 이름 (또는 스크립트에서 지정한 다른 이름)을 가진 **결과 디렉토리**가 생성됩니다. 이 디렉토리에는 문제 해결에 필요한 로그 및 설정 파일 등 다양한 진단 정보가 포함되어 있습니다.
+4.  **생성된 결과 디렉토리를 압축합니다:** 압축 도구(`zip`, `tar` 등)를 사용하여 `querypie_cs_report` 디렉토리를 하나의 파일로 만듭니다.
+    *   **zip 사용 시:**
+        ```bash
+        zip -r querypie_cs_report.zip querypie_cs_report/
+        ```
+    *   **tar.gz 사용 시:**
+        ```bash
+        tar -czvf querypie_cs_report.tar.gz querypie_cs_report/
+        ```
+5.  **압축된 결과 파일(`querypie_cs_report.zip` 또는 `querypie_cs_report.tar.gz`)을 지원팀이나 담당자에게 전달해 주세요.** 이 파일은 문제 원인 분석에 사용됩니다.
+
 ## 결과 해석
 
 스크립트는 가독성을 위해 색상을 사용합니다:
@@ -87,4 +116,6 @@
 *   **노란색:** 경고 또는 참고할 만한 설정 (예: 감지된 프록시)
 *   **빨간색:** 오류 또는 실패
 
-출력 내용에서 빨간색 오류 메시지가 있는지 확인하여 잠재적인 문제를 파악하세요. DNS 결과, 프록시 설정, 인증서 정보 등이 예상과 다르거나 일치하지 않는지 검토합니다. 
+`agent_diag_*` 스크립트 출력 내용에서 빨간색 오류 메시지가 있는지 확인하여 잠재적인 문제를 파악하세요. DNS 결과, 프록시 설정, 인증서 정보 등이 예상과 다르거나 일치하지 않는지 검토합니다.
+
+`querypie_cs_report.sh` 스크립트는 직접적인 결과 해석보다는 생성된 결과 디렉토리의 내용을 전달하는 것이 주 목적입니다. 
