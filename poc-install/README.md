@@ -21,7 +21,7 @@ QueryPie POC 설치를 위한 자동화 스크립트입니다. 이 스크립트�
 
 ### 실행 권한 추가  
 
-    chmod +x poc-install.sh.sh
+    chmod +x poc-install.sh
 
 ### 라이선스 파일 복사  
 
