@@ -80,7 +80,7 @@ This is an automated script for installing QueryPie POC. The script helps you ea
 
 ### Add Execution Permission
 
-    chmod +x poc-install.sh.sh
+    chmod +x poc-install.sh
 
 ### Copy License File
 
