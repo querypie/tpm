@@ -12,6 +12,9 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
+# Default harbor address
+HARBOR_ADDRESS="harbor.chequer.io/querypie"
+
 # Version format validation function
 validate_version() {
     local version=$1
@@ -41,16 +44,22 @@ download_image() {
     
     # Save image ID before docker pull
     local before_id
-    before_id=$(docker images -q harbor.chequer.io/querypie/$image_name:$version 2>/dev/null || echo "")
+    before_id=$(docker images -q $HARBOR_ADDRESS/$image_name:$version 2>/dev/null || echo "")
     
     # Execute docker pull directly to show progress
-    if ! docker pull harbor.chequer.io/querypie/$image_name:$version; then
-        return 1
+    if ! docker pull $HARBOR_ADDRESS/$image_name:$version; then
+        echo -e "${RED}Error: Failed to download image $HARBOR_ADDRESS/$image_name:$version${NC}"
+        echo -e "${RED}Possible reasons:${NC}"
+        echo -e "${RED}1. Harbor registry is not accessible${NC}"
+        echo -e "${RED}2. Image version does not exist${NC}"
+        echo -e "${RED}3. Authentication failed${NC}"
+        echo -e "${RED}4. Network connection issues${NC}"
+        exit 1
     fi
     
     # Check image ID after docker pull
     local after_id
-    after_id=$(docker images -q harbor.chequer.io/querypie/$image_name:$version)
+    after_id=$(docker images -q $HARBOR_ADDRESS/$image_name:$version)
     
     # Change NEEDS_RESTART value only for querypie image
     if [ "$image_name" = "querypie" ]; then
@@ -67,10 +76,11 @@ download_image() {
 # Version and option argument check
 if [ $# -lt 1 ]; then
     echo -e "${RED}Please provide a version as an argument.${NC}"
-    echo "Usage: $0 <version> [--with-tools] [--force-restart]"
+    echo "Usage: $0 <version> [--with-tools] [--force-restart] [-h <harbor-address>]"
     echo "  version: major.minor.patch format (e.g., 10.2.7)"
     echo "  --with-tools: Also update querypie-tools image"
     echo "  --force-restart: Restart service regardless of image update status"
+    echo "  -h <harbor-address>: Custom harbor address (default: harbor.chequer.io/querypie)"
     exit 1
 fi
 
@@ -99,9 +109,18 @@ while [[ $# -gt 0 ]]; do
             echo -e "${YELLOW}Service force restart is enabled.${NC}"
             shift
             ;;
+        -h)
+            if [ -z "$2" ]; then
+                echo -e "${RED}Error: Harbor address not provided for -h option${NC}"
+                exit 1
+            fi
+            HARBOR_ADDRESS="$2"
+            echo -e "${YELLOW}Using custom harbor address: $HARBOR_ADDRESS${NC}"
+            shift 2
+            ;;
         *)
             echo -e "${RED}Error: Unknown option '$1'${NC}"
-            echo "Usage: $0 <version> [--with-tools] [--force-restart]"
+            echo "Usage: $0 <version> [--with-tools] [--force-restart] [-h <harbor-address>]"
             exit 1
             ;;
     esac
