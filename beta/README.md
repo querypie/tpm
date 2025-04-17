@@ -39,16 +39,18 @@
 - **용도**: QueryPie 도커 이미지 교체 및 서비스 재시작
 - **다운로드**: `curl -L https://raw.githubusercontent.com/querypie/tpm/refs/heads/main/beta/ChangeImages.sh -o ChangeImages.sh`
 - **실행 위치**: `{유저홈} 혹은 setup.sh 저장 위치`
-- **사용법**: `./ChangeImages.sh <version> [--with-tools] [--force-restart]`
+- **사용법**: `./ChangeImages.sh <version> [--with-tools] [--force-restart] [-h <harbor-address>]`
   - `version`: 버전 번호 (예: 10.2.7)
   - `--with-tools`: QueryPie Tools 이미지도 함께 업데이트
   - `--force-restart`: 이미지 업데이트 여부와 관계없이 서비스 강제 재시작
+  - `-h <harbor-address>`: 커스텀 Harbor 레지스트리 주소 (기본값: harbor.chequer.io/querypie)
 - **예시**:
   ```bash
   ./ChangeImages.sh 10.2.7                    # QueryPie 이미지만 교체
   ./ChangeImages.sh 10.2.7 --with-tools       # QueryPie와 Tools 이미지 모두 교체
   ./ChangeImages.sh 10.2.7 --force-restart    # QueryPie 이미지 교체 후 강제 재시작
   ./ChangeImages.sh 10.2.7 --with-tools --force-restart  # 모든 이미지 교체 후 강제 재시작
+  ./ChangeImages.sh 10.2.7 -h custom.harbor.io/querypie  # 커스텀 Harbor 주소 사용
   ```
 
 ## OneStepUpgrade.sh
@@ -151,16 +153,18 @@ The location and distribution method will be changed upon official release.
 - **Purpose**: Replace QueryPie Docker images and restart services
 - **Download**: `curl -L https://raw.githubusercontent.com/querypie/tpm/refs/heads/main/beta/ChangeImages.sh -o ChangeImages.sh`
 - **Execution Location**: `{user home} or setup.sh storage location`
-- **Usage**: `./ChangeImages.sh <version> [--with-tools] [--force-restart]`
+- **Usage**: `./ChangeImages.sh <version> [--with-tools] [--force-restart] [-h <harbor-address>]`
   - `version`: Version number (e.g., 10.2.7)
   - `--with-tools`: Update QueryPie Tools images as well
   - `--force-restart`: Force restart services regardless of image updates
+  - `-h <harbor-address>`: Custom Harbor registry address (default: harbor.chequer.io/querypie)
 - **Example**:
   ```bash
   ./ChangeImages.sh 10.2.7                    # Replace QueryPie images only
   ./ChangeImages.sh 10.2.7 --with-tools       # Replace both QueryPie and Tools images
   ./ChangeImages.sh 10.2.7 --force-restart    # Replace QueryPie images and force restart
   ./ChangeImages.sh 10.2.7 --with-tools --force-restart  # Replace all images and force restart
+  ./ChangeImages.sh 10.2.7 -h custom.harbor.io/querypie  # Use custom Harbor address
   ```
 
 ## OneStepUpgrade.sh
