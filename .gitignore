@@ -1,0 +1,5 @@
+# Ignore top-level files
+/.idea/
+
+# Ignore .DS_Store files in any directory.
+.DS_Store
