@@ -3,3 +3,21 @@
 
 # Ignore .DS_Store files in any directory.
 .DS_Store
+
+# Ignore Terraform directories and state files
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+.terraform.lock.*
+
+# Ignore QueryPie license file
+.license.crt
+
+# Ignore QueryPie Docker registry credentials
+.docker-config.json
+
+# Ignore QueryPie Terraform variable definitions
+.querypie.tfvars
+
+# Ignore AWS private key files
+*.pem
