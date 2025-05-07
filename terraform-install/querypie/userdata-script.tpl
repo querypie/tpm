@@ -1,17 +1,24 @@
 #!/bin/bash -ex
 
+# Enable error handling with nounset to catch unbound variables
+set -o errexit
+set -o pipefail
+set -o nounset
+
 exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
 echo BEGIN
 
-set -e
-
 # Variables
 QP_TEMPDIR=$(mktemp -d)
-QUERYPIE_USER=${OS_USER}
 QP_BASEDIR=${OS_HOME_DIR}/querypie
 QP_VERSION=${QUERYPIE_VERSION}
 DOWNLOAD_VERSION=$${QP_VERSION%.*}.x
+QUERYPIE_USER=${OS_USER}
+QUERYPIE_HOST=${QUERYPIE_HOST}
 QUERYPIE_PROXY_HOST=${QUERYPIE_PROXY_HOST}
+OS_TYPE=${OS_TYPE}
+OS_USER=${OS_USER}
+OS_HOME_DIR=${OS_HOME_DIR}
 USE_EXTERNALDB=${USE_EXTERNALDB}
 USE_EXTERNALREDIS=${USE_EXTERNALREDIS}
 DB_HOST=${DB_HOST}
@@ -36,7 +43,7 @@ fi
 # Install and configure SSM Agent
 if ! command -v amazon-ssm-agent &>/dev/null; then
     echo -e "$${YELLOW}SSM Agent not found. Installing...$${NC}"
-    if [ "${OS_TYPE}" = "ubuntu" ]; then
+    if [ $OS_TYPE = "ubuntu" ]; then
         apt-get update
         apt-get install -y amazon-ssm-agent
     elif command -v dnf &>/dev/null; then
@@ -64,7 +71,7 @@ command_exists() {
 }
 
 # Set package manager based on OS type
-if [ "${OS_TYPE}" = "ubuntu" ]; then
+if [ $OS_TYPE = "ubuntu" ]; then
     PKG_MANAGER="apt-get"
 elif command_exists dnf; then
     PKG_MANAGER="dnf"
@@ -75,22 +82,22 @@ fi
 
 # Install Docker & Docker-compose and QueryPie
 echo -e "$${YELLOW}Downloading and running QueryPie setup script as $QUERYPIE_USER...$${NC}"
-cd ${OS_HOME_DIR}
+cd $OS_HOME_DIR
 curl -L https://dl.querypie.com/releases/compose/setup.sh -o setup.sh
 chmod +x setup.sh
 sudo -u $QUERYPIE_USER QP_VERSION=$QP_VERSION DOWNLOAD_VERSION=$DOWNLOAD_VERSION ./setup.sh
 
 # Move compose-env to the installation directory
-mv -f ${OS_HOME_DIR}/compose-env $QP_BASEDIR/$QP_VERSION/compose-env
-su $QUERYPIE_USER -c "mkdir -p ${OS_HOME_DIR}/.docker"
+mv -f $OS_HOME_DIR/compose-env $QP_BASEDIR/$QP_VERSION/compose-env
+su $QUERYPIE_USER -c "mkdir -p $OS_HOME_DIR/.docker"
 
 # Setup Docker configuration to login to Harbor registry
 echo -e "$${YELLOW}Setting up Docker configuration...$${NC}"
-cat <<EOF >${OS_HOME_DIR}/.docker/config.json
+cat <<EOF >$OS_HOME_DIR/.docker/config.json
 ${DOCKER_CONFIG}
 EOF
 
-chown $QUERYPIE_USER:$QUERYPIE_USER ${OS_HOME_DIR}/.docker/config.json
+chown $QUERYPIE_USER:$QUERYPIE_USER $OS_HOME_DIR/.docker/config.json
 
 echo -e "$${YELLOW}Creating cabinet data directory...$${NC}"
 mkdir -vp /data
@@ -98,7 +105,7 @@ chown -R $QUERYPIE_USER:$QUERYPIE_USER /data
 
 # Install MySQL Cli
 echo -e "$${YELLOW}Installing MySQL client...$${NC}"
-if [ "${OS_TYPE}" = "ubuntu" ]; then
+if [ $OS_TYPE = "ubuntu" ]; then
     apt-get update
     apt-get install -y mysql-client
 elif command_exists dnf; then

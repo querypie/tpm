@@ -1,4 +1,9 @@
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
+
 locals {
+  aws_account_id = data.aws_caller_identity.current.account_id
+
   # Define OS-specific settings based on os_type
   os_user     = var.os_type == "ubuntu" ? "ubuntu" : "ec2-user"
   os_home_dir = var.os_type == "ubuntu" ? "/home/ubuntu" : "/home/ec2-user"
@@ -30,6 +35,7 @@ resource "aws_instance" "querypie_ec2" {
       REDIS_PASSWORD        = var.use_external_redis ? var.redis_password : ""
       AGENT_SECRET          = var.agent_secret != "" ? var.agent_secret : random_id.agent_secret.hex
       KEY_ENCRYPTION_KEY    = var.key_encryption_key != "" ? var.key_encryption_key : random_id.key_encryption_key.b64_std
+      AWS_ACCOUNT_ID        = local.aws_account_id
     })
     destination = "${local.os_home_dir}/compose-env"
   }
@@ -47,8 +53,9 @@ resource "aws_instance" "querypie_ec2" {
   }
 
   user_data = templatefile(lookup(var.userdata, var.querypie_version, lookup(var.userdata, "default", "userdata-script.tpl")), {
-    QUERYPIE_VERSION      = var.querypie_version,
-    DOCKER_CONFIG         = file(var.docker_registry_credential_file),
+    QUERYPIE_VERSION      = var.querypie_version
+    DOCKER_CONFIG         = file(var.docker_registry_credential_file)
+    QUERYPIE_HOST         = var.create_lb ? "https://${var.querypie_domain_name}" : ""
     QUERYPIE_PROXY_HOST   = var.create_lb ? var.querypie_proxy_domain_name : ""
     USE_EXTERNALDB        = var.use_external_db ? "1" : "0"
     USE_EXTERNALREDIS     = var.use_external_redis ? "1" : "0"
