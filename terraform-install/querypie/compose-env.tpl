@@ -20,7 +20,7 @@ QUERYPIE_WEB_URL=${QUERYPIE_HOST}
 ## The AWS Account ID currently provisioned for QueryPie.
 ## This ID is used for provisioning the AWS Cross-Account Role.
 ## You can set using AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
-AWS_ACCOUNT_ID=142605707876
+AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
 
 # DB
 DB_HOST=${DB_HOST}

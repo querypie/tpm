@@ -18,7 +18,7 @@
 
 - **운영체제**: macOS, Linux 또는 WSL이 설치된 Windows
 - **메모리**: 최소 8GB RAM
-- **디스크 여유 공간**: 최소 1GB
+- **디스크 여유 공간**: 최소 5GB
 - **네트워크**: 안정적인 인터넷 연결
 
 ---
@@ -79,6 +79,10 @@ brew install tfenv
 tfenv install 1.5.5
 tfenv use 1.5.5
 terraform --version
+```
+
+### 2.3 Terraform 초기화
+```bash
 terraform init
 ```
 
@@ -86,7 +90,17 @@ terraform init
 
 ## 3. QueryPie 설치
 
-### 3.1 구성 파일 준비
+### 3.1 소스 코드 내려받기
+
+```bash
+# QueryPie Terraform 소스 코드 클론
+git clone https://github.com/querypie/tpm.git
+
+# Terraform 실행을 위한 디렉토리로 이동
+cd tpm/terraform-install/querypie
+```
+
+### 3.2 구성 파일 준비
 
 #### Docker 인증 설정
 
@@ -129,21 +143,21 @@ docker_registry_credential_file = ".docker-config.json"  # Docker 자격증명 �
 products = "DAC, SAC, KAC, WAC"            # 사용할 QueryPie 제품
 
 # EC2 인스턴스 사양
-instance_type       = "m5.large"           # EC2 인스턴스 타입
+instance_type       = "m6i.xlarge"         # 권장 EC2 인스턴스 타입
 os_type             = "amazon_linux"       # OS 종류 (amazon_linux, ubuntu, redhat)
 create_new_key_pair = true                 # 새 키 페어 생성 여부
 
 # 네트워크 설정
-vpc_id                = "vpc-0123456789abcdef0"   # VPC ID
+vpc_id                = "vpc-0123456789abcdef0"                # VPC ID
 lb_allowed_cidr_blocks = ["203.0.113.0/24","198.51.100.0/24"]  # ELB 허용 CIDR
 lb_subnet_ids          = ["subnet-0123456789abcdef0","subnet-0123456789abcdef1"]  # ELB 서브넷
-agentless_proxy_ports  = "40000-40002"             # 에이전트리스 프록시 포트 범위
+agentless_proxy_ports  = "40000-40002"                         # 에이전트리스 프록시 포트 범위
 
 # 로드 밸런서 설정
-create_lb                  = true                     # ELB 생성 여부
-querypie_domain_name       = "querypie.example.com"   # QueryPie 도메인
+create_lb                  = true                          # ELB 생성 여부
+querypie_domain_name       = "querypie.example.com"        # QueryPie 도메인
 querypie_proxy_domain_name = "proxy.querypie.example.com"  # 프록시 도메인
-aws_route53_zone_id        = "Z0123456789ABCDEFGHIJ"  # Route53 호스티드 존 ID
+aws_route53_zone_id        = "Z0123456789ABCDEFGHIJ"       # Route53 호스티드 존 ID
 aws_acm_certificate_arn    = "arn:aws:acm:region:account:certificate/id"  # ACM 인증서 ARN
 
 # 외부 DB 사용 옵션 (선택 사항)
@@ -164,7 +178,7 @@ use_external_redis = false          # 외부 Redis 사용 여부
 # key_encryption_key           = "your-encryption-key"
 ```
 
-### 3.2 배포
+### 3.3 배포
 
 #### 변경 내용 미리 보기
 ```bash
@@ -178,7 +192,7 @@ terraform apply -var-file=".querypie.tfvars"
 ```
 프롬프트에 `yes`를 입력하여 배포를 시작합니다.
 
-### 3.3 접근
+### 3.4 접근
 
 배포 완료 후 출력된 정보를 확인합니다:
 
@@ -251,4 +265,3 @@ terraform destroy -var-file=".querypie.tfvars"
 - [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
 - [AWS CLI 문서](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html)
 - [Terraform 모범 사례](https://www.terraform-best-practices.com/)
-
