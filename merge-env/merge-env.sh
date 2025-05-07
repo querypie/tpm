@@ -121,6 +121,22 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+# Function for cross-platform in-place sed
+# Usage: sed_inplace "s|pattern|replacement|" filename
+sed_inplace() {
+    local pattern=$1
+    local file=$2
+
+    # Check if we're on macOS (BSD sed) or Linux (GNU sed)
+    if [[ "$(uname)" == "Darwin" ]]; then
+        # macOS requires an empty string as the extension for in-place editing
+        sed -i '' "$pattern" "$file"
+    else
+        # Linux doesn't need the empty string
+        sed -i "$pattern" "$file"
+    fi
+}
+
 #######################################
 # New functions for file operations
 #######################################
@@ -304,7 +320,7 @@ handle_redis_connection_mode() {
 
             if [ "$DRY_RUN" = false ]; then
                 # Update REDIS_CONNECTION_MODE to STANDALONE
-                sed -i '' "s|^REDIS_CONNECTION_MODE=.*|REDIS_CONNECTION_MODE=STANDALONE|" "$NEW_FILE"
+                sed_inplace "s|^REDIS_CONNECTION_MODE=.*|REDIS_CONNECTION_MODE=STANDALONE|" "$NEW_FILE"
             fi
         else
             echo "REDIS_CONNECTION_MODE key doesn't exist or has a value, skipping"
@@ -315,7 +331,7 @@ handle_redis_connection_mode() {
         if [ "$DRY_RUN" = false ]; then
             # Update REDIS_NODES in the new file
             if grep -q "^REDIS_NODES=" "$NEW_FILE"; then
-                sed -i '' "s|^REDIS_NODES=.*|REDIS_NODES=$redis_nodes|" "$NEW_FILE"
+                sed_inplace "s|^REDIS_NODES=.*|REDIS_NODES=$redis_nodes|" "$NEW_FILE"
             else
                 echo "REDIS_NODES=$redis_nodes" >> "$NEW_FILE"
             fi
@@ -324,6 +340,32 @@ handle_redis_connection_mode() {
             if [[ "$new_mode_exists" -eq 1 ]] && [[ -z "$new_mode_value" ]]; then
                 echo -e "${GREEN}✓ Successfully updated REDIS_CONNECTION_MODE${NC}"
             fi
+        fi
+
+        # Add to MERGED_FILE directly for DRY_RUN mode
+        if [ "$DRY_RUN" = true ]; then
+            # Add REDIS_CONNECTION_MODE if needed
+            if [[ "$new_mode_exists" -eq 1 ]] && [[ -z "$new_mode_value" ]]; then
+                echo "REDIS_CONNECTION_MODE=STANDALONE" >> "$MERGED_FILE"
+                # Add to NEW_KEYS for display
+                echo "Key 'REDIS_CONNECTION_MODE'=STANDALONE (automatically set)" >> "$NEW_KEYS"
+            fi
+            # Add REDIS_NODES
+            echo "REDIS_NODES=$redis_nodes" >> "$MERGED_FILE"
+            # Add to NEW_KEYS for display
+            echo "Key 'REDIS_NODES'=$redis_nodes (generated from REDIS_HOST:REDIS_PORT)" >> "$NEW_KEYS"
+
+            # Mark these keys as processed
+            echo "REDIS_CONNECTION_MODE" >> "$TEMP_DIR/processed_redis_keys.txt"
+            echo "REDIS_NODES" >> "$TEMP_DIR/processed_redis_keys.txt"
+
+            # Add REDIS_HOST and REDIS_PORT to removed keys for display
+            echo "Key 'REDIS_HOST'='$redis_host'" >> "$REMOVED_KEYS"
+            echo "Key 'REDIS_PORT'='$redis_port'" >> "$REMOVED_KEYS"
+
+            # Skip adding these keys to the general removed keys section
+            echo "REDIS_HOST" >> "$TEMP_DIR/skip_removed_keys.txt"
+            echo "REDIS_PORT" >> "$TEMP_DIR/skip_removed_keys.txt"
         fi
 
         # Print the new keys section
@@ -358,15 +400,40 @@ handle_redis_connection_mode() {
         if [ "$DRY_RUN" = false ]; then
             # Update REDIS_NODES in the new file
             if grep -q "^REDIS_NODES=" "$NEW_FILE"; then
-                sed -i '' "s|^REDIS_NODES=.*|REDIS_NODES=$redis_nodes|" "$NEW_FILE"
+                sed_inplace "s|^REDIS_NODES=.*|REDIS_NODES=$redis_nodes|" "$NEW_FILE"
             else
                 echo "REDIS_NODES=$redis_nodes" >> "$NEW_FILE"
             fi
 
             # Update REDIS_CONNECTION_MODE to STANDALONE
-            sed -i '' "s|^REDIS_CONNECTION_MODE=.*|REDIS_CONNECTION_MODE=STANDALONE|" "$NEW_FILE"
+            sed_inplace "s|^REDIS_CONNECTION_MODE=.*|REDIS_CONNECTION_MODE=STANDALONE|" "$NEW_FILE"
 
             echo -e "${GREEN}✓ Successfully updated REDIS_NODES and REDIS_CONNECTION_MODE${NC}"
+        fi
+
+        # Add to MERGED_FILE directly for DRY_RUN mode
+        if [ "$DRY_RUN" = true ]; then
+            # Add REDIS_CONNECTION_MODE
+            echo "REDIS_CONNECTION_MODE=STANDALONE" >> "$MERGED_FILE"
+            # Add to NEW_KEYS for display
+            echo "Key 'REDIS_CONNECTION_MODE'=STANDALONE (automatically set)" >> "$NEW_KEYS"
+
+            # Add REDIS_NODES
+            echo "REDIS_NODES=$redis_nodes" >> "$MERGED_FILE"
+            # Add to NEW_KEYS for display
+            echo "Key 'REDIS_NODES'=$redis_nodes (generated from REDIS_HOST:REDIS_PORT)" >> "$NEW_KEYS"
+
+            # Mark these keys as processed
+            echo "REDIS_CONNECTION_MODE" >> "$TEMP_DIR/processed_redis_keys.txt"
+            echo "REDIS_NODES" >> "$TEMP_DIR/processed_redis_keys.txt"
+
+            # Add REDIS_HOST and REDIS_PORT to removed keys for display
+            echo "Key 'REDIS_HOST'='$redis_host'" >> "$REMOVED_KEYS"
+            echo "Key 'REDIS_PORT'='$redis_port'" >> "$REMOVED_KEYS"
+
+            # Skip adding these keys to the general removed keys section
+            echo "REDIS_HOST" >> "$TEMP_DIR/skip_removed_keys.txt"
+            echo "REDIS_PORT" >> "$TEMP_DIR/skip_removed_keys.txt"
         fi
 
         # Print the new keys section
@@ -460,6 +527,11 @@ trim() {
 process_key_value() {
     local key=$1
     local value=$2
+
+    # Check if this key has already been processed by handle_redis_connection_mode
+    if [ -f "$TEMP_DIR/processed_redis_keys.txt" ] && grep -q "^$key$" "$TEMP_DIR/processed_redis_keys.txt"; then
+        return
+    fi
 
     # Special handling for REDIS_NODES when it's empty
     if [[ "$key" == "REDIS_NODES" ]] && [[ -z "$value" ]]; then
