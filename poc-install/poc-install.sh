@@ -13,17 +13,17 @@ NC='\033[0m' # No Color
 get_server_ip() {
     # eth0, ens, enp 인터페이스 중 활성화된 인터페이스의 IP 주소를 찾음
     local ip=$(ip addr show | grep -E 'inet.*(eth|ens|enp)' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d'/' -f1 | head -n1)
-    
+
     # 위 방법으로 IP를 찾지 못한 경우, 기본 네트워크 인터페이스에서 IP를 찾음
     if [ -z "$ip" ]; then
         ip=$(hostname -I | awk '{print $1}')
     fi
-    
+
     # 여전히 IP를 찾지 못한 경우 기본값 반환
     if [ -z "$ip" ]; then
         ip="192.168.1.100"
     fi
-    
+
     echo "$ip"
 }
 
@@ -51,7 +51,7 @@ process_input() {
     local key=$1
     local current_value=$2
     local new_value=""
-    
+
     if [ -n "$current_value" ]; then
         echo -e "Current ${key} value: $current_value"
         read -p "Press Enter to keep the current value. Enter a new value to change: " new_value
@@ -61,7 +61,7 @@ process_input() {
     else
         read -p "Enter ${key} value: " new_value
     fi
-    
+
     echo "$new_value"
 }
 
@@ -126,7 +126,7 @@ while true; do
     # 직접 로그인 명령어 실행
     docker login harbor.chequer.io
     login_status=$?
-    
+
     if [ $login_status -eq 0 ]; then
         # 로그인 성공 확인
         if docker login harbor.chequer.io 2>&1 | grep -q "Authenticating with existing credentials"; then
@@ -134,7 +134,7 @@ while true; do
             break
         fi
     fi
-    
+
     echo -e "${RED}Login failed. Would you like to try again? (y/n)${NC}"
     read -r retry
     if [[ ! "$retry" =~ ^[Yy]$ ]]; then
@@ -228,7 +228,7 @@ validate_value() {
     if [ "$key" = "REDIS_NODES" ]; then
         # 마지막 쉼표 제거
         value=$(echo "$value" | sed 's/,$//')
-        
+
         # host:port 형식 또는 쉼표로 연결된 host:port 형식 검증
         IFS=',' read -ra nodes <<< "$value"
         for node in "${nodes[@]}"; do
@@ -272,7 +272,7 @@ handle_env_input() {
     local compose_env_file="compose-env"
     local temp_file="compose-env.temp"
     local server_ip=$(get_server_ip)
-    
+
     # compose-env 파일의 모든 내용을 임시 파일로 복사 (주석 포함)
     cp "$compose_env_file" "$temp_file"
 
@@ -282,7 +282,15 @@ handle_env_input() {
     # REQUIRED_KEYS와 compose-env 파일 모두에 있는 키들만 처리
     for key in "${REQUIRED_KEYS[@]}"; do
         # compose-env에 없는 키는 건너뛰기
-        if [[ ! " ${compose_env_keys[@]} " =~ " ${key} " ]]; then
+        local key_found=false
+        for env_key in "${compose_env_keys[@]}"; do
+            if [[ "$env_key" == "$key" ]]; then
+                key_found=true
+                break
+            fi
+        done
+
+        if [[ "$key_found" == false ]]; then
             continue
         fi
 
@@ -290,7 +298,7 @@ handle_env_input() {
         local value=""
         local existing_value=""
         local key_exists=false
-        
+
         # 기존 compose-env 파일에서 키가 있는지 확인
         if grep -q "^$key=" "$compose_env_file" 2>/dev/null; then
             key_exists=true
@@ -302,7 +310,7 @@ handle_env_input() {
         if [ "$key" = "QUERYPIE_WEB_URL" ]; then
             echo -e "${YELLOW}QUERYPIE_WEB_URL must start with http:// or https://.${NC}"
         fi
-        
+
         # 키가 있고 값이 있는 경우
         if [ "$key_exists" = true ] && [ -n "$existing_value" ]; then
             echo -e "Current ${key} value ${RED}[${existing_value}]${NC}"
@@ -365,12 +373,12 @@ handle_env_input() {
                         ;;
                 esac
             fi
-            
+
             # 새로운 값 입력 받기
             while true; do
                 echo -n "Enter ${key} value: "
                 read -r value
-                
+
                 if validate_value "$key" "$value"; then
                     break
                 fi
@@ -414,16 +422,16 @@ fi
 while true; do
     # 환경 변수 입력 받기
     handle_env_input
-    
+
     # 설정된 내용 확인
     echo -e "\n${YELLOW}Current compose-env file content:${NC}"
     echo -e "${BLUE}----------------------------------------${NC}"
     cat compose-env
     echo -e "${BLUE}----------------------------------------${NC}"
-    
+
     echo -e "\n${YELLOW}Do you want to finish the configuration? (y/n)${NC}"
     read -p "> " confirm
-    
+
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
         echo -e "${GREEN}Proceeding with the configured values.${NC}"
         break
@@ -434,6 +442,40 @@ while true; do
         echo -e "${RED}Invalid input. Please enter y or n.${NC}"
     fi
 done 
+
+# Check if DB_USERNAME is not "querypie"
+DB_USERNAME=$(grep "^DB_USERNAME=" compose-env 2>/dev/null | cut -d'=' -f2-)
+if [ "$DB_USERNAME" != "querypie" ]; then
+    echo -e "\n${YELLOW}DB_USERNAME is set to '$DB_USERNAME', which is different from the default 'querypie'.${NC}"
+    echo -e "${YELLOW}Do you want to modify ./mysql_init/init.sql to use '$DB_USERNAME' instead of 'querypie'? (y/n)${NC}"
+    read -p "> " modify_init_sql
+
+    if [[ "$modify_init_sql" =~ ^[Yy]$ ]]; then
+        # Check if mysql_init directory exists, if not show error and exit
+        if [ ! -d "./mysql_init" ]; then
+            echo -e "${RED}Error: ./mysql_init directory does not exist.${NC}"
+            exit 1
+        fi
+
+        # Check if init.sql exists, if not show error and exit
+        if [ ! -f "./mysql_init/init.sql" ]; then
+            echo -e "${RED}Error: ./mysql_init/init.sql file does not exist.${NC}"
+            exit 1
+        fi
+
+        # Backup the original init.sql file
+        cp "./mysql_init/init.sql" "./mysql_init/init.sql.backup"
+        echo -e "${GREEN}Backed up init.sql to init.sql.backup.${NC}"
+
+        # Modify the init.sql file to use the new DB_USERNAME
+        sed -i.bak "s/GRANT ALL privileges ON querypie\.\* TO querypie@'%';/GRANT ALL privileges ON querypie.* TO $DB_USERNAME@'%';/g" "./mysql_init/init.sql"
+        sed -i.bak "s/GRANT ALL privileges ON querypie_log\.\* TO querypie@'%';/GRANT ALL privileges ON querypie_log.* TO $DB_USERNAME@'%';/g" "./mysql_init/init.sql"
+        sed -i.bak "s/GRANT ALL privileges ON querypie_snapshot\.\* TO querypie@'%';/GRANT ALL privileges ON querypie_snapshot.* TO $DB_USERNAME@'%';/g" "./mysql_init/init.sql"
+        rm -f "./mysql_init/init.sql.bak"
+
+        echo -e "${GREEN}Modified init.sql to use '$DB_USERNAME' instead of 'querypie'.${NC}"
+    fi
+fi
 
 echo -e "\n${YELLOW}Starting database...${NC}"
 docker-compose --env-file compose-env --profile database up -d
@@ -491,7 +533,7 @@ while true; do
         echo -e "\n${YELLOW}Adding internal QueryPie license...${NC}"
         docker exec -it querypie-tools-1 /app/script/license.sh add
         license_status=$?
-        
+
         if [ $license_status -ne 0 ]; then
             echo -e "${RED}Error occurred while adding license. Would you like to try again? (y/n)${NC}"
             read -r retry
