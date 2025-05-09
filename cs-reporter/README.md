@@ -7,11 +7,14 @@
 *   `agent_diag_mac.sh`: **macOS**용 특정 엔드포인트 대상 네트워크 진단 스크립트 (Bash/zsh 사용)
 *   `agent_diag_win.ps1`: **Windows**용 특정 엔드포인트 대상 네트워크 진단 스크립트 (PowerShell 사용)
 *   `querypie_cs_report.sh`: **macOS/Linux**용 종합 진단 정보 수집 스크립트 (Bash/zsh 사용)
+*   `conn_checker.sh`: **macOS/Linux**용 특정 호스트 및 포트 연결 확인 스크립트 (Bash/zsh 사용)
+*   `conn_checker.ps1`: **Windows**용 특정 호스트 및 포트 연결 확인 스크립트 (PowerShell 사용)
 
 ## 목적
 
 *   `agent_diag_*` 스크립트: 사용자가 지정한 웹 도메인과 호스트 도메인에 대해 네트워크 검사를 수행하여 DNS, 프록시, 방화벽, TLS 인증서 등 특정 연결 문제를 식별합니다.
 *   `querypie_cs_report.sh`: 시스템 및 네트워크 환경 전반에 대한 진단 정보를 수집하여 문제 해결에 필요한 종합적인 데이터를 제공합니다.
+*   `conn_checker.*` 스크립트: 지정된 호스트와 포트로의 기본적인 TCP 네트워크 연결 가능성을 빠르게 확인합니다. 방화벽 규칙이나 서비스 리스닝 상태를 간단히 점검하는 데 유용합니다.
 
 ## 주요 기능 (`agent_diag_*` 스크립트)
 
@@ -26,13 +29,14 @@
 
 ## 사전 요구 사항
 
-*   **macOS (`agent_diag_mac.sh`, `querypie_cs_report.sh`):**
+*   **macOS (`agent_diag_mac.sh`, `querypie_cs_report.sh`, `conn_checker.sh`):**
     *   Bash 또는 zsh 호환 셸 (macOS 기본)
     *   `dig` 명령어 (macOS 네트워크 도구에 포함되어 있거나 `brew install bind`로 설치 가능)
     *   `openssl` 명령어 (macOS에 기본 포함)
+    *   `conn_checker.sh`의 경우: `nc` (netcat) 또는 `telnet` 명령어가 필요할 수 있습니다 (대부분의 macOS/Linux 시스템에 기본 포함).
     *   (`querypie_cs_report.sh`의 경우 추가적인 시스템 명령어가 필요할 수 있습니다.)
-*   **Windows (`agent_diag_win.ps1`):**
-    *   PowerShell (최신 Windows 버전에 기본 포함)
+*   **Windows (`agent_diag_win.ps1`, `conn_checker.ps1`):**
+    *   PowerShell (최신 Windows 버전에 기본 포함). `conn_checker.ps1`은 PowerShell 4.0 이상 (`Test-NetConnection` cmdlet 필요)이 권장됩니다.
     *   .NET Framework (일반적으로 기본 포함)
 
 ## 사용 방법
@@ -108,6 +112,62 @@
         ```
 5.  **압축된 결과 파일(`querypie_cs_report.zip` 또는 `querypie_cs_report.tar.gz`)을 지원팀이나 담당자에게 전달해 주세요.** 이 파일은 문제 원인 분석에 사용됩니다.
 
+### conn_checker.sh (macOS/Linux 특정 호스트/포트 연결 확인)
+
+이 스크립트는 지정된 호스트와 포트로의 TCP 연결을 시도하여 네트워크 연결성을 확인합니다.
+
+1.  스크립트에 실행 권한을 부여합니다:
+    ```bash
+    chmod +x cs-reporter/conn_checker.sh
+    ```
+2.  터미널에서 스크립트를 실행하며, 첫 번째 인자로 대상 호스트(IP 주소 또는 도메인 이름), 두 번째 인자로 대상 포트 번호를 전달합니다:
+    ```bash
+    ./cs-reporter/conn_checker.sh <target_host> <target_port>
+    ```
+    **예시:**
+    ```bash
+    # querypie-proxy.example.com 의 9000번 포트 연결 확인
+    ./cs-reporter/conn_checker.sh querypie-proxy.example.com 9000
+
+    # IP 주소 192.168.1.100 의 3306번 포트 연결 확인
+    ./cs-reporter/conn_checker.sh 192.168.1.100 3306
+    ```
+3.  **결과 확인:**
+    *   스크립트는 일반적으로 연결 성공 또는 실패 메시지를 출력합니다.
+    *   연결에 성공하면 "Connection to <target_host> <target_port> succeeded!" 와 유사한 메시지가 표시될 수 있습니다.
+    *   연결에 실패하면 "Connection to <target_host> <target_port> failed!" 또는 `nc`/`telnet`의 오류 메시지(예: "Connection timed out", "Connection refused")가 표시될 수 있습니다.
+    *   방화벽에 의해 차단되거나, 해당 포트에서 서비스가 실행 중이지 않거나, 네트워크 경로에 문제가 있는 경우 연결에 실패할 수 있습니다.
+
+### conn_checker.ps1 (Windows 특정 호스트/포트 연결 확인)
+
+이 스크립트는 지정된 호스트와 포트로의 TCP 연결을 시도하여 네트워크 연결성을 확인합니다 (`Test-NetConnection` cmdlet 사용).
+
+1.  PowerShell을 실행합니다. (참고: 일반 사용자 권한으로도 실행 가능하나, 네트워크 문제 진단 시 관리자 권한이 더 많은 정보를 제공할 수 있습니다.)
+2.  필요한 경우 현재 세션의 스크립트 실행 정책을 변경합니다:
+    ```powershell
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+    ```
+3.  스크립트를 실행하며, 대상 호스트와 포트를 파라미터로 전달합니다:
+    ```powershell
+    # 명명된 파라미터 사용 (권장)
+    .\cs-reporter\conn_checker.ps1 -TargetHost <target_host> -TargetPort <target_port>
+
+    # 위치 기반 파라미터 사용
+    .\cs-reporter\conn_checker.ps1 <target_host> <target_port>
+    ```
+    **예시:**
+    ```powershell
+    # querypie-proxy.example.com 의 9000번 포트 연결 확인
+    .\cs-reporter\conn_checker.ps1 -TargetHost querypie-proxy.example.com -TargetPort 9000
+
+    # IP 주소 192.168.1.100 의 3306번 포트 연결 확인
+    .\cs-reporter\conn_checker.ps1 192.168.1.100 3306
+    ```
+4.  **결과 확인:**
+    *   스크립트는 연결 성공 또는 실패 메시지를 명확하게 출력합니다.
+    *   연결 성공 시 "결과: 연결 성공!" 메시지와 함께 `Test-NetConnection`의 상세 결과가 표시될 수 있습니다.
+    *   연결 실패 시 "결과: 연결 실패." 메시지와 함께 가능한 원인 목록 및 상세 오류 확인을 위한 직접 실행 명령어를 안내합니다.
+
 ## 결과 해석
 
 스크립트는 가독성을 위해 색상을 사용합니다:
@@ -118,4 +178,6 @@
 
 `agent_diag_*` 스크립트 출력 내용에서 빨간색 오류 메시지가 있는지 확인하여 잠재적인 문제를 파악하세요. DNS 결과, 프록시 설정, 인증서 정보 등이 예상과 다르거나 일치하지 않는지 검토합니다.
 
-`querypie_cs_report.sh` 스크립트는 직접적인 결과 해석보다는 생성된 결과 디렉토리의 내용을 전달하는 것이 주 목적입니다. 
+`querypie_cs_report.sh` 스크립트는 직접적인 결과 해석보다는 생성된 결과 디렉토리의 내용을 전달하는 것이 주 목적입니다.
+
+`conn_checker.*` 스크립트는 간단한 연결 성공/실패 여부를 통해 기본적인 네트워크 경로 및 포트 접근성을 판단하는 데 사용됩니다. 
