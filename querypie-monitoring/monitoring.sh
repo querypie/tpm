@@ -6,12 +6,14 @@ set -o nounset
 
 # Constants
 readonly SCRIPT_NAME=$(basename "$0")
-readonly MONITORING_DIR="querypie-monitoring"
 readonly GITHUB_REPO="https://github.com/querypie/tpm/archive/refs/heads/main.tar.gz"
 readonly DASHBOARD_FILES=("querypie-status.json" "querypie-log.json" "querypie-cp.json")
 
+# Get host IP address
+HOST_IP=$(hostname -I | awk '{print $1}' || echo "127.0.0.1")
+
 # Default configuration
-readonly DEFAULT_MYSQL_HOST="127.0.0.1"
+readonly DEFAULT_MYSQL_HOST="${HOST_IP}"
 readonly DEFAULT_PORT="3306"
 readonly DEFAULT_MYSQL_USER="querypie"
 readonly DEFAULT_MYSQL_PASS="Querypie1!"
@@ -61,15 +63,18 @@ check_prerequisites() {
 setup_monitoring_dir() {
   log_info "Setting up monitoring directory..."
 
-  mkdir -p "${MONITORING_DIR}"
-
   log_info "Downloading monitoring files..."
   curl -L "${GITHUB_REPO}" | tar -xzf - \
     --strip-components=2 \
-    -C "${MONITORING_DIR}" \
+    -C . \
     tpm-main/querypie-monitoring
 
-  cd "${MONITORING_DIR}"
+  # --- 추가 시작 ---
+  log_info "Setting execute permission for ${SCRIPT_NAME}..."
+  chmod +x "${SCRIPT_NAME}"
+  log_info "Execute permission set."
+  # --- 추가 끝 ---
+
   log_info "Monitoring directory setup completed"
 }
 
@@ -103,7 +108,7 @@ setup_mysql_config() {
   MYSQL_PASS=${MYSQL_PASS:-"${DEFAULT_MYSQL_PASS}"}
   MYSQL_DB=${MYSQL_DB:-"${DEFAULT_MYSQL_DB}"}
 
-  log_debug "MySQL Host: ${MYSQL_HOST}"
+  log_info "Using MySQL Host: ${MYSQL_HOST}"
   log_debug "MySQL Port: ${PORT}"
   log_debug "MySQL User: ${MYSQL_USER}"
   log_debug "MySQL Database: ${MYSQL_DB}"
@@ -311,6 +316,12 @@ setup_monitoring() {
 # Function to start monitoring services
 start_monitoring() {
   log_info "Starting monitoring services..."
+
+  if [[ ! -f "monitoring.yml" ]]; then
+    log_error "monitoring.yml not found. Please run setup first."
+    exit 1
+  fi
+
   docker-compose -f monitoring.yml up -d
   log_info "Monitoring services started successfully!"
 }
@@ -318,6 +329,12 @@ start_monitoring() {
 # Function to stop monitoring services
 stop_monitoring() {
   log_info "Stopping monitoring services..."
+
+  if [[ ! -f "monitoring.yml" ]]; then
+    log_error "monitoring.yml not found. Please run setup first."
+    exit 1
+  fi
+
   docker-compose -f monitoring.yml down
   log_info "Monitoring services stopped successfully!"
 }

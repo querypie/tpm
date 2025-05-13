@@ -1,45 +1,21 @@
 # QueryPie 모니터링 설정 가이드
 
-실행 중인 QueryPie 인스턴스에 대한 모니터링 설정 가이드입니다.
-QueryPie 인스턴스가 다수일 경우 각각의 노드에서 실행해줘야 합니다.
+## 개요
+QueryPie 모니터링은 Prometheus, Grafana, Process Exporter를 사용하여 QueryPie의 상태를 모니터링하는 시스템입니다.
 
-이 가이드는 Prometheus, Grafana, Process Exporter를 사용하여 QueryPie 모니터링 시스템을 설정하는 방법을 설명합니다. 모니터링 시스템은 QueryPie의 성능, 리소스 사용량, 데이터베이스 활동에 대한 실시간 인사이트를 제공합니다.
+## 설치 방법
 
-## 사전 요구사항
-
-- QueryPie 10.1.7 이상 버전 설치
-- Docker 및 Docker Compose 설치
-- QueryPie MetaDB 접근 권한
-
-## 설치 단계
-
-### 1. 모니터링 스크립트 다운로드
-QueryPie Docker 인스턴스가 설치되어 있는 노드에서 다음 명령어를 실행합니다:
+### 1. 모니터링 디렉토리 생성 및 이동
 ```bash
-curl -O https://raw.githubusercontent.com/querypie/tpm/refs/heads/main/querypie-monitoring/monitoring.sh
+mkdir querypie-monitoring
+cd querypie-monitoring
+```
+
+### 2. 모니터링 스크립트 다운로드
+```bash
+curl -O https://raw.githubusercontent.com/querypie/tpm/main/querypie-monitoring/monitoring.sh
 chmod +x monitoring.sh
 ```
-
-### 2. MetaDB 설정
-MetaDB 연결 설정은 두 가지 방법으로 구성할 수 있습니다:
-
-#### 방법 1: 환경 변수 사용
-설정 스크립트를 실행하기 전에 다음 환경 변수를 설정합니다:
-```bash
-export MYSQL_HOST=<메타DB_호스트>
-export PORT=<메타DB_포트>
-export MYSQL_USER=<메타DB_사용자>
-export MYSQL_PASS=<메타DB_비밀번호>
-export MYSQL_DB="querypie_log"
-```
-
-#### 방법 2: 기본값 사용
-환경 변수를 설정하지 않으면 스크립트는 다음 기본값을 사용합니다:
-- MYSQL_HOST: 127.0.0.1
-- PORT: 3306
-- MYSQL_USER: querypie
-- MYSQL_PASS: Querypie1!
-- MYSQL_DB: querypie_log
 
 ### 3. 모니터링 환경 초기화
 ```bash
@@ -47,26 +23,40 @@ export MYSQL_DB="querypie_log"
 ```
 
 ### 4. 모니터링 서비스 시작
-각 QueryPie 인스턴스에서 다음 명령어를 실행합니다:
 ```bash
 ./monitoring.sh up
 ```
 
-이 명령어는 다음 컴포넌트들을 실행합니다:
-- Prometheus (메트릭 수집)
-- Grafana (대시보드 시각화)
-- procstat (proc 메트릭)
+### 5. 모니터링 서비스 중지 (필요시)
+```bash
+./monitoring.sh down
+```
 
-## 상태 확인
+## 대시보드 접속
+- Grafana 대시보드: http://localhost:3000
+- Prometheus 대시보드: http://localhost:9090
 
-### 접속 확인
-- Grafana: `http://{instance-ip}:3000/dashboards`
-- Prometheus: `http://{instance-ip}:9090`
+## 환경 변수 설정 (선택사항)
+기본값을 변경하려면 다음 환경 변수를 설정할 수 있습니다:
+```bash
+export MYSQL_HOST="your-mysql-host"
+export PORT="your-mysql-port"
+export MYSQL_USER="your-mysql-user"
+export MYSQL_PASS="your-mysql-password"
+export MYSQL_DB="your-mysql-database"
+```
 
-### 메트릭 수집 확인
-Prometheus에서 다음 타겟들의 상태를 확인:
-- QueryPie (80)
-- procstat
+## 주의사항
+- QueryPie가 실행 중이어야 합니다
+- Docker와 Docker Compose가 설치되어 있어야 합니다
+- 포트 3000, 9090, 9256이 사용 가능해야 합니다
+- QueryPie 버전 3.0.0 이상에서만 지원됩니다
+
+## 사전 요구사항
+
+- QueryPie 10.1.7 이상 버전 설치
+- Docker 및 Docker Compose 설치
+- QueryPie MetaDB 접근 권한
 
 ## 제공되는 대시보드
 
