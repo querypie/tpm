@@ -28,7 +28,7 @@ print_banner() {
 
 QUERYPIE_NAME=$1
 if [ -z "$QUERYPIE_NAME" ]; then
-	QUERYPIE_NAME=$(docker ps --filter "name=^querypie" --format "{{.Names}}")
+	QUERYPIE_NAME=$(docker ps --filter "name=^querypie-app" --format "{{.Names}}")
 else
 	QUERYPIE_NAME_EXISTS=$(docker ps --filter name="^$QUERYPIE_NAME$" --format "{{.Names}}")
 	if [ -z "$QUERYPIE_NAME_EXISTS" ]; then
@@ -73,8 +73,8 @@ netstat -an > $OUTPUT_DIR/netstat
 echo -n "Listening... : "
 cat $OUTPUT_DIR/netstat | grep LISTEN | egrep ^tcp | fgrep LISTEN | wc -l
 
-docker exec querypie /sbin/ifconfig > $OUTPUT_DIR/docker_ifconfig
-docker exec querypie netstat -an > $OUTPUT_DIR/docker_netstat
+docker exec $QUERYPIE_NAME /sbin/ifconfig > $OUTPUT_DIR/docker_ifconfig
+docker exec $QUERYPIE_NAME netstat -an > $OUTPUT_DIR/docker_netstat
 echo -n "Docker Listening... : "
 cat $OUTPUT_DIR/docker_netstat | grep LISTEN | egrep ^tcp | fgrep LISTEN | wc -l
 
