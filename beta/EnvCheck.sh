@@ -150,7 +150,8 @@ if [[ -n "$OUTPUT_FILE" ]]; then
     # Create a temporary file descriptor for tee
     exec 3>&1
     # Redirect stdout to tee which writes to both the file and fd 3 (original stdout)
-    exec 1> >(tee "$OUTPUT_FILE" >&3)
+    # Use 'sed' to strip ANSI color codes when writing to file
+    exec 1> >(tee >(sed 's/\x1b\[[0-9;]*m//g' > "$OUTPUT_FILE") >&3)
     echo -e "${GREEN}Output will be saved to ${OUTPUT_FILE}${NC}"
 fi
 
