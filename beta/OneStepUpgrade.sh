@@ -119,44 +119,64 @@ confirm "위 설정으로 계속 진행하시겠습니까?"
 # docker instance 중지
 echo "Docker 인스턴스 중지 중..."
 
-docker-compose --env-file compose-env --profile querypie down
+# 실행 중인 인스턴스가 없어도 계속 진행
+docker-compose --env-file compose-env --profile querypie down || {
+    echo "실행 중인 Docker 인스턴스가 없거나 중지 중 오류가 발생했습니다. 계속 진행합니다."
+}
 
 # tools 프로필로 docker-compose 실행
 echo "Docker tools 시작 중..."
-docker-compose --env-file compose-env --profile tools up -d
+docker-compose --env-file compose-env --profile tools up -d || {
+    echo "Docker tools 시작 중 오류가 발생했습니다. 계속 진행합니다."
+}
 
-# 5초 대기
-echo "5초 대기 중..."
-sleep 5
-
-# scanner.sh 실행
-echo "scanner.sh 실행 중..."
-./scanner.sh || true
-
-# scanner.sh가 비정상 종료되더라도 스크립트 계속 진행
-echo ""
-echo "스캔 결과가 표시되었습니다. 일부 로컬 연결 테스트가 실패하는 것은 정상입니다."
-echo "Instance 연결 테스트가 성공했는지 확인하세요."
-echo ""
-
-# 사용자 확인
-confirm "스캔 결과를 확인했습니다. 계속 진행하시겠습니까?"
+# 10초 대기
+echo "10초 대기 중..."
+sleep 10
 
 # 마이그레이션 실행
 echo "마이그레이션 실행 중..."
-docker exec -it querypie-tools-1 /app/script/migrate.sh runall
+
+# 마이그레이션 실행 (최대 3번 시도, 5초 간격)
+MAX_ATTEMPTS=3
+ATTEMPT=1
+MIGRATION_SUCCESS=false
+
+while [ $ATTEMPT -le $MAX_ATTEMPTS ] && [ "$MIGRATION_SUCCESS" = "false" ]; do
+    echo "마이그레이션 시도 $ATTEMPT/$MAX_ATTEMPTS..."
+
+    if docker exec -it querypie-tools-1 /app/script/migrate.sh runall; then
+        MIGRATION_SUCCESS=true
+        echo "마이그레이션이 성공적으로 완료되었습니다."
+    else
+        if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+            echo "마이그레이션 실패. 5초 후 재시도합니다..."
+            sleep 5
+        else
+            echo "마이그레이션 최대 시도 횟수에 도달했습니다. 계속 진행합니다."
+        fi
+    fi
+
+    ATTEMPT=$((ATTEMPT+1))
+done
 
 # tools 중지
 echo "QueryPie tools 서비스 중지 중..."
-docker-compose --env-file compose-env --profile tools down
+docker-compose --env-file compose-env --profile tools down || {
+    echo "QueryPie tools 서비스 중지 중 오류가 발생했습니다. 계속 진행합니다."
+}
 
 # querypie 프로필로 docker-compose 실행
 echo "QueryPie 서비스 시작 중..."
-docker-compose --env-file compose-env --profile querypie up -d
+docker-compose --env-file compose-env --profile querypie up -d || {
+    echo "QueryPie 서비스 시작 중 오류가 발생했습니다. 계속 진행합니다."
+}
 
 # 로그 확인
 echo "애플리케이션 로그 확인 중... (종료하려면 Ctrl+C를 누르세요)"
-docker logs -f querypie-app-1
+docker logs -f querypie-app-1 || {
+    echo "로그 확인 중 오류가 발생했습니다. 계속 진행합니다."
+}
 
 # 원래 위치로 돌아가기
 echo "원래 위치로 돌아가는 중..."
