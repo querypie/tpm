@@ -311,8 +311,175 @@ extract_default_value() {
 # Function to resolve variable values
 resolve_value() {
     local var_ref="$1"
-    local default_value=""
-    local error_msg=""
+
+    # If it's not a variable reference, return as is
+    if [[ ! "$var_ref" =~ \$\{ ]]; then
+        echo "$var_ref"
+        return
+    fi
+
+    # Special case for triple-nested variables like STORAGE_DB_USER=${STORAGE_DB_USER:-${ENG_DB_USERNAME:-${DB_USERNAME}}}
+    if [[ "$var_ref" =~ \$\{([A-Z0-9_]+):-\$\{([A-Z0-9_]+):-\$\{([A-Z0-9_]+)\}\}\} ]]; then
+        local var1="${BASH_REMATCH[1]}"
+        local var2="${BASH_REMATCH[2]}"
+        local var3="${BASH_REMATCH[3]}"
+
+        # Try var1 first
+        local val1=$(get_env_value "$var1")
+        if [[ -n "$val1" ]]; then
+            echo "$val1"
+            return
+        fi
+
+        # Try var2 next
+        local val2=$(get_env_value "$var2")
+        if [[ -n "$val2" ]]; then
+            echo "$val2"
+            return
+        fi
+
+        # Try var3 last
+        local val3=$(get_env_value "$var3")
+        if [[ -n "$val3" ]]; then
+            echo "$val3"
+            return
+        fi
+
+        echo ""
+        return
+    fi
+
+    # Handle common patterns for variable references
+
+    # Pattern: ${VAR:-default}
+    if [[ "$var_ref" =~ \$\{([A-Z0-9_]+):-([^}]*)\} ]]; then
+        local var_name="${BASH_REMATCH[1]}"
+        local default_val="${BASH_REMATCH[2]}"
+
+        # Get value from env_vars
+        local env_value=$(get_env_value "$var_name")
+
+        if [[ -n "$env_value" ]]; then
+            echo "$env_value"
+            return
+        fi
+
+        # If default contains another variable reference, resolve it recursively
+        if [[ "$default_val" =~ \$\{ ]]; then
+            echo "$(resolve_value "$default_val")"
+            return
+        fi
+
+        echo "$default_val"
+        return
+    fi
+
+    # Pattern: ${VAR:?error_message}
+    if [[ "$var_ref" =~ \$\{([A-Z0-9_]+):\?([^}]*)\} ]]; then
+        local var_name="${BASH_REMATCH[1]}"
+        local error_msg="${BASH_REMATCH[2]}"
+
+        # Get value from env_vars
+        local env_value=$(get_env_value "$var_name")
+
+        if [[ -n "$env_value" ]]; then
+            echo "$env_value"
+            return
+        fi
+
+        # For required variables with error message, return a placeholder
+        echo "REQUIRED ($error_msg)"
+        return
+    fi
+
+    # Pattern: ${VAR} (simple variable reference)
+    if [[ "$var_ref" =~ \$\{([A-Z0-9_]+)\} ]]; then
+        local var_name="${BASH_REMATCH[1]}"
+
+        # Get value from env_vars
+        local env_value=$(get_env_value "$var_name")
+
+        if [[ -n "$env_value" ]]; then
+            echo "$env_value"
+            return
+        fi
+
+        echo ""
+        return
+    fi
+
+    # Pattern: ${VAR-default} (use default only if VAR is unset)
+    if [[ "$var_ref" =~ \$\{([A-Z0-9_]+)-([^}]*)\} ]]; then
+        local var_name="${BASH_REMATCH[1]}"
+        local default_val="${BASH_REMATCH[2]}"
+
+        # Get value from env_vars
+        local env_value=$(get_env_value "$var_name")
+
+        if [[ -n "$env_value" ]]; then
+            echo "$env_value"
+            return
+        fi
+
+        # If default contains another variable reference, resolve it recursively
+        if [[ "$default_val" =~ \$\{ ]]; then
+            echo "$(resolve_value "$default_val")"
+            return
+        fi
+
+        echo "$default_val"
+        return
+    fi
+
+    # Handle special cases for nested variable references
+
+    # Pattern: ${VAR1:-${VAR2:-default}}
+    if [[ "$var_ref" =~ \$\{([A-Z0-9_]+):-\$\{([A-Z0-9_]+):-([^}]*)\}\} ]]; then
+        local var1="${BASH_REMATCH[1]}"
+        local var2="${BASH_REMATCH[2]}"
+        local default_val="${BASH_REMATCH[3]}"
+
+        # Try var1 first
+        local val1=$(get_env_value "$var1")
+        if [[ -n "$val1" ]]; then
+            echo "$val1"
+            return
+        fi
+
+        # Try var2 next
+        local val2=$(get_env_value "$var2")
+        if [[ -n "$val2" ]]; then
+            echo "$val2"
+            return
+        fi
+
+        # Use default value
+        echo "$default_val"
+        return
+    fi
+
+    # Pattern: ${VAR1:-${VAR2}}
+    if [[ "$var_ref" =~ \$\{([A-Z0-9_]+):-\$\{([A-Z0-9_]+)\}\} ]]; then
+        local var1="${BASH_REMATCH[1]}"
+        local var2="${BASH_REMATCH[2]}"
+
+        # Try var1 first
+        local val1=$(get_env_value "$var1")
+        if [[ -n "$val1" ]]; then
+            echo "$val1"
+            return
+        fi
+
+        # Try var2 next
+        local val2=$(get_env_value "$var2")
+        if [[ -n "$val2" ]]; then
+            echo "$val2"
+            return
+        fi
+
+        echo ""
+        return
+    fi
 
     # If it's not a variable reference, return as is
     if [[ ! "$var_ref" =~ \$\{ ]]; then
@@ -493,6 +660,13 @@ resolve_value() {
         # Get value from env_vars
     if [[ "$var_ref" =~ \${([^:}]+)$ ]]; then
         var_name="${BASH_REMATCH[1]}"
+
+    # Pattern: ${VAR:-default (missing closing brace)
+    if [[ "$var_ref" =~ \$\{([A-Z0-9_]+):-([^}]*)$ ]]; then
+        local var_name="${BASH_REMATCH[1]}"
+        local default_val="${BASH_REMATCH[2]}"
+
+        # Get value from env_vars
         local env_value=$(get_env_value "$var_name")
 
         if [[ -n "$env_value" ]]; then
@@ -500,6 +674,7 @@ resolve_value() {
             return
         else
             echo ""
+            return
         fi
 
         # If default contains another variable reference, resolve it recursively
@@ -513,6 +688,7 @@ resolve_value() {
     if [[ "$var_ref" =~ \${([A-Z_]+)_FILE_UPLOAD_SIZE_LIMIT_MB:-\${ENG_FILE_UPLOAD_SIZE_LIMIT_MB:-([0-9]+)}} ]]; then
         # This is a file upload size limit variable with a nested default
         echo "${BASH_REMATCH[2]}"
+        echo "$default_val"
         return
     fi
 
@@ -529,6 +705,10 @@ resolve_value() {
             error_msg="${BASH_REMATCH[2]:1}"
         elif [[ "${BASH_REMATCH[2]}" == \-* ]]; then
             default_value="${BASH_REMATCH[2]:1}"
+    # Pattern: ${VAR:?error_message (missing closing brace)
+    if [[ "$var_ref" =~ \$\{([A-Z0-9_]+):\?([^}]*)$ ]]; then
+        local var_name="${BASH_REMATCH[1]}"
+        local error_msg="${BASH_REMATCH[2]}"
 
         # Get value from env_vars
             # Try to extract the actual default value
@@ -539,9 +719,9 @@ resolve_value() {
         fi
 
         # Get the value from env_vars
+        # Get value from env_vars
         local env_value=$(get_env_value "$var_name")
 
-        # Return the value, or default, or "REQUIRED"
         if [[ -n "$env_value" ]]; then
             echo "$env_value"
             return
@@ -595,6 +775,46 @@ resolve_value() {
         # Return the literal value if it's not a variable reference
         echo "$var_ref"
     fi
+            return
+        fi
+
+        # For required variables with error message, return a placeholder
+        echo "REQUIRED ($error_msg)"
+        return
+    fi
+
+    # Pattern: ${VAR (missing closing brace)
+    if [[ "$var_ref" =~ \$\{([A-Z0-9_]+)$ ]]; then
+        local var_name="${BASH_REMATCH[1]}"
+
+        # Get value from env_vars
+        local env_value=$(get_env_value "$var_name")
+
+        if [[ -n "$env_value" ]]; then
+            echo "$env_value"
+            return
+        fi
+
+        echo ""
+        return
+    fi
+
+    # Special case for file upload size limit variables
+    # Pattern: ${ENG_FILE_UPLOAD_SIZE_LIMIT_MB:-10}
+    if [[ "$var_ref" =~ \$\{ENG_FILE_UPLOAD_SIZE_LIMIT_MB:-([0-9]+)\} ]]; then
+        echo "${BASH_REMATCH[1]}"
+        return
+    fi
+
+    # Special case for nested file upload size limit variables
+    # Pattern: ${XXX_FILE_UPLOAD_SIZE_LIMIT_MB:-${ENG_FILE_UPLOAD_SIZE_LIMIT_MB:-10}}
+    if [[ "$var_ref" =~ \$\{[A-Z0-9_]+_FILE_UPLOAD_SIZE_LIMIT_MB:-\$\{ENG_FILE_UPLOAD_SIZE_LIMIT_MB:-([0-9]+)\}\} ]]; then
+        echo "${BASH_REMATCH[1]}"
+        return
+    fi
+
+    # If we can't parse it with any of the above patterns, return as is
+    echo "$var_ref"
 }
 
 # Parse docker-compose file to extract services and their environment variables
@@ -627,6 +847,9 @@ while IFS= read -r var_name; do
     if [[ "$var_line" =~ ([A-Z_][A-Z0-9_]*)=(.+) ]]; then
         var_name="${BASH_REMATCH[1]}"
         var_ref="${BASH_REMATCH[2]}"
+    # Split the line at the first equals sign to handle values with special characters
+    var_name=$(echo "$var_line" | cut -d= -f1)
+    var_ref=$(echo "$var_line" | cut -d= -f2-)
 
     # Resolve the value
     resolved_value=$(resolve_value "$var_ref")
@@ -643,6 +866,8 @@ while IFS= read -r var_name; do
         # Display with proper indentation
         echo -e "  ${BLUE}$var_name${NC} = $display_value"
     fi
+    # Display with proper indentation
+    echo -e "  ${BLUE}$var_name${NC} = $display_value"
 done <<< "$unique_vars"
 echo
 
