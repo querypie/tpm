@@ -110,6 +110,17 @@
   ./QueryPieLoadImages.sh 10.2.1 tools     # Tools 이미지만 로드
   ```
 
+## EnvCheck.sh
+- **용도**: compose-env 와 docker-compose.yml 파일 조합으로 만들어진 환경변수 체크
+- **다운로드**: `curl -L https://raw.githubusercontent.com/querypie/tpm/refs/heads/main/beta/EnvCheck.sh -o EnvCheck.sh`
+- **실행 위치**: `{user home} or {version 홈}`
+- **사용법**: `./EnvCheck.sh <version> [-o] <filename>`
+- **예시**:
+  ```bash
+  ./EnvCheck.sh 10.2.1          
+  ./EnvCheck.sh 10.2.1 -o check.txt
+  ```
+
 ---
 
 # [BETA] QueryPie Utility Scripts Usage Guide
@@ -222,5 +233,16 @@ The location and distribution method will be changed upon official release.
   ./QueryPieLoadImages.sh 10.2.1          # Load both QueryPie and Tools images
   ./QueryPieLoadImages.sh 10.2.1 querypie  # Load QueryPie images only
   ./QueryPieLoadImages.sh 10.2.1 tools     # Load Tools images only
+  ```
+
+## EnvCheck.sh
+- **Purpose**: Check environment variables created by the combination of compose-env and docker-compose.yml files
+- **Download**: `curl -L https://raw.githubusercontent.com/querypie/tpm/refs/heads/main/beta/EnvCheck.sh -o EnvCheck.sh`
+- **Execution Location**: `{user home} or {version 홈}`
+- **Usage**: `./EnvCheck.sh <version> [-o] <filename>`
+- **Example**:
+  ```bash
+  ./EnvCheck.sh 10.2.1          
+  ./EnvCheck.sh 10.2.1 -o check.txt
   ```
 
