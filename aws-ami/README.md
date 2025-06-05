@@ -11,6 +11,17 @@ brew install awscli
 # Verify the installation
 aws --version
 ```
+1. Configure AWS credentials
+```bash
+# You will be prompted to enter your AWS Access Key ID, Secret Access Key, and default region.
+aws configure
+```
+1. Give your IAM user permissions to create AMIs by attaching the following policy:
+  - AmazonEC2FullAccess
+    - ec2:DescribeImages
+    - ec2:CreateImage
+    - ec2:DescribeKeyPairs
+    - ...
 1. Install Packer, a tool for building AMIs
 ```bash
 # Install Packer using Homebrew
@@ -19,10 +30,9 @@ brew install hashicorp/tap/packer
 # Verify the installation
 packer --version
 ```
-1. Configure AWS credentials
+1. Initialize the Packer project, which will download the necessary plugins and dependencies
 ```bash
-# You will be prompted to enter your AWS Access Key ID, Secret Access Key, and default region.
-aws configure
+packer init querypie-ami.pkr.hcl
 ```
 
 ## Troubleshooting
