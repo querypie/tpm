@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o nounset -o errexit -o errtrace -o pipefail
 
@@ -22,36 +22,50 @@ function log::error() {
 }
 
 function packer::build() {
-  local version=$1 project_name=$2
+  local version=$1
   echo >&2 "### Build AMI with Packer ###"
   log::do packer build \
-  -var "version=$version" \
-  -var "project_name=$project_name" \
-  ami-build.json
+    -var "querypie_version=$version" \
+    -var "ami_name_prefix=$AMI_NAME_PREFIX" \
+    querypie-ami.pkr.hcl
 }
 
 function aws::image_id() {
-  local project_name=$1 version=$2
+  local ami_name=$1 version=$2
   echo >&2 "### Get AMI ID ###"
   aws ec2 describe-images \
     --owners self \
-    --filters "Name=name,Values=$project_name-$version" \
+    --filters "Name=name,Values=$ami_name-$version" \
     --query 'Images[0].ImageId' \
     --output text
 }
 
-function main() {
-  local build_version=${1:-}
-  local project_name=${2:-"querypie-marketplace"}
-  if [[ -z "$build_version" ]]; then
-    echo "Usage: $0 <build_version> [<project_name>]"
+function validate_environment() {
+  if ! command -v packer &>/dev/null; then
+    log::error "Packer is not installed. Please install Packer to continue."
     exit 1
   fi
 
-  packer::build "$build_version" "$project_name" || true # ignore errors for debugging
+  if ! command -v aws &>/dev/null; then
+    log::error "AWS CLI is not installed. Please install AWS CLI to continue."
+    exit 1
+  fi
+}
+
+function main() {
+  local build_version=${1:-}
+  if [[ -z "$build_version" ]]; then
+    echo "Usage: $0 <build_version>"
+    exit 1
+  fi
+
+  validate_environment
+
+  AMI_NAME_PREFIX="${AMI_NAME_PREFIX:-querypie-suite}"
+  packer::build "$build_version" || true # ignore errors for debugging
 
   local image_id
-  image_id=$(aws::image_id "$project_name" "$build_version")
+  image_id=$(aws::image_id "$AMI_NAME_PREFIX" "$build_version")
 }
 
 main "$@"

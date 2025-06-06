@@ -1,0 +1,211 @@
+# This file is to create a QueryPie AMI using Packer for AWS Marketplace.
+
+packer {
+  required_plugins {
+    amazon = {
+      version = ">= 1.2.8"
+      source  = "github.com/hashicorp/amazon"
+    }
+  }
+}
+
+# Variables
+variable "querypie_version" {
+  type        = string
+  default     = "10.3.0"
+  description = "Version of QueryPie to install"
+}
+
+variable "ami_name_prefix" {
+  type        = string
+  default     = "querypie"
+  description = "Prefix for AMI name"
+}
+
+variable "aws_region" {
+  type        = string
+  default     = "ap-northeast-2"
+  description = "AWS region to build AMI"
+}
+
+variable "instance_type" {
+  type        = string
+  default     = "t3.micro"
+  description = "EC2 instance type for building"
+}
+
+variable "ssh_username" {
+  type        = string
+  default     = "ec2-user"
+  description = "SSH username for Amazon Linux 2023"
+}
+
+# Local variables
+locals {
+  timestamp = regex_replace(timestamp(), "[- TZ:]", "")
+  ami_name  = "${var.ami_name_prefix}-${var.querypie_version}-${local.timestamp}"
+}
+
+# Data source for latest Amazon Linux 2023 AMI
+data "amazon-ami" "amazon-linux-2023" {
+  filters = {
+    name                = "al2023-ami-*-x86_64"
+    root-device-type    = "ebs"
+    virtualization-type = "hvm"
+  }
+  most_recent = true
+  owners      = ["amazon"]
+  region      = var.aws_region
+}
+
+# Source configuration
+source "amazon-ebs" "amazon-linux-2023" {
+  ami_name      = local.ami_name
+  instance_type = var.instance_type
+  region        = var.aws_region
+
+  source_ami = data.amazon-ami.amazon-linux-2023.id
+
+  ssh_username = var.ssh_username
+
+  # EBS configuration
+  ebs_optimized = true
+  ena_support   = true
+  sriov_support = true
+
+  # Root volume configuration
+  launch_block_device_mappings {
+    device_name           = "/dev/xvda"
+    volume_size           = 20
+    volume_type           = "gp3"
+    iops                  = 3000
+    throughput            = 125
+    delete_on_termination = true
+    encrypted             = true
+  }
+
+  # Additional EBS volume (optional)
+  launch_block_device_mappings {
+    device_name           = "/dev/sdf"
+    volume_size           = 10
+    volume_type           = "gp3"
+    delete_on_termination = true
+    encrypted             = true
+  }
+
+  # Instance metadata options
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+    http_put_response_hop_limit = 1
+  }
+
+  # Security group configuration
+  temporary_security_group_source_cidrs = ["0.0.0.0/0"]
+
+  # Tags
+  tags = {
+    Name         = local.ami_name
+    Environment  = "production"
+    OS           = "Amazon Linux 2023"
+    BuildDate    = local.timestamp
+    BuildTool    = "Packer"
+    BaseAMI      = data.amazon-ami.amazon-linux-2023.id
+  }
+
+  # Snapshot tags
+  snapshot_tags = {
+    Name         = "${local.ami_name}-snapshot"
+    Environment  = "production"
+    BuildDate    = local.timestamp
+  }
+}
+
+# Build configuration
+build {
+  name = "build-querypie-ami"
+  sources = [
+    "source.amazon-ebs.amazon-linux-2023"
+  ]
+
+  # Wait for cloud-init to complete
+  provisioner "shell" {
+    inline = [
+      "echo 'Waiting for cloud-init to complete...'",
+      "cloud-init status --wait",
+      "echo 'Cloud-init completed'"
+    ]
+  }
+
+  # System updates
+  provisioner "shell" {
+    inline = [
+      "echo 'Starting system updates...'",
+      "sudo dnf update -y",
+      "sudo dnf upgrade -y"
+    ]
+  }
+
+  # Install essential packages
+  provisioner "shell" {
+    inline = [
+      "echo 'Installing essential packages...'",
+      "sudo dnf install -y git curl wget vim htop tree unzip",
+      "sudo dnf install -y amazon-cloudwatch-agent",
+      "sudo dnf install -y awscli"
+    ]
+  }
+
+  # Install Docker
+  # provisioner "shell" {
+  #   script = "scripts/install-docker.sh"
+  # }
+
+  # Configure CloudWatch Agent
+  # provisioner "file" {
+  #   source      = "configs/cloudwatch-config.json"
+  #   destination = "/tmp/cloudwatch-config.json"
+  # }
+
+  # provisioner "shell" {
+  #   inline = [
+  #     "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc/",
+  #     "sudo mv /tmp/cloudwatch-config.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+  #   ]
+  # }
+
+  # Custom application setup
+  # provisioner "shell" {
+  #   script = "scripts/setup-application.sh"
+  # }
+
+  # Security hardening
+  # provisioner "shell" {
+  #   script = "scripts/security-hardening.sh"
+  # }
+
+  # Final cleanup
+  provisioner "shell" {
+    inline = [
+      "echo 'Performing final cleanup...'",
+      "sudo dnf clean all",
+      "sudo rm -rf /tmp/*",
+      "sudo rm -rf /var/tmp/*",
+      "history -c",
+      "cat /dev/null > ~/.bash_history",
+      "sudo rm -f /root/.bash_history",
+      "sudo find /var/log -type f -exec truncate -s 0 {} \\;",
+      "echo 'Cleanup completed'"
+    ]
+  }
+
+  # Generate manifest
+  post-processor "manifest" {
+    output = "manifest.json"
+    strip_path = true
+    custom_data = {
+      build_time = local.timestamp
+      base_ami   = data.amazon-ami.amazon-linux-2023.id
+    }
+  }
+}
