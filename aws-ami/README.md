@@ -5,35 +5,40 @@
 Suppose you are building on macOS.
 
 1. Install AWS CLI
-```bash
-# Install AWS CLI using Homebrew
-brew install awscli
-# Verify the installation
-aws --version
-```
-1. Configure AWS credentials
-```bash
-# You will be prompted to enter your AWS Access Key ID, Secret Access Key, and default region.
-aws configure
-```
-1. Give your IAM user permissions to create AMIs by attaching the following policy:
-  - AmazonEC2FullAccess
-    - ec2:DescribeImages
-    - ec2:CreateImage
-    - ec2:DescribeKeyPairs
-    - ...
-1. Install Packer, a tool for building AMIs
-```bash
-# Install Packer using Homebrew
-brew tap hashicorp/tap
-brew install hashicorp/tap/packer
-# Verify the installation
-packer --version
-```
-1. Initialize the Packer project, which will download the necessary plugins and dependencies
-```bash
-packer init querypie-ami.pkr.hcl
-```
+    ```bash
+    # Install AWS CLI using Homebrew
+    brew install awscli
+    # Verify the installation
+    aws --version
+    ```
+2. Configure AWS credentials
+    ```bash
+    # You will be prompted to enter your AWS Access Key ID, Secret Access Key, and default region.
+    aws configure
+    ```
+3. Give your IAM user permissions to create AMIs by attaching the following policy:
+    - AmazonEC2FullAccess
+        - ec2:DescribeImages
+        - ec2:CreateImage
+        - ec2:DescribeKeyPairs
+        - ...
+4. Install Packer, a tool for building AMIs
+    ```bash
+    # Install Packer using Homebrew
+    brew tap hashicorp/tap
+    brew install hashicorp/tap/packer
+    # Verify the installation
+    packer --version
+    ```
+5. Initialize the Packer project, which will download the necessary plugins and dependencies
+    ```bash
+    packer init querypie-ami.pkr.hcl
+    ```
+
+## Build an AMI
+
+Run `build-ami.sh <version>` to build an AMI where <version> is a version of QueryPie.
+    `./build-ami.sh 10.3.0`
 
 ## Troubleshooting
 

@@ -43,7 +43,7 @@ variable "ssh_username" {
 # Local variables
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
-  ami_name  = "${var.ami_name_prefix}-${var.querypie_version}-${local.timestamp}"
+  ami_name = "${var.ami_name_prefix}-${var.querypie_version}-${local.timestamp}"
 }
 
 # Data source for latest Amazon Linux 2023 AMI
@@ -54,7 +54,7 @@ data "amazon-ami" "amazon-linux-2023" {
     virtualization-type = "hvm"
   }
   most_recent = true
-  owners      = ["amazon"]
+  owners = ["amazon"]
   region      = var.aws_region
 }
 
@@ -84,19 +84,10 @@ source "amazon-ebs" "amazon-linux-2023" {
     encrypted             = true
   }
 
-  # Additional EBS volume (optional)
-  launch_block_device_mappings {
-    device_name           = "/dev/sdf"
-    volume_size           = 10
-    volume_type           = "gp3"
-    delete_on_termination = true
-    encrypted             = true
-  }
-
   # Instance metadata options
   metadata_options {
-    http_endpoint = "enabled"
-    http_tokens   = "required"
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
     http_put_response_hop_limit = 1
   }
 
@@ -105,19 +96,19 @@ source "amazon-ebs" "amazon-linux-2023" {
 
   # Tags
   tags = {
-    Name         = local.ami_name
-    Environment  = "production"
-    OS           = "Amazon Linux 2023"
-    BuildDate    = local.timestamp
-    BuildTool    = "Packer"
-    BaseAMI      = data.amazon-ami.amazon-linux-2023.id
+    Name        = local.ami_name
+    Environment = "production"
+    OS          = "Amazon Linux 2023"
+    BuildDate   = local.timestamp
+    BuildTool   = "Packer"
+    BaseAMI     = data.amazon-ami.amazon-linux-2023.id
   }
 
   # Snapshot tags
   snapshot_tags = {
-    Name         = "${local.ami_name}-snapshot"
-    Environment  = "production"
-    BuildDate    = local.timestamp
+    Name        = "${local.ami_name}-snapshot"
+    Environment = "production"
+    BuildDate   = local.timestamp
   }
 }
 
@@ -128,38 +119,28 @@ build {
     "source.amazon-ebs.amazon-linux-2023"
   ]
 
-  # Wait for cloud-init to complete
   provisioner "shell" {
     inline = [
-      "echo 'Waiting for cloud-init to complete...'",
+      "set -o xtrace",
       "cloud-init status --wait",
-      "echo 'Cloud-init completed'"
-    ]
-  }
 
-  # System updates
-  provisioner "shell" {
-    inline = [
-      "echo 'Starting system updates...'",
+      "# System updates",
       "sudo dnf update -y",
-      "sudo dnf upgrade -y"
+      "sudo dnf upgrade -y",
+
+      "# Installing essential packages...",
+      "sudo dnf install -y git wget vim htop tree unzip",
+      "sudo dnf install -y awscli amazon-cloudwatch-agent",
+      "sudo dnf install -y docker",
     ]
   }
 
-  # Install essential packages
+  # Install QueryPie
   provisioner "shell" {
     inline = [
-      "echo 'Installing essential packages...'",
-      "sudo dnf install -y git curl wget vim htop tree unzip",
-      "sudo dnf install -y amazon-cloudwatch-agent",
-      "sudo dnf install -y awscli"
+      ""
     ]
   }
-
-  # Install Docker
-  # provisioner "shell" {
-  #   script = "scripts/install-docker.sh"
-  # }
 
   # Configure CloudWatch Agent
   # provisioner "file" {
@@ -187,7 +168,8 @@ build {
   # Final cleanup
   provisioner "shell" {
     inline = [
-      "echo 'Performing final cleanup...'",
+      "echo '# Performing final cleanup...'",
+      "set -o xtrace",
       "sudo dnf clean all",
       "sudo rm -rf /tmp/*",
       "sudo rm -rf /var/tmp/*",
@@ -201,7 +183,7 @@ build {
 
   # Generate manifest
   post-processor "manifest" {
-    output = "manifest.json"
+    output     = "manifest.json"
     strip_path = true
     custom_data = {
       build_time = local.timestamp
