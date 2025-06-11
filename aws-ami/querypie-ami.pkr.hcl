@@ -123,47 +123,34 @@ build {
     inline = [
       "set -o xtrace",
       "cloud-init status --wait",
+      # Now this EC2 instance is ready for more software installation.
 
       "# System updates",
       "sudo dnf update -y",
       "sudo dnf upgrade -y",
 
       "# Installing essential packages...",
-      "sudo dnf install -y git wget vim htop tree unzip",
-      "sudo dnf install -y awscli amazon-cloudwatch-agent",
       "sudo dnf install -y docker",
+      "sudo usermod -aG docker ${var.ssh_username}",
     ]
   }
 
   # Install QueryPie
   provisioner "shell" {
     inline = [
-      ""
+      "set -o xtrace",
+      "pwd",
+      "curl -L https://dl.querypie.com/releases/compose/setup.sh -o setup.sh",
+      "QP_VERSION=${var.querypie_version} bash setup.sh",
     ]
   }
-
-  # Configure CloudWatch Agent
-  # provisioner "file" {
-  #   source      = "configs/cloudwatch-config.json"
-  #   destination = "/tmp/cloudwatch-config.json"
-  # }
-
-  # provisioner "shell" {
-  #   inline = [
-  #     "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc/",
-  #     "sudo mv /tmp/cloudwatch-config.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
-  #   ]
-  # }
-
-  # Custom application setup
-  # provisioner "shell" {
-  #   script = "scripts/setup-application.sh"
-  # }
-
-  # Security hardening
-  # provisioner "shell" {
-  #   script = "scripts/security-hardening.sh"
-  # }
+  # Setup docker environment file
+  provisioner "shell" {
+    environment_vars = [
+      "SOURCE_FILE=querypie/${var.querypie_version}/compose-env",
+    ]
+    script = "scripts/init-compose-env.sh"
+  }
 
   # Final cleanup
   provisioner "shell" {
