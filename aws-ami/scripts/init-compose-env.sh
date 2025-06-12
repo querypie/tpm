@@ -89,6 +89,7 @@ function determine_value() {
 
 function generate_env() {
   local source_env=$1 line name value existing_value
+
   while IFS= read -r -u 9 line; do
     if [[ -z "${line}" || "${line}" =~ ^\s*# ]]; then
       # Skip empty lines and comments.
@@ -104,18 +105,29 @@ function generate_env() {
 }
 
 function main() {
-  if [[ $# -lt 0 ]]; then
-    echo "Usage: $0 <compose-env>"
-    exit 1
-  fi
-  local source_env=$1
-  if [[ ! -r "${source_env}" ]]; then
-    log::error "Cannot read the source environment file: ${source_env}"
+  local source_file tmp_file
+  if [[ -v SOURCE_FILE ]]; then
+    # If SOURCE_FILE is set, use it as the source environment file.
+    source_file="${SOURCE_FILE}"
+  else
+    echo "Usage: SOURCE_FILE=<compose-env> $0"
     exit 1
   fi
 
-  echo >&2 "## Generating a docker env file from ${source_env}..."
-  generate_env "${source_env}"
+  if [[ ! -r "${source_file}" ]]; then
+    log::error "Cannot read the source environment file: ${source_file}"
+    exit 1
+  fi
+
+  tmp_file=$(mktemp /tmp/compose-env.XXXXXX)
+  # SC2064 Use single quotes, otherwise this expands now rather than when signalled.
+  #shellcheck disable=SC2064
+  trap "rm -f ${tmp_file}" EXIT
+
+  echo >&2 "## Generating a docker env file from ${source_file} as ${tmp_file}..."
+  generate_env "${source_file}" > "${tmp_file}"
+  echo >&2 "## Replacing the original file ${source_file} with the generated file ${tmp_file}..."
+  cp "${tmp_file}" "${source_file}"
 }
 
 main "$@"
