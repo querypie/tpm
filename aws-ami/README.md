@@ -34,17 +34,29 @@ Suppose you are building on macOS.
     ```bash
     packer init querypie-ami.pkr.hcl
     ```
+6. Modify docker-config.json by populating the auth value.
+    ```json
+   {
+     "auths": {
+       "harbor.chequer.io": {
+         "auth": "<base64-encoded-username:password>"
+       }
+     }
+   }
+    ```
+   To generate the auth value, run: `echo -n 'username:password' | base64`
 
 ## Build an AMI
 
 Run `build-ami.sh <version>` to build an AMI where <version> is a version of QueryPie.
-    `./build-ami.sh 10.3.0`
+`./build-ami.sh 10.3.0`
 
 ## Troubleshooting
 
 ### An error occurred (UnauthorizedOperation) when calling the DescribeImages operation
 
 You may encounter the following error when running Packer:
+
 ```
 An error occurred (UnauthorizedOperation) when calling the DescribeImages operation: 
   You are not authorized to perform this operation. 
@@ -56,6 +68,7 @@ This error indicates that your IAM user does not have the necessary permissions 
 To resolve this, you need to attach a policy that allows the `ec2:DescribeImages` action to your IAM user.
 
 Steps to resolve the issue:
+
 1. Go to the [IAM Management Console](https://console.aws.amazon.com/iam/home).
 2. Select your IAM user.
 3. Click on the "Add permissions" button.
