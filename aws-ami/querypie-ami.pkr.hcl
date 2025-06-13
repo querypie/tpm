@@ -76,7 +76,7 @@ source "amazon-ebs" "amazon-linux-2023" {
   # Root volume configuration
   launch_block_device_mappings {
     device_name           = "/dev/xvda"
-    volume_size           = 20
+    volume_size           = 30
     volume_type           = "gp3"
     iops                  = 3000
     throughput            = 125
@@ -135,15 +135,17 @@ build {
     ]
   }
 
-  # Install QueryPie
+  # Install QueryPie Deployment Package
   provisioner "shell" {
     inline = [
       "set -o xtrace",
       "pwd",
       "curl -L https://dl.querypie.com/releases/compose/setup.sh -o setup.sh",
       "QP_VERSION=${var.querypie_version} bash setup.sh",
+      "[[ -d ~/.docker ]] || mkdir -p -m 700 ~/.docker",
     ]
   }
+
   # Setup docker environment file
   provisioner "shell" {
     environment_vars = [
@@ -152,11 +154,32 @@ build {
     script = "scripts/init-compose-env.sh"
   }
 
+  # Setup .docker/config.json for Docker registry authentication
+  provisioner "file" {
+      source      = "docker-config.json"
+      destination = ".docker/config.json"
+  }
+
+  # Pull QueryPie Docker Images
+  provisioner "shell" {
+    inline = [
+      "set -o xtrace",
+      "find ~ -ls", # TODO(JK): Debugging purpose, remove later
+      "cd querypie/${var.querypie_version}",
+      "ln -s compose-env .env",
+      "docker-compose pull app tools mysql redis --quiet",
+      "docker image ls",
+      "docker container ls --all",
+    ]
+  }
+
   # Final cleanup
   provisioner "shell" {
     inline = [
       "echo '# Performing final cleanup...'",
       "set -o xtrace",
+      "find ~ -ls", # TODO(JK): Debugging purpose, remove later
+      "rm ~/.docker/config.json",
       "sudo dnf clean all",
       "sudo rm -rf /tmp/*",
       "sudo rm -rf /var/tmp/*",
