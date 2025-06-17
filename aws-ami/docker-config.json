@@ -1,0 +1,7 @@
+{
+  "auths": {
+    "harbor.chequer.io": {
+      "auth": "<base64-encoded-username:password>"
+    }
+  }
+}
