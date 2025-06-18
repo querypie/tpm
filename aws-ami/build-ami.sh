@@ -22,10 +22,13 @@ function log::error() {
 }
 
 function packer::build() {
-  local version=$1 packer_option=""
-  # NOTE(JK): Use `-on-error=continue` to allow debugging the AMI build process.
-  #packer_option="-on-error=abort"
+  local version=$1 packer_option="${PACKER_OPTION:-}"
+  # NOTE(JK): Use `PACKER_OPTION=-on-error=abort` to allow debugging the AMI build process.
   echo >&2 "### Build AMI with Packer ###"
+  echo >&2 "PACKER_OPTION: $packer_option"
+
+  # Disable SC2086(Use double quotes to prevent word splitting) to allow expansion of variables.
+  # shellcheck disable=SC2086
   log::do packer build \
     -var "querypie_version=$version" \
     -var "ami_name_prefix=$AMI_NAME_PREFIX" \
