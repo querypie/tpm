@@ -166,6 +166,10 @@ build {
       "curl -L https://dl.querypie.com/releases/compose/setup.sh -o setup.sh",
       "QP_VERSION=${var.querypie_version} bash setup.sh",
       "[[ -d ~/.docker ]] || mkdir -p -m 700 ~/.docker",
+
+      # Create a symlink, .env for compose-env.
+      "cd querypie/${var.querypie_version}",
+      "ln -s compose-env .env",
     ]
   }
 
@@ -183,15 +187,64 @@ build {
     destination = ".docker/config.json"
   }
 
-  # Pull QueryPie Docker Images
+  # Run mysql, redis containers
   provisioner "shell" {
     inline = [
       "set -o xtrace",
-      "find ~ -ls", # TODO(JK): Debugging purpose, remove later
       "cd querypie/${var.querypie_version}",
-      "ln -s compose-env .env",
-      "docker-compose pull app tools mysql redis --quiet",
-      "docker image ls",
+      "docker-compose pull --quiet mysql redis",
+      "docker-compose --profile database up --detach",
+    ]
+  }
+
+  # Run querypie-tools container
+  provisioner "shell" {
+    inline = [
+      "set -o xtrace",
+
+      # Create a swap file for the tools container to allow enough memory
+      "sudo dd if=/dev/zero of=/swapfile bs=1M count=4096", # 4 GiB swap file
+      "sudo chmod 600 /swapfile",
+      "sudo mkswap /swapfile",
+      "sudo swapon /swapfile",
+
+      # Run querypie-tools container
+      "cd querypie/${var.querypie_version}",
+      "docker-compose pull --quiet tools",
+      "docker-compose --profile tools up --detach",
+      "docker container ls --all",
+    ]
+  }
+
+  # Wait for the tools container to be ready
+  provisioner "shell" {
+    script = "scripts/tools-readyz"
+  }
+
+  # Migrate the database from querypie-tools container
+  provisioner "shell" {
+    inline = [
+      "set -o xtrace",
+
+      # Run containers, and populate the MySQL database
+      "cd querypie/${var.querypie_version}",
+      # Save long output of migrate.sh as querypie-migrate.log
+      "docker exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.log 2>&1",
+      # Run migrate.sh again to ensure the migration is completed properly
+      "docker exec querypie-tools-1 /app/script/migrate.sh runall",
+      "docker-compose --profile tools down",
+      "docker-compose pull --quiet app",
+      "docker-compose --profile querypie up --no-start --detach",
+      "docker container ls --all",
+    ]
+  }
+
+  # Create querypie-app container, but do not start it
+  provisioner "shell" {
+    inline = [
+      "set -o xtrace",
+      "docker-compose pull --quiet app",
+      "docker-compose --profile querypie up --no-start --detach",
       "docker container ls --all",
     ]
   }
@@ -201,7 +254,6 @@ build {
     inline = [
       "echo '# Performing final cleanup...'",
       "set -o xtrace",
-      "find ~ -ls", # TODO(JK): Debugging purpose, remove later
       "rm ~/.docker/config.json",
       "sudo dnf clean all",
       "sudo rm -rf /tmp/*",

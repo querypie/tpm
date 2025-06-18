@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# Copy of querypie-mono/apps/tools/script/tools-readyz.
+# TODO(JK): After tools-readyz is available in released docker images, remove this file.
+set -o nounset -o errexit -o errtrace -o pipefail
+
+function print_banner_of_tools() {
+  cat <<'END_OF_BANNER'
+########################################################################
+#                                                                      #
+#     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██████╗ ██╗███████╗    #
+#    ██╔═══██╗██║   ██║██╔════╝██╔══██╗╚██╗ ██╔╝██╔══██╗██║██╔════╝    #
+#    ██║   ██║██║   ██║█████╗  ██████╔╝ ╚████╔╝ ██████╔╝██║█████╗      #
+#    ██║▄▄ ██║██║   ██║██╔══╝  ██╔══██╗  ╚██╔╝  ██╔═══╝ ██║██╔══╝      #
+#    ╚██████╔╝╚██████╔╝███████╗██║  ██║   ██║   ██║     ██║███████╗    #
+#     ╚══▀▀═╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝╚══════╝    #
+#                                                                      #
+#    ████████╗ ██████╗  ██████╗ ██╗     ███████╗                       #
+#    ╚══██╔══╝██╔═══██╗██╔═══██╗██║     ██╔════╝                       #
+#       ██║   ██║   ██║██║   ██║██║     ███████╗                       #
+#       ██║   ██║   ██║██║   ██║██║     ╚════██║                       #
+#       ██║   ╚██████╔╝╚██████╔╝███████╗███████║                       #
+#       ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝╚══════╝                       #
+########################################################################
+END_OF_BANNER
+}
+
+function get_readyz() {
+  curl --silent --output /dev/null --write-out "%{http_code}" \
+    http://localhost:8050/health || true
+}
+
+function wait_until_readyz_gets_ready() {
+  local started_at ended_at repeated=0 i
+  started_at=$(date +%s)
+
+  # If readyz returns 200 for 3 times in a row, we consider it's ready.
+  # It waits for 5 minutes at most, and fails if readyz does not get ready.
+  for i in {1..300}; do
+    if [[ "$(get_readyz)" == "200" ]]; then
+      repeated=$((repeated + 1))
+      if ((repeated >= 3)); then
+        return 0
+      fi
+    else
+      repeated=0
+    fi
+    sleep 1
+  done
+  ended_at=$(date +%s)
+  local elapsed=$((ended_at - started_at))
+  echo >&2 "readyz will not be ready. Elapsed time: ${elapsed} seconds."
+  return 1
+}
+
+function wait_and_print_banner() {
+  if wait_until_readyz_gets_ready; then
+    print_banner_of_tools
+    # Please note that box lines are aligned with date string.
+    cat <<END_OF_SUCCESSFUL_BANNER
+.--------------------------------------------------------.
+|  🚀 QueryPie Tools has been successfully started! 🚀   |
+|  Timestamp in UTC: $(TZ=UTC date)        |
+|  Timestamp in KST: $(TZ=KST-9 date)        |
+'--------------------------------------------------------'
+END_OF_SUCCESSFUL_BANNER
+  else
+    # Please note that box lines are aligned with date string.
+    cat <<END_OF_FAILURE_BANNER
+.--------------------------------------------------------.
+|  ❌ QueryPie Tools has failed to start ! ❌            |
+|  Timestamp in UTC: $(TZ=UTC date)        |
+|  Timestamp in KST: $(TZ=KST-9 date)        |
+'--------------------------------------------------------'
+END_OF_FAILURE_BANNER
+  fi
+}
+
+function watch_readyz() {
+  local timestamp now last_printed_at="" readyz="" readyz_previous=""
+  while true; do
+    timestamp=$(date)
+    readyz=$(get_readyz)
+    if [[ "${readyz}" == "${readyz_previous}" ]]; then
+      now=$(date +%s)
+      if ((last_printed_at + 60 < now)); then
+        : # Print every 60 seconds.
+      else
+        sleep 1
+        continue
+      fi
+    fi
+
+    echo "${timestamp} readyz=${readyz}"
+    last_printed_at=$(date +%s)
+    readyz_previous=${readyz}
+    sleep 1
+  done
+}
+
+function current_readyz() {
+  echo "readyz=$(get_readyz)"
+}
+
+function main() {
+  local cmd=${1:-wait-and-banner}
+  case "${cmd}" in
+  wait-and-banner)
+    wait_and_print_banner
+    ;;
+  test-banner)
+    print_banner_of_tools
+    ;;
+  now)
+    current_readyz
+    ;;
+  wait)
+    wait_until_readyz_gets_ready || exit 1
+    ;;
+  watch)
+    watch_readyz
+    ;;
+  *)
+    echo "Usage: $0 {wait-and-banner|test-banner|now|wait|watch}"
+    echo "  wait-and-banner: Print banner when readyz gets ready (default)"
+    echo "  test-banner: Print banner immediately"
+    echo "  now: Show current readyz"
+    echo "  wait: Wait until readyz gets ready"
+    echo "  watch: Watch readyz infinitely"
+    exit 1
+    ;;
+  esac
+}
+
+main "$@"
