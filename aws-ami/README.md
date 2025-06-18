@@ -34,7 +34,7 @@ Suppose you are building on macOS.
     ```bash
     packer init querypie-ami.pkr.hcl
     ```
-6. Modify docker-config.json by populating the auth value.
+6. Copy `docker-config.tmpl.json` to `docker-config.json`, and populate the auth values.
     ```json
    {
      "auths": {

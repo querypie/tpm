@@ -29,8 +29,9 @@ variable "aws_region" {
 }
 
 variable "instance_type" {
-  type        = string
-  default     = "t3.micro"
+  type = string
+  # 2 GiB of memory is required to run querypie-tools container.
+  default     = "t3.small"
   description = "EC2 instance type for building"
 }
 
@@ -44,6 +45,36 @@ variable "ssh_username" {
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
   ami_name = "${var.ami_name_prefix}-${var.querypie_version}-${local.timestamp}"
+
+  common_tags = {
+    CreatedBy = "Packer"
+    Owner     = "AMI-Builder"
+    Purpose   = "Automated QueryPie AMI Build"
+    BuildDate = local.timestamp
+    Version   = var.querypie_version
+  }
+
+  instance_tags = merge(
+    local.common_tags,
+    {
+      Name = "AMI-Builder-${local.ami_name}"
+    }
+  )
+  ami_tags = merge(
+    local.common_tags,
+    {
+      Name    = local.ami_name
+      OS      = "Amazon Linux 2023"
+      BaseAMI = data.amazon-ami.amazon-linux-2023.id
+    }
+  )
+  snapshot_tags = merge(
+    local.common_tags,
+    {
+      Name        = "${local.ami_name}-snapshot"
+      Description = "Snapshot of QueryPie AMI built on ${local.timestamp}"
+    }
+  )
 }
 
 # Data source for latest Amazon Linux 2023 AMI
@@ -58,7 +89,7 @@ data "amazon-ami" "amazon-linux-2023" {
   region      = var.aws_region
 }
 
-# Source configuration
+# Builder Configuration
 source "amazon-ebs" "amazon-linux-2023" {
   ami_name      = local.ami_name
   instance_type = var.instance_type
@@ -94,22 +125,14 @@ source "amazon-ebs" "amazon-linux-2023" {
   # Security group configuration
   temporary_security_group_source_cidrs = ["0.0.0.0/0"]
 
-  # Tags
-  tags = {
-    Name        = local.ami_name
-    Environment = "production"
-    OS          = "Amazon Linux 2023"
-    BuildDate   = local.timestamp
-    BuildTool   = "Packer"
-    BaseAMI     = data.amazon-ami.amazon-linux-2023.id
-  }
+  # Tags of the EC2 instance used for building the AMI
+  run_tags = local.instance_tags
 
-  # Snapshot tags
-  snapshot_tags = {
-    Name        = "${local.ami_name}-snapshot"
-    Environment = "production"
-    BuildDate   = local.timestamp
-  }
+  # Tags of the AMI created
+  tags = local.ami_tags
+
+  # Tags of the snapshot from VM
+  snapshot_tags = local.snapshot_tags
 }
 
 # Build configuration
@@ -156,8 +179,8 @@ build {
 
   # Setup .docker/config.json for Docker registry authentication
   provisioner "file" {
-      source      = "docker-config.json"
-      destination = ".docker/config.json"
+    source      = "docker-config.json"
+    destination = ".docker/config.json"
   }
 
   # Pull QueryPie Docker Images
