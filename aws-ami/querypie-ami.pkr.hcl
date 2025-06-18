@@ -33,7 +33,7 @@ locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
   ami_name = "${var.ami_name_prefix}-${var.querypie_version}-${local.timestamp}"
   region   = "ap-northeast-2"
-  instance_type = "t3.small"
+  instance_type = "t3.xlarge" # Use t3.xlarge to accelerate the build process
   ssh_username = "ec2-user" # SSH username for Amazon Linux 2023
 
   common_tags = {
