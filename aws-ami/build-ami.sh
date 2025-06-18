@@ -22,11 +22,14 @@ function log::error() {
 }
 
 function packer::build() {
-  local version=$1
+  local version=$1 packer_option=""
+  # NOTE(JK): Use `-on-error=continue` to allow debugging the AMI build process.
+  #packer_option="-on-error=abort"
   echo >&2 "### Build AMI with Packer ###"
   log::do packer build \
     -var "querypie_version=$version" \
     -var "ami_name_prefix=$AMI_NAME_PREFIX" \
+    ${packer_option} \
     querypie-ami.pkr.hcl
 }
 
