@@ -243,6 +243,7 @@ build {
   provisioner "shell" {
     inline = [
       "set -o xtrace",
+      "cd querypie/${var.querypie_version}",
       "docker-compose pull --quiet app",
       "docker-compose --profile querypie up --no-start --detach",
       "docker container ls --all",
