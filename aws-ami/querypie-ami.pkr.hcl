@@ -22,29 +22,19 @@ variable "ami_name_prefix" {
   description = "Prefix for AMI name"
 }
 
-variable "aws_region" {
+variable "docker_auth" {
   type        = string
-  default     = "ap-northeast-2"
-  description = "AWS region to build AMI"
-}
-
-variable "instance_type" {
-  type = string
-  # 2 GiB of memory is required to run querypie-tools container.
-  default     = "t3.small"
-  description = "EC2 instance type for building"
-}
-
-variable "ssh_username" {
-  type        = string
-  default     = "ec2-user"
-  description = "SSH username for Amazon Linux 2023"
+  description = "Base64-encoded Docker registry authentication (username:password)"
+  # No default value for security reasons, must be provided at runtime
 }
 
 # Local variables
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
   ami_name = "${var.ami_name_prefix}-${var.querypie_version}-${local.timestamp}"
+  region   = "ap-northeast-2"
+  instance_type = "t3.xlarge" # Use t3.xlarge to accelerate the build process
+  ssh_username = "ec2-user" # SSH username for Amazon Linux 2023
 
   common_tags = {
     CreatedBy = "Packer"
@@ -86,18 +76,17 @@ data "amazon-ami" "amazon-linux-2023" {
   }
   most_recent = true
   owners = ["amazon"]
-  region      = var.aws_region
+  region      = local.region
 }
 
 # Builder Configuration
 source "amazon-ebs" "amazon-linux-2023" {
   ami_name      = local.ami_name
-  instance_type = var.instance_type
-  region        = var.aws_region
+  instance_type = local.instance_type
+  region        = local.region
+  ssh_username  = local.ssh_username
 
   source_ami = data.amazon-ami.amazon-linux-2023.id
-
-  ssh_username = var.ssh_username
 
   # EBS configuration
   ebs_optimized = true
@@ -107,10 +96,10 @@ source "amazon-ebs" "amazon-linux-2023" {
   # Root volume configuration
   launch_block_device_mappings {
     device_name           = "/dev/xvda"
-    volume_size           = 30
+    volume_size           = 32
     volume_type           = "gp3"
-    iops                  = 3000
-    throughput            = 125
+    iops = 16000 # Max: 16000 IOPS for gp3
+    throughput = 1000  # Max: 1000 MiB/s throughput
     delete_on_termination = true
     encrypted             = true
   }
@@ -154,7 +143,7 @@ build {
 
       "# Installing essential packages...",
       "sudo dnf install -y docker",
-      "sudo usermod -aG docker ${var.ssh_username}",
+      "sudo usermod -aG docker ${local.ssh_username}",
     ]
   }
 
@@ -165,7 +154,6 @@ build {
       "pwd",
       "curl -L https://dl.querypie.com/releases/compose/setup.sh -o setup.sh",
       "QP_VERSION=${var.querypie_version} bash setup.sh",
-      "[[ -d ~/.docker ]] || mkdir -p -m 700 ~/.docker",
 
       # Create a symlink, .env for compose-env.
       "cd querypie/${var.querypie_version}",
@@ -183,8 +171,19 @@ build {
 
   # Setup .docker/config.json for Docker registry authentication
   provisioner "file" {
-    source      = "docker-config.json"
-    destination = ".docker/config.json"
+    source      = "docker-config.tmpl.json"
+    destination = "/tmp/docker-config.tmpl.json"
+  }
+  provisioner "shell" {
+    environment_vars = [
+      "DOCKER_AUTH=${var.docker_auth}"
+    ]
+    inline = [
+      "set -o xtrace",
+      "[[ -d ~/.docker ]] || mkdir -p -m 700 ~/.docker",
+      "sed 's/<base64-encoded-username:password>/${var.docker_auth}/g' /tmp/docker-config.tmpl.json > ~/.docker/config.json",
+      "chmod 600 ~/.docker/config.json"
+    ]
   }
 
   # Run mysql, redis containers
@@ -233,9 +232,6 @@ build {
       # Run migrate.sh again to ensure the migration is completed properly
       "docker exec querypie-tools-1 /app/script/migrate.sh runall",
       "docker-compose --profile tools down",
-      "docker-compose pull --quiet app",
-      "docker-compose --profile querypie up --no-start --detach",
-      "docker container ls --all",
     ]
   }
 
@@ -247,6 +243,24 @@ build {
       "docker-compose pull --quiet app",
       "docker-compose --profile querypie up --no-start --detach",
       "docker container ls --all",
+    ]
+  }
+
+  # Setup querypie-first-boot.service
+  provisioner "file" {
+    source      = "querypie-first-boot.service"
+    destination = "/tmp/querypie-first-boot.service"
+  }
+  provisioner "shell" {
+    inline = [
+      "set -o xtrace",
+      "sudo install -m 644 /tmp/querypie-first-boot.service /etc/systemd/system/querypie-first-boot.service",
+      "sudo systemctl enable querypie-first-boot.service",
+      "sudo systemctl daemon-reload",
+      # Please note that this service will run only once, at the first boot of the AMI.
+      # You can check the status of this service using `systemctl status querypie-first-boot.service`,
+      # after the AMI is launched.
+      # Unless this service is running, the QueryPie application will not be started automatically.
     ]
   }
 
