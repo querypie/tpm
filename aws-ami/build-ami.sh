@@ -32,8 +32,12 @@ function packer::build() {
   log::do packer build \
     -var "querypie_version=$version" \
     -var "ami_name_prefix=$AMI_NAME_PREFIX" \
+    -var "docker_auth=$DOCKER_AUTH" \
+    -timestamp-ui \
     ${packer_option} \
-    querypie-ami.pkr.hcl
+    querypie-ami.pkr.hcl |
+    sed 's/ ==> build-querypie-ami\.amazon-ebs\.amazon-linux-2023://'
+    # Remove builder name of '==> build-querypie-ami.amazon-ebs.amazon-linux-2023:'
 }
 
 function aws::image_id() {
@@ -54,6 +58,11 @@ function validate_environment() {
 
   if ! command -v aws &>/dev/null; then
     log::error "AWS CLI is not installed. Please install AWS CLI to continue."
+    exit 1
+  fi
+
+  if [[ -z "${DOCKER_AUTH:-}" ]]; then
+    log::error "DOCKER_AUTH environment variable is not set. Please set it to the base64-encoded Docker registry authentication."
     exit 1
   fi
 }

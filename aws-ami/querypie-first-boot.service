@@ -1,0 +1,21 @@
+[Unit]
+Description=Start QueryPie containers on first boot
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+ConditionPathExists=!/var/lib/querypie/first-boot-done
+
+[Service]
+Type=oneshot
+WorkingDirectory=/tmp
+ExecStartPre=/bin/mkdir -p /var/lib/querypie
+ExecStartPre=docker container inspect querypie-app-1 --format="{{.State.Status}}"
+ExecStart=/usr/bin/docker start querypie-app-1
+ExecStartPost=/bin/touch /var/lib/querypie/first-boot-done
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=30
+
+[Install]
+WantedBy=multi-user.target
