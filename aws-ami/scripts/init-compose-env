@@ -87,7 +87,7 @@ function determine_value() {
   esac
 }
 
-function generate_env() {
+function populate_env() {
   local source_env=$1 line name value existing_value
 
   while IFS= read -r -u 9 line; do
@@ -104,13 +104,47 @@ function generate_env() {
   done 9<"${source_env}" # 9 is unused file descriptor to read ${source_env}.
 }
 
-function main() {
-  local source_file tmp_file
-  if [[ -v SOURCE_FILE ]]; then
-    # If SOURCE_FILE is set, use it as the source environment file.
-    source_file="${SOURCE_FILE}"
-  else
-    echo "Usage: SOURCE_FILE=<compose-env> $0"
+function reset_credential() {
+  local name=$1 existing_value=$2
+
+  case "${name}" in
+  AGENT_SECRET)
+    echo ""
+    ;;
+  KEY_ENCRYPTION_KEY)
+    echo ""
+    ;;
+  DB_PASSWORD | REDIS_PASSWORD)
+    echo ""
+    ;;
+  *)
+    # For other variables, we do not reset them.
+    echo "${existing_value}"
+    ;;
+  esac
+}
+
+function reset_credential_in_env() {
+  local source_env=$1 line name value existing_value
+
+  while IFS= read -r -u 9 line; do
+    if [[ -z "${line}" || "${line}" =~ ^\s*# ]]; then
+      # Skip empty lines and comments.
+      echo "${line}"
+      continue
+    fi
+
+    name=${line%%=*}
+    existing_value=${line#*=}
+    value=$(reset_credential "${name}" "${existing_value}")
+    echo "${name}=${value}"
+  done 9<"${source_env}" # 9 is unused file descriptor to read ${source_env}.
+}
+
+function validate_source_file() {
+  local source_file=$1
+  if [[ -z "${source_file}" ]]; then
+    log::error "Source environment file is not specified."
     exit 1
   fi
 
@@ -118,16 +152,42 @@ function main() {
     log::error "Cannot read the source environment file: ${source_file}"
     exit 1
   fi
+}
+
+function main() {
+  local cmd=${1:-} source_file=${2:-} tmp_file
+  if [[ -z "${cmd}" || -z "${source_file}" ]]; then
+    echo "Usage: $0 {populate|reset-credential} <source_file>"
+    exit 1
+  fi
+  validate_source_file "${source_file}"
 
   tmp_file=$(mktemp /tmp/compose-env.XXXXXX)
-  # SC2064 Use single quotes, otherwise this expands now rather than when signalled.
+  # SC2064 Use single quotes, otherwise this expands now rather than when signaled.
   #shellcheck disable=SC2064
   trap "rm -f ${tmp_file}" EXIT
 
-  echo >&2 "## Generating a docker env file from ${source_file} as ${tmp_file}..."
-  generate_env "${source_file}" > "${tmp_file}"
-  echo >&2 "## Replacing the original file ${source_file} with the generated file ${tmp_file}..."
-  cp "${tmp_file}" "${source_file}"
+  case "${cmd}" in
+  populate)
+    # Populate the environment variables in the source file.
+    echo >&2 "## Generating a docker env file from ${source_file} as ${tmp_file}..."
+    populate_env "${source_file}" >"${tmp_file}"
+    echo >&2 "## Replacing the original file ${source_file} with the generated file ${tmp_file}..."
+    cp "${tmp_file}" "${source_file}"
+    ;;
+  reset-credential)
+    # Reset the credential variables in the source file.
+    echo >&2 "## Resetting credentials in ${source_file}..."
+    reset_credential_in_env "${source_file}" >"${tmp_file}"
+    echo >&2 "## Replacing the original file ${source_file} with the reset file ${tmp_file}..."
+    cp "${tmp_file}" "${source_file}"
+    ;;
+  *)
+    log::error "Unknown command: ${cmd}"
+    echo "Usage: $0 generate <source_file>"
+    exit 1
+    ;;
+  esac
 }
 
 main "$@"
