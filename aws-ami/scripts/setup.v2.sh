@@ -17,6 +17,7 @@ Usage: $program_name [options] <version>
     or $program_name [options] --upgrade <version>
     or $program_name [options] --resume
     or $program_name [options] --populate-env <compose-env-file>
+    or $program_name [options] --reset-credential <compose-env-file>
     or $program_name [options] --help
 
 OPTIONS:
@@ -86,7 +87,7 @@ function command_exists() {
   command -v "$@" >/dev/null 2>&1
 }
 
-function setup_sudo_privileges() {
+function setup::sudo_privileges() {
   echo >&2 "#"
   echo >&2 "## Setup sudo privileges"
   echo >&2 "#"
@@ -189,6 +190,119 @@ function install_config_files() {
   fi
 }
 
+###############################################################################
+# compose-env related functions
+
+function env_file::random_hex() {
+  local length=${1:-32}
+  if command -v openssl >/dev/null; then
+    openssl rand -hex $((length / 2))
+    return 0
+  fi
+  if command -v xxd >/dev/null; then
+    xxd -l "$((length / 2))" -p /dev/urandom
+    return 0
+  fi
+  log::error "Cannot generate a random hex string."
+  log::error "Please make sure that you have openssl(1) or xxd(1) installed in the host."
+  exit 1
+}
+
+function env_file::determine_value() {
+  local name=$1 existing_value=$2
+
+  # Priority 1: Use the value from the environment if it exists.
+  if [[ -n "${!name:-}" ]]; then
+    echo "${!name}"
+    return
+  fi
+
+  # Priority 2: Use the value from the source file if it exists.
+  if [[ -n "${existing_value}" ]]; then
+    echo "${existing_value}"
+    return
+  fi
+
+  # Priority 3: Provide default values for specific variables.
+  case "${name}" in
+  AGENT_SECRET)
+    env_file::random_hex 32
+    ;;
+  KEY_ENCRYPTION_KEY)
+    env_file::random_hex 12
+    ;;
+  DB_PASSWORD | REDIS_PASSWORD)
+    env_file::random_hex 8
+    ;;
+  DB_HOST)
+    echo host.docker.internal
+    ;;
+  DB_USERNAME)
+    echo querypie
+    ;;
+  REDIS_NODES)
+    echo host.docker.internal:6379
+    ;;
+  *)
+    log::error "Unexpected variable: ${name}"
+    ;;
+  esac
+}
+
+function env_file::populate_env() {
+  local source_env=$1 line name value existing_value
+
+  while IFS= read -r -u 9 line; do
+    if [[ -z "${line}" || "${line}" =~ ^\s*# ]]; then
+      # Skip empty lines and comments.
+      echo "${line}"
+      continue
+    fi
+
+    name=${line%%=*}
+    existing_value=${line#*=}
+    value=$(env_file::determine_value "${name}" "${existing_value}")
+    echo "${name}=${value}"
+  done 9<"${source_env}" # 9 is unused file descriptor to read ${source_env}.
+}
+
+function env_file::reset_credential() {
+  local name=$1 existing_value=$2
+
+  case "${name}" in
+  AGENT_SECRET)
+    echo ""
+    ;;
+  KEY_ENCRYPTION_KEY)
+    echo ""
+    ;;
+  DB_PASSWORD | REDIS_PASSWORD)
+    echo ""
+    ;;
+  *)
+    # For other variables, we do not reset them.
+    echo "${existing_value}"
+    ;;
+  esac
+}
+
+function env_file::reset_credential_in_env() {
+  local source_env=$1 line name value existing_value
+
+  while IFS= read -r -u 9 line; do
+    if [[ -z "${line}" || "${line}" =~ ^\s*# ]]; then
+      # Skip empty lines and comments.
+      echo "${line}"
+      continue
+    fi
+
+    name=${line%%=*}
+    existing_value=${line#*=}
+    value=$(env_file::reset_credential "${name}" "${existing_value}")
+    echo "${name}=${value}"
+  done 9<"${source_env}" # 9 is unused file descriptor to read ${source_env}.
+}
+
 function validate::action_and_version() {
   local action=$1 version=$2
   case "$action" in
@@ -236,7 +350,7 @@ function package_version() {
   fi
 }
 
-function do_install_partially_for_ami() {
+function cmd::install_partially_for_ami() {
   local QP_VERSION=${1:-}
 
   echo >&2 "### Install partially for AWS AMI Build. ###"
@@ -245,7 +359,7 @@ function do_install_partially_for_ami() {
   PACKAGE_VERSION=$(package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
   echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
 
-  setup_sudo_privileges
+  setup::sudo_privileges
   install_docker
   install_docker_compose
   install_config_files
@@ -253,10 +367,60 @@ function do_install_partially_for_ami() {
   echo >&2 "### Installation is done successfully."
 }
 
+function validate::source_env_file() {
+  local filename=$1
+  if [[ -z "${filename}" ]]; then
+    log::error "Source environment file is not specified."
+    exit 1
+  fi
+
+  if [[ ! -f "${filename}" ]]; then
+    log::error "Source environment file is not a normal file: ${filename}"
+    exit 1
+  fi
+
+  if [[ ! -r "${filename}" || ! -f "${filename}" ]]; then
+    log::error "Cannot read the source environment file: ${filename}"
+    exit 1
+  fi
+}
+
+# Populate the environment variables in the source file.
+function cmd::populate_env() {
+  local source_env_file=${1:-} tmp_file
+  validate::source_env_file "${source_env_file}"
+
+  tmp_file=$(mktemp /tmp/compose-env.XXXXXX)
+  # SC2064 Use single quotes, otherwise this expands now rather than when signaled.
+  #shellcheck disable=SC2064
+  trap "rm -f ${tmp_file}" EXIT
+
+  echo >&2 "## Generating a docker env file from ${source_env_file} as ${tmp_file}..."
+  env_file::populate_env "${source_env_file}" >"${tmp_file}"
+  echo >&2 "## Replacing the original file ${source_env_file} with the generated file ${tmp_file}..."
+  cp "${tmp_file}" "${source_env_file}"
+}
+
+# Reset the credential variables in the source file.
+function cmd::reset_credential() {
+  local source_env_file=${1:-} tmp_file
+  validate::source_env_file "${source_env_file}"
+
+  tmp_file=$(mktemp /tmp/compose-env.XXXXXX)
+  # SC2064 Use single quotes, otherwise this expands now rather than when signaled.
+  #shellcheck disable=SC2064
+  trap "rm -f ${tmp_file}" EXIT
+
+  echo >&2 "## Resetting credentials in ${source_env_file}..."
+  env_file::reset_credential_in_env "${source_env_file}" >"${tmp_file}"
+  echo >&2 "## Replacing the original file ${source_env_file} with the reset file ${tmp_file}..."
+  cp "${tmp_file}" "${source_env_file}"
+}
+
 function main() {
 
   local -a argv=()
-  local action="install"
+  local cmd="install"
   while [[ $# -gt 0 ]]; do
     case "$1" in
     -x | --xtrace)
@@ -266,12 +430,16 @@ function main() {
     -h | --help)
       print_usage_and_exit 0
       ;;
-    --install | --install-partially-for-ami | --upgrade | --resume)
-      action="${1#--}"
+    --install | --upgrade)
+      cmd="${1#--}"
       shift
       ;;
-    --populate-env)
-      action="${1#--}"
+    --install-partially-for-ami | --resume)
+      cmd="${1#--}"
+      shift
+      ;;
+    --populate-env | --reset-credential)
+      cmd="${1#--}"
       shift
       ;;
     -*)
@@ -287,27 +455,29 @@ function main() {
   done
   set -- "${argv[@]}"
 
-  case "$action" in
+  case "$cmd" in
   install)
     echo >&2 "# Install is not implemented yet."
-    ;;
-  install-partially-for-ami)
-    do_install_partially_for_ami "$@"
     ;;
   upgrade)
     echo >&2 "# Upgrade is not implemented yet."
     exit 1
+    ;;
+  install-partially-for-ami)
+    cmd::install_partially_for_ami "$@"
     ;;
   resume)
     echo >&2 "# Resuming installation is not implemented yet."
     exit 1
     ;;
   populate-env)
-    echo >&2 "# populate-env is not implemented yet."
-    exit 1
+    cmd::populate_env "$@"
+    ;;
+  reset-credential)
+    cmd::reset_credential "$@"
     ;;
   *)
-    log::error "Invalid action: $action"
+    log::error "Invalid action: $cmd"
     print_usage_and_exit 1
     ;;
   esac
