@@ -185,62 +185,13 @@ build {
     ]
   }
 
-  # Setup docker environment file.
-  # This step is required that the docker-compose pull command can run properly.
-  provisioner "shell" {
-    inline = [
-      "set -o xtrace",
-      "setup.v2.sh --populate-env querypie/${var.querypie_version}/compose-env",
-    ]
-  }
-
-  # Pull all the images
-  provisioner "shell" {
-    inline = [
-      "set -o xtrace",
-      "cd querypie/${var.querypie_version}",
-      "docker-compose pull --quiet mysql redis tools app",
-    ]
-  }
-
   ## TODO(JK): Following steps will be moved to first-boot script.
 
-  # Run mysql, redis containers
+  # Resume Installation
   provisioner "shell" {
     inline = [
       "set -o xtrace",
-      "cd querypie/${var.querypie_version}",
-      "docker-compose --profile database up --detach",
-      "sleep 10", # Wait for MySQL and Redis to be ready
-    ]
-  }
-
-  # Run querypie-tools container
-  provisioner "shell" {
-    inline = [
-      "set -o xtrace",
-
-      # Run querypie-tools container
-      "cd querypie/${var.querypie_version}",
-      "docker-compose --profile tools up --detach",
-      "docker container ls --all",
-      # Wait for the tools container to be ready
-      "tools-readyz",
-      # Save long output of migrate.sh as querypie-migrate.log
-      "docker exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.log 2>&1",
-      # Run migrate.sh again to ensure the migration is completed properly
-      "docker exec querypie-tools-1 /app/script/migrate.sh runall",
-      "docker-compose --profile tools down",
-    ]
-  }
-
-  # Create querypie-app container, but do not start it
-  provisioner "shell" {
-    inline = [
-      "set -o xtrace",
-      "cd querypie/${var.querypie_version}",
-      "docker-compose --profile querypie up --no-start --detach",
-      "docker container ls --all",
+      "setup.v2.sh --resume",
     ]
   }
 
