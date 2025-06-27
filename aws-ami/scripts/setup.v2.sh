@@ -13,8 +13,10 @@ function print_usage_and_exit() {
   cat >&"${out}" <<END
 Usage: $program_name [options] <version>
     or $program_name [options] --install <version>
+    or $program_name [options] --install-partially-for-ami <version>
     or $program_name [options] --upgrade <version>
     or $program_name [options] --resume
+    or $program_name [options] --populate-env <compose-env-file>
     or $program_name [options] --help
 
 OPTIONS:
@@ -234,13 +236,12 @@ function package_version() {
   fi
 }
 
-function do_install() {
-  local qp_version=$1
-  QP_VERSION="${QP_VERSION:-${qp_version:-}}"
+function do_install_partially_for_ami() {
+  local QP_VERSION=${1:-}
 
+  echo >&2 "### Install partially for AWS AMI Build. ###"
   validate::action_and_version install "${QP_VERSION}"
   echo >&2 "# QP_VERSION: ${QP_VERSION}"
-
   PACKAGE_VERSION=$(package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
   echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
 
@@ -253,9 +254,9 @@ function do_install() {
 }
 
 function main() {
-  echo >&2 "### Welcome to QueryPie Installation! ###"
 
-  local action="install" qp_version=""
+  local -a argv=()
+  local action="install"
   while [[ $# -gt 0 ]]; do
     case "$1" in
     -x | --xtrace)
@@ -265,16 +266,12 @@ function main() {
     -h | --help)
       print_usage_and_exit 0
       ;;
-    --install)
-      action="install"
+    --install | --install-partially-for-ami | --upgrade | --resume)
+      action="${1#--}"
       shift
       ;;
-    --upgrade)
-      action="upgrade"
-      shift
-      ;;
-    --resume)
-      action="resume"
+    --populate-env)
+      action="${1#--}"
       shift
       ;;
     -*)
@@ -282,22 +279,20 @@ function main() {
       log::error "Unexpected option received: $1"
       print_usage_and_exit 1
       ;;
-    [0-9]*.[0-9]*.[0-9]*)
-      qp_version="$1"
-      shift
-      ;;
     *)
-      # Got unexpected arguments
-      log::error "Unexpected argument received: $1"
-      log::error "Please provide the version in the format ##.##.#, such as 10.3.1"
-      print_usage_and_exit 1
+      argv+=("$1")
+      shift
       ;;
     esac
   done
+  set -- "${argv[@]}"
 
   case "$action" in
   install)
-    do_install "$qp_version"
+    echo >&2 "# Install is not implemented yet."
+    ;;
+  install-partially-for-ami)
+    do_install_partially_for_ami "$@"
     ;;
   upgrade)
     echo >&2 "# Upgrade is not implemented yet."
@@ -305,6 +300,10 @@ function main() {
     ;;
   resume)
     echo >&2 "# Resuming installation is not implemented yet."
+    exit 1
+    ;;
+  populate-env)
+    echo >&2 "# populate-env is not implemented yet."
     exit 1
     ;;
   *)
