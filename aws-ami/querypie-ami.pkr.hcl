@@ -147,23 +147,6 @@ build {
     ]
   }
 
-  # Install QueryPie Deployment Package
-  provisioner "shell" {
-    inline = [
-      "set -o xtrace",
-      "pwd",
-      "curl -L https://dl.querypie.com/releases/compose/setup.sh -o setup.sh",
-      "QP_VERSION=${var.querypie_version} bash setup.sh",
-
-      "pushd querypie; rm -f current; ln -s ${var.querypie_version} current; popd;",
-
-      # Create a symlink, .env for compose-env.
-      "pushd querypie/${var.querypie_version}",
-      "[[ -e .env ]] || ln -s compose-env .env",
-      "popd",
-    ]
-  }
-
   # Setup .docker/config.json for Docker registry authentication
   provisioner "file" {
     source      = "docker-config.tmpl.json"
@@ -181,7 +164,7 @@ build {
     ]
   }
 
-  # Install scripts
+  # Install scripts such as setup.v2.sh, tools-readyz
   provisioner "file" {
     source      = "scripts/"
     destination = "/tmp/"
@@ -189,8 +172,16 @@ build {
   provisioner "shell" {
     inline = [
       "set -o xtrace",
-      "sudo install -m 755 /tmp/init-compose-env /usr/local/bin/init-compose-env",
+      "sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh",
       "sudo install -m 755 /tmp/tools-readyz /usr/local/bin/tools-readyz",
+    ]
+  }
+
+  # Install QueryPie Deployment Package
+  provisioner "shell" {
+    inline = [
+      "set -o xtrace",
+      "setup.v2.sh --install-partially-for-ami ${var.querypie_version}",
     ]
   }
 
@@ -199,7 +190,7 @@ build {
   provisioner "shell" {
     inline = [
       "set -o xtrace",
-      "init-compose-env populate querypie/${var.querypie_version}/compose-env",
+      "setup.v2.sh --populate-env querypie/${var.querypie_version}/compose-env",
     ]
   }
 
@@ -213,13 +204,6 @@ build {
   }
 
   ## TODO(JK): Following steps will be moved to first-boot script.
-  # Setup docker environment file
-  provisioner "shell" {
-    inline = [
-      "set -o xtrace",
-      "init-compose-env populate querypie/${var.querypie_version}/compose-env",
-    ]
-  }
 
   # Run mysql, redis containers
   provisioner "shell" {
