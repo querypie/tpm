@@ -190,7 +190,7 @@ function install::config_files() {
   fi
 }
 
-###############################################################################
+################################################################################
 # compose-env related functions
 
 function env_file::random_hex() {
@@ -303,38 +303,8 @@ function env_file::reset_credential_in_env() {
   done 9<"${source_env}" # 9 is unused file descriptor to read ${source_env}.
 }
 
-function validate::action_and_version() {
-  local action=$1 version=$2
-  case "$action" in
-  install | upgrade)
-    if [[ -z $version ]]; then
-      log::error "Version is required for installation or upgrade."
-      print_usage_and_exit 1
-    fi
-    if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-      log::error "Invalid version format: $version"
-      print_usage_and_exit 1
-    fi
-    ;;
-  resume)
-    # Resume does not require a version, so no validation needed.
-    ;;
-  *)
-    log::error "Invalid action: $action"
-    echo >&2 "# Valid actions are: install, upgrade, resume."
-    print_usage_and_exit 1
-    ;;
-  esac
-
-  if [[ -z $version ]]; then
-    log::error "QP_VERSION is required. Please set QP_VERSION environment variable."
-    exit 1
-  elif [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    log::error "Invalid version format of QP_VERSION: $version"
-    echo >&2 "# QP_VERSION should be in the format of 'major.minor.patch' such as '10.2.5'."
-    exit 1
-  fi
-}
+################################################################################
+# Commands
 
 function package_version() {
   local package_version=$1 image_version=$2
@@ -351,10 +321,9 @@ function package_version() {
 }
 
 function cmd::install_partially_for_ami() {
-  local QP_VERSION=${1:-}
+  local QP_VERSION=${1}
 
   echo >&2 "### Install partially for AWS AMI Build. ###"
-  validate::action_and_version install "${QP_VERSION}"
   echo >&2 "# QP_VERSION: ${QP_VERSION}"
   PACKAGE_VERSION=$(package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
   echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
@@ -416,28 +385,9 @@ function cmd::resume() {
   echo >&2 "### Completed installation successfully."
 }
 
-function validate::source_env_file() {
-  local filename=$1
-  if [[ -z "${filename}" ]]; then
-    log::error "Source environment file is not specified."
-    exit 1
-  fi
-
-  if [[ ! -f "${filename}" ]]; then
-    log::error "Source environment file is not a normal file: ${filename}"
-    exit 1
-  fi
-
-  if [[ ! -r "${filename}" || ! -f "${filename}" ]]; then
-    log::error "Cannot read the source environment file: ${filename}"
-    exit 1
-  fi
-}
-
 # Populate the environment variables in the source file.
 function cmd::populate_env() {
-  local source_env_file=${1:-} tmp_file
-  validate::source_env_file "${source_env_file}"
+  local source_env_file=$1 tmp_file
 
   tmp_file=$(mktemp /tmp/compose-env.XXXXXX)
   # SC2064 Use single quotes, otherwise this expands now rather than when signaled.
@@ -452,8 +402,7 @@ function cmd::populate_env() {
 
 # Reset the credential variables in the source file.
 function cmd::reset_credential() {
-  local source_env_file=${1:-} tmp_file
-  validate::source_env_file "${source_env_file}"
+  local source_env_file=$1 tmp_file
 
   tmp_file=$(mktemp /tmp/compose-env.XXXXXX)
   # SC2064 Use single quotes, otherwise this expands now rather than when signaled.
@@ -464,6 +413,43 @@ function cmd::reset_credential() {
   env_file::reset_credential_in_env "${source_env_file}" >"${tmp_file}"
   echo >&2 "## Replacing the original file ${source_env_file} with the reset file ${tmp_file}..."
   cp "${tmp_file}" "${source_env_file}"
+}
+
+################################################################################
+# Input validations
+
+function require::version() {
+  local version=${1:-}
+
+  if [[ -z "${version}" ]]; then
+    log::error "Version is required. Please provide a version."
+    print_usage_and_exit 1
+  fi
+
+  if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    log::error "Invalid version format: ${version}"
+    echo >&2 "# Version should be in the format of 'major.minor.patch' such as '10.2.5'."
+    print_usage_and_exit 1
+  fi
+}
+
+function require::compose_env_file() {
+  local filename=${1:-}
+
+  if [[ -z "${filename}" ]]; then
+    log::error "Source environment file is not specified."
+    exit 1
+  fi
+
+  if [[ ! -f "${filename}" ]]; then
+    log::error "Source environment file is not a normal file: ${filename}"
+    exit 1
+  fi
+
+  if [[ ! -r "${filename}" || ! -f "${filename}" ]]; then
+    log::error "Cannot read the source environment file: ${filename}"
+    exit 1
+  fi
 }
 
 function main() {
@@ -506,22 +492,27 @@ function main() {
 
   case "$cmd" in
   install)
+    require::version "$@"
     echo >&2 "# Install is not implemented yet."
     ;;
   upgrade)
+    require::version "$@"
     echo >&2 "# Upgrade is not implemented yet."
     exit 1
     ;;
   install-partially-for-ami)
+    require::version "$@"
     cmd::install_partially_for_ami "$@"
     ;;
   resume)
     cmd::resume
     ;;
   populate-env)
+    require::compose_env_file "$@"
     cmd::populate_env "$@"
     ;;
   reset-credential)
+    require::compose_env_file "$@"
     cmd::reset_credential "$@"
     ;;
   *)
