@@ -22,7 +22,7 @@ function log::error() {
 }
 
 function packer::build() {
-  local version=$1 packer_option="${PACKER_OPTION:-}"
+  local version=$1 ami_name=$2 packer_option="${PACKER_OPTION:-}"
   # NOTE(JK): Use `PACKER_OPTION=-on-error=abort` to allow debugging the AMI build process.
   echo >&2 "### Build AMI with Packer ###"
   echo >&2 "PACKER_OPTION: $packer_option"
@@ -31,7 +31,7 @@ function packer::build() {
   # shellcheck disable=SC2086
   log::do packer build \
     -var "querypie_version=$version" \
-    -var "ami_name_prefix=$AMI_NAME_PREFIX" \
+    -var "ami_name=$ami_name" \
     -var "docker_auth=$DOCKER_AUTH" \
     -timestamp-ui \
     ${packer_option} \
@@ -41,11 +41,11 @@ function packer::build() {
 }
 
 function aws::image_id() {
-  local ami_name=$1 version=$2
+  local ami_name=$1
   echo >&2 "### Get AMI ID ###"
-  aws ec2 describe-images \
+  log::do aws ec2 describe-images \
     --owners self \
-    --filters "Name=name,Values=$ami_name-$version" \
+    --filters "Name=name,Values=$ami_name" \
     --query 'Images[0].ImageId' \
     --output text
 }
@@ -68,19 +68,26 @@ function validate_environment() {
 }
 
 function main() {
-  local build_version=${1:-}
-  if [[ -z "$build_version" ]]; then
-    echo "Usage: $0 <build_version>"
+  local querypie_version=${1:-} ami_name timestamp
+  if [[ -z "$querypie_version" ]]; then
+    echo "Usage: $0 <querypie_version>"
+    echo "  MODE=release $0 <querypie_version>"
     exit 1
   fi
 
   validate_environment
 
-  AMI_NAME_PREFIX="${AMI_NAME_PREFIX:-querypie-suite}"
-  packer::build "$build_version" || true # ignore errors for debugging
+  timestamp=$(date +%Y%m%d%H%M)
+  if [[ "${MODE:-}" == "release" ]]; then
+    ami_name="QueryPie-Suite-${querypie_version}"
+  else
+    ami_name="QueryPie-Suite-${querypie_version}-${timestamp}"
+  fi
+
+  packer::build "$querypie_version" "${ami_name}"
 
   local image_id
-  image_id=$(aws::image_id "$AMI_NAME_PREFIX" "$build_version")
+  image_id=$(aws::image_id "$ami_name")
 }
 
 main "$@"
