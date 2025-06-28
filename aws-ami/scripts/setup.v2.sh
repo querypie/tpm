@@ -107,7 +107,7 @@ function setup::sudo_privileges() {
   fi
 }
 
-function install_docker() {
+function install::docker() {
   echo >&2 "#"
   echo >&2 "## Install docker"
   echo >&2 "#"
@@ -148,7 +148,7 @@ function install_docker() {
   echo >&2 "# $user has been added to the docker group. Please log out and log back in to use the docker command."
 }
 
-function install_docker_compose() {
+function install::docker_compose() {
   echo >&2 "#"
   echo >&2 "## Install docker-compose"
   echo >&2 "#"
@@ -164,7 +164,7 @@ function install_docker_compose() {
   rm docker-compose
 }
 
-function install_config_files() {
+function install::config_files() {
   echo >&2 "#"
   echo >&2 "## Install config files: docker-compose.yml, compose-env, and more"
   echo >&2 "#"
@@ -360,11 +360,60 @@ function cmd::install_partially_for_ami() {
   echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
 
   setup::sudo_privileges
-  install_docker
-  install_docker_compose
-  install_config_files
+  install::docker
+  install::docker_compose
+  install::config_files
 
-  echo >&2 "### Installation is done successfully."
+  log::do pushd "./querypie/${QP_VERSION}/"
+  cmd::populate_env "compose-env"
+  log::do docker-compose pull --quiet mysql redis tools app
+  log::do docker image ls
+  cmd::reset_credential "compose-env"
+  log::do popd
+
+  echo >&2 "### Completed installation successfully."
+}
+
+function resume::find_out_version() {
+  local latest_version
+  latest_version=$(
+    find querypie -maxdepth 1 -type d -regextype posix-egrep -regex '.*/[0-9]+\.[0-9]+\.[0-9]+' |
+      sed 's:.*/::' |
+      sort -V | # Sort by version number
+      tail -n 1
+  )
+  if [[ -z "$latest_version" ]]; then
+    log::error "Unable to find a target directory in ./querypie."
+    exit 1
+  fi
+  echo "$latest_version"
+}
+
+function cmd::resume() {
+  echo >&2 "### Resume a partially completed installation ###"
+
+  local QP_VERSION
+  resume::find_out_version >/dev/null # Check if the version can be determined.
+  QP_VERSION=$(resume::find_out_version)
+  echo >&2 "# QP_VERSION: ${QP_VERSION}"
+
+  log::do pushd "./querypie/${QP_VERSION}/"
+  cmd::populate_env "compose-env"
+  log::do docker-compose --profile database up --detach
+  log::do sleep 10
+  log::do docker-compose --profile tools up --detach
+  log::do tools-readyz
+
+  # Save long output of migrate.sh as querypie-migrate.log
+  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.log
+  # Run migrate.sh again to ensure the migration is completed properly
+  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall
+  log::do docker-compose --profile tools down
+  log::do docker-compose --profile querypie up --no-start --detach
+  log::do docker container ls --all
+  log::do popd
+
+  echo >&2 "### Completed installation successfully."
 }
 
 function validate::source_env_file() {
@@ -467,8 +516,7 @@ function main() {
     cmd::install_partially_for_ami "$@"
     ;;
   resume)
-    echo >&2 "# Resuming installation is not implemented yet."
-    exit 1
+    cmd::resume
     ;;
   populate-env)
     cmd::populate_env "$@"
