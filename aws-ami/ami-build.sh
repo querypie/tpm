@@ -88,6 +88,7 @@ function main() {
 
   local image_id
   image_id=$(aws::image_id "$ami_name")
+  echo "Built AMI: $image_id"
 }
 
 main "$@"

@@ -164,7 +164,7 @@ build {
     ]
   }
 
-  # Install scripts such as setup.v2.sh, tools-readyz
+  # Install scripts such as setup.v2.sh
   provisioner "file" {
     source      = "scripts/"
     destination = "/tmp/"
@@ -173,7 +173,6 @@ build {
     inline = [
       "set -o xtrace",
       "sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh",
-      "sudo install -m 755 /tmp/tools-readyz /usr/local/bin/tools-readyz",
     ]
   }
 
