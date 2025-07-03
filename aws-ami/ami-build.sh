@@ -35,7 +35,7 @@ function packer::build() {
     -var "docker_auth=$DOCKER_AUTH" \
     -timestamp-ui \
     ${packer_option} \
-    querypie-ami.pkr.hcl |
+    ami-build.pkr.hcl |
     sed 's/ ==> build-querypie-ami\.amazon-ebs\.amazon-linux-2023://'
     # Remove builder name of '==> build-querypie-ami.amazon-ebs.amazon-linux-2023:'
 }

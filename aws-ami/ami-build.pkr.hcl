@@ -68,6 +68,9 @@ locals {
 }
 
 # Data source for latest Amazon Linux 2023 AMI
+# data : Keyword to begin a data source block
+# amazon-ami : Type of data source, or plugin name
+# amazon-linux-2023 : Name of the data source
 data "amazon-ami" "amazon-linux-2023" {
   filters = {
     name                = "al2023-ami-*-x86_64"
@@ -80,6 +83,9 @@ data "amazon-ami" "amazon-linux-2023" {
 }
 
 # Builder Configuration
+# source : Keyword to begin a source block
+# amazon-ebs : Type of builder, or plugin name
+# amazon-linux-2023 : Name of the source
 source "amazon-ebs" "amazon-linux-2023" {
   ami_name      = local.ami_name
   instance_type = local.instance_type
@@ -236,6 +242,8 @@ build {
     custom_data = {
       build_time = local.timestamp
       base_ami   = data.amazon-ami.amazon-linux-2023.id
+      ami_name   = local.ami_name
+      querypie_version = var.querypie_version
     }
   }
 }
