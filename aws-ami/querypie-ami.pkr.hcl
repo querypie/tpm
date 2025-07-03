@@ -16,10 +16,10 @@ variable "querypie_version" {
   description = "Version of QueryPie to install"
 }
 
-variable "ami_name_prefix" {
+variable "ami_name" {
   type        = string
-  default     = "querypie"
-  description = "Prefix for AMI name"
+  default     = "QueryPie-Suite-0.0.0"
+  description = "AMI name"
 }
 
 variable "docker_auth" {
@@ -31,7 +31,7 @@ variable "docker_auth" {
 # Local variables
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
-  ami_name = "${var.ami_name_prefix}-${var.querypie_version}-${local.timestamp}"
+  ami_name = "${var.ami_name}"
   region   = "ap-northeast-2"
   instance_type = "t3.xlarge" # Use t3.xlarge to accelerate the build process
   ssh_username = "ec2-user" # SSH username for Amazon Linux 2023
