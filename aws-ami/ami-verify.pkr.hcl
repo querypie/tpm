@@ -45,7 +45,7 @@ locals {
 # amazon-ebs : Type of source, or plugin name
 # querypie-suite : Name of the source block
 source "amazon-ebs" "querypie-suite" {
-  skip_create_ami = true # Skip creating a new AMI, we are verifying an existing one
+  skip_create_ami = true
   source_ami = local.source_ami
   ami_name   = local.ami_name
 
