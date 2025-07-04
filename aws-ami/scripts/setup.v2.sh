@@ -303,6 +303,57 @@ function env_file::reset_credential_in_env() {
   done 9<"${source_env}" # 9 is unused file descriptor to read ${source_env}.
 }
 
+function tools::get_readyz() {
+  curl --silent --output /dev/null --write-out "%{http_code}" \
+    http://localhost:8050/health || true
+}
+
+function tools::wait_until_readyz_gets_ready() {
+  local started_at ended_at repeated=0 i
+  started_at=$(date +%s)
+
+  # If readyz returns 200 for 3 times in a row, we consider it's ready.
+  # It waits for 5 minutes at most, and fails if readyz does not get ready.
+  for i in {1..300}; do
+    if [[ "$(tools::get_readyz)" == "200" ]]; then
+      repeated=$((repeated + 1))
+      if ((repeated >= 3)); then
+        return 0
+      fi
+    else
+      repeated=0
+    fi
+    sleep 1
+  done
+  ended_at=$(date +%s)
+  local elapsed=$((ended_at - started_at))
+  echo >&2 "readyz will not be ready. Elapsed time: ${elapsed} seconds."
+  return 1
+}
+
+function tools::wait_and_print_banner() {
+  # TODO(JK): tools-readyz will be available in tools container in the future, later than 11.0.
+  if tools::wait_until_readyz_gets_ready; then
+    # Please note that box lines are aligned with date string.
+    cat <<END_OF_SUCCESSFUL_BANNER
+.--------------------------------------------------------.
+|  🚀 QueryPie Tools has been successfully started! 🚀   |
+|  Timestamp in UTC: $(TZ=UTC date)        |
+|  Timestamp in KST: $(TZ=KST-9 date)        |
+'--------------------------------------------------------'
+END_OF_SUCCESSFUL_BANNER
+  else
+    # Please note that box lines are aligned with date string.
+    cat <<END_OF_FAILURE_BANNER
+.--------------------------------------------------------.
+|  ❌ QueryPie Tools has failed to start ! ❌            |
+|  Timestamp in UTC: $(TZ=UTC date)        |
+|  Timestamp in KST: $(TZ=KST-9 date)        |
+'--------------------------------------------------------'
+END_OF_FAILURE_BANNER
+  fi
+}
+
 ################################################################################
 # Commands
 
@@ -371,7 +422,7 @@ function cmd::resume() {
   log::do docker-compose --profile database up --detach
   log::do sleep 10
   log::do docker-compose --profile tools up --detach
-  log::do tools-readyz
+  log::do tools::wait_and_print_banner
 
   # Save long output of migrate.sh as querypie-migrate.log
   log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.log
