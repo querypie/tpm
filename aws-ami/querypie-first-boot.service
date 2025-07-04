@@ -7,15 +7,14 @@ ConditionPathExists=!/var/lib/querypie/first-boot-done
 
 [Service]
 Type=oneshot
-WorkingDirectory=/tmp
+WorkingDirectory=/home/ec2-user
 ExecStartPre=/bin/mkdir -p /var/lib/querypie
-ExecStartPre=docker container inspect querypie-app-1 --format="{{.State.Status}}"
-ExecStart=/usr/bin/docker start querypie-app-1
+ExecStart=/usr/local/bin/setup.v2.sh --resume
 ExecStartPost=/bin/touch /var/lib/querypie/first-boot-done
 RemainAfterExit=yes
 StandardOutput=journal
 StandardError=journal
-TimeoutStartSec=30
+TimeoutStartSec=600
 
 [Install]
 WantedBy=multi-user.target
