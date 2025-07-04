@@ -13,9 +13,10 @@ function print_usage_and_exit() {
   cat >&"${out}" <<END
 Usage: $program_name [options] <version>
     or $program_name [options] --install <version>
-    or $program_name [options] --install-partially-for-ami <version>
     or $program_name [options] --upgrade <version>
+    or $program_name [options] --install-partially-for-ami <version>
     or $program_name [options] --resume
+    or $program_name [options] --verify-installation
     or $program_name [options] --populate-env <compose-env-file>
     or $program_name [options] --reset-credential <compose-env-file>
     or $program_name [options] --help
@@ -524,6 +525,10 @@ function main() {
       cmd="${1#--}"
       shift
       ;;
+    --verify-installation)
+      cmd="${1#--}"
+      shift
+      ;;
     --populate-env | --reset-credential)
       cmd="${1#--}"
       shift
@@ -557,6 +562,10 @@ function main() {
     ;;
   resume)
     cmd::resume
+    ;;
+  verify-installation)
+    echo >&2 "# Verify installation is not implemented yet."
+    exit 1
     ;;
   populate-env)
     require::compose_env_file "$@"
