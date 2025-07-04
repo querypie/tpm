@@ -335,7 +335,7 @@ function tools::wait_until_readyz_gets_ready() {
 function tools::wait_and_print_banner() {
   # TODO(JK): tools-readyz will be available in tools container in the future, later than 11.0.
   if tools::wait_until_readyz_gets_ready; then
-    # Please note that box lines are aligned with date string.
+    # Please note that box lines are aligned with the date string.
     cat <<END_OF_SUCCESSFUL_BANNER
 .--------------------------------------------------------.
 |  🚀 QueryPie Tools has been successfully started! 🚀   |
@@ -344,7 +344,7 @@ function tools::wait_and_print_banner() {
 '--------------------------------------------------------'
 END_OF_SUCCESSFUL_BANNER
   else
-    # Please note that box lines are aligned with date string.
+    # Please note that box lines are aligned with the date string.
     cat <<END_OF_FAILURE_BANNER
 .--------------------------------------------------------.
 |  ❌ QueryPie Tools has failed to start ! ❌            |
@@ -363,7 +363,7 @@ function verify::get_version_of_querypie() {
 ################################################################################
 # Commands
 
-function package_version() {
+function install::get_package_version() {
   local package_version=$1 image_version=$2
   if [[ -n "$package_version" ]]; then
     # If package_version is provided, return it directly.
@@ -377,12 +377,57 @@ function package_version() {
   fi
 }
 
+function cmd::install() {
+  local QP_VERSION=${1:-}
+
+  echo >&2 "### Install QueryPie ###"
+  echo >&2 "# QP_VERSION: ${QP_VERSION}"
+  PACKAGE_VERSION=$(install::get_package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
+  echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
+
+  setup::sudo_privileges
+  install::docker
+  install::docker_compose
+  install::config_files
+
+  log::do pushd "./querypie/${QP_VERSION}/"
+  echo >&2 "## Configure ./querypie/${QP_VERSION}/compose-env file."
+  cmd::populate_env "compose-env"
+  log::do docker-compose pull --quiet mysql redis tools app
+  echo >&2 "## Start up MySQL and Redis for QueryPie."
+  log::do docker-compose --profile database up --detach
+  log::do sleep 10
+  log::do docker-compose --profile tools up --detach
+  log::do tools::wait_and_print_banner
+
+  echo >&2 "## Run migrate.sh to populate MySQL for QueryPie."
+  # Save the long output of migrate.sh as querypie-migrate.1.log
+  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.1.log
+  # Run migrate.sh again to ensure the migration is completed properly
+  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
+  log::do docker-compose --profile tools down
+  echo >&2 "## Almost done. Now QueryPie container is going to start up in about 2 minutes."
+  log::do docker-compose --profile querypie up --detach
+  log::do docker exec querypie-app-1 readyz || {
+    log::error "QueryPie container has failed to start up. Please check the logs."
+    log::do docker logs --tail 100 querypie-app-1 || true
+    exit 1
+  }
+  log::do popd
+
+  local ip_address
+  ip_address="$(hostname -i)"
+  echo >&2 "### Completed installation successfully."
+  echo >&2 "### Please open your browser and access http://${ip_address}/ to use QueryPie."
+  echo >&2 "### You might need to figure out the public IP address of your host machine."
+}
+
 function cmd::install_partially_for_ami() {
   local QP_VERSION=${1}
 
   echo >&2 "### Install partially for AWS AMI Build. ###"
   echo >&2 "# QP_VERSION: ${QP_VERSION}"
-  PACKAGE_VERSION=$(package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
+  PACKAGE_VERSION=$(install::get_package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
   echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
 
   setup::sudo_privileges
@@ -516,7 +561,7 @@ function cmd::verify_installation() {
   # Find out the version of the QueryPie app container.
   echo >&2 "# QueryPie version: $(verify::get_version_of_querypie || true)"
 
-  log::do docker exec querypie-app-1 readyz || {
+  log::do docker exec querypie-app-1 readyz wait || {
     log::error "QueryPie app verification failed. Please check the installation."
     log::do docker logs --tail 100 querypie-app-1 || true
     ((status += 1))
@@ -613,7 +658,7 @@ function main() {
   case "$cmd" in
   install)
     require::version "$@"
-    echo >&2 "# Install is not implemented yet."
+    cmd::install "$@"
     ;;
   upgrade)
     require::version "$@"

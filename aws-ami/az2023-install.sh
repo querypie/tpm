@@ -21,21 +21,22 @@ function log::error() {
   printf "%bERROR: %s%b\n" "$BOLD_RED" "$*" "$RESET" 1>&2
 }
 
-function packer::verify() {
-  local ami_id=$1 packer_option="${PACKER_OPTION:-}"
+function packer::install() {
+  local version=$1 packer_option="${PACKER_OPTION:-}"
   # NOTE(JK): Use `PACKER_OPTION=-on-error=abort` to allow debugging the AMI build process.
-  echo >&2 "### Verify AMI with Packer ###"
+  echo >&2 "### Install QueryPie and Verify with Packer ###"
   echo >&2 "PACKER_OPTION: $packer_option"
 
   # Disable SC2086(Use double quotes to prevent word splitting) to allow expansion of variables.
   # shellcheck disable=SC2086
   log::do packer build \
-    -var "source_ami=$ami_id" \
+    -var "querypie_version=$version" \
+    -var "docker_auth=$DOCKER_AUTH" \
     -timestamp-ui \
     ${packer_option} \
-    ami-verify.pkr.hcl |
-    sed 's/ ==> amazon-ebs\.ami-verify://'
-    # Remove the builder name of '==> amazon-ebs.ami-verify:'
+    az2023-install.pkr.hcl |
+    sed 's/ ==> amazon-ebs\.az2023-install://'
+    # Remove the builder name of '==> amazon-ebs.az2023-install:'
 }
 
 function validate_environment() {
@@ -48,18 +49,23 @@ function validate_environment() {
     log::error "AWS CLI is not installed. Please install AWS CLI to continue."
     exit 1
   fi
+
+  if [[ -z "${DOCKER_AUTH:-}" ]]; then
+    log::error "DOCKER_AUTH environment variable is not set. Please set it to the base64-encoded Docker registry authentication."
+    exit 1
+  fi
 }
 
 function main() {
-  local ami_id=${1:-} ami_name timestamp
-  if [[ -z "$ami_id" ]]; then
-    echo "Usage: $0 <ami_id>"
+  local querypie_version=${1:-} ami_name timestamp
+  if [[ -z "$querypie_version" ]]; then
+    echo "Usage: $0 <querypie_version>"
     exit 1
   fi
 
   validate_environment
 
-  packer::verify "$ami_id"
+  packer::install "$querypie_version"
 }
 
 main "$@"
