@@ -98,11 +98,24 @@ build {
     ]
   }
 
+  # Install scripts such as setup.v2.sh
+  # TODO(JK): Remove this provisioner when setup.v2.sh is completed.
+  provisioner "file" {
+    source      = "scripts/"
+    destination = "/tmp/"
+  }
+  provisioner "shell" {
+    inline = [
+      "set -o xtrace",
+      "sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh",
+    ]
+  }
+
   # Verify QueryPie installation
   provisioner "shell" {
     inline = [
       "set -o xtrace",
-      "setup.v2.sh --verify-installation || true",
+      "setup.v2.sh --verify-installation",
     ]
   }
 }
