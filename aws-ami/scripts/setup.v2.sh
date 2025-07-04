@@ -430,12 +430,12 @@ function cmd::resume() {
   log::do docker-compose --profile tools up --detach
   log::do tools::wait_and_print_banner
 
-  # Save long output of migrate.sh as querypie-migrate.log
-  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.log
+  # Save the long output of migrate.sh as querypie-migrate.1.log
+  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.1.log
   # Run migrate.sh again to ensure the migration is completed properly
-  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall
+  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
   log::do docker-compose --profile tools down
-  log::do docker-compose --profile querypie up --no-start --detach
+  log::do docker-compose --profile querypie up --detach
   log::do docker container ls --all
   log::do popd
 
@@ -480,13 +480,14 @@ function cmd::verify_installation() {
 
   if [[ -f /etc/systemd/system/querypie-first-boot.service ]]; then
     echo >&2 "## querypie-first-boot systemd service is installed."
-    for try in {1..40}; do
+    for try in {1..30}; do
       if [[ -e /var/lib/querypie/first-boot-done ]]; then
         echo >&2 "# QueryPie first boot is done."
         break
       fi
       echo >&2 "# Waiting for QueryPie first boot to complete... (try ${try})"
-      sleep 5
+      log::do systemctl status querypie-first-boot || true
+      sleep 10
     done
 
     if [[ ! -e /var/lib/querypie/first-boot-done ]]; then
@@ -501,7 +502,7 @@ function cmd::verify_installation() {
 
     log::do systemctl status querypie-first-boot || {
       log::error "QueryPie first boot service status could not be retrieved."
-      log::do systemctl logs querypie-first-boot || true
+      log::do journalctl -u querypie-first-boot || true
       ((status += 1))
     }
   fi

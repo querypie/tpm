@@ -190,17 +190,8 @@ build {
     ]
   }
 
-  ## TODO(JK): Following steps will be moved to first-boot script.
-
-  # Resume Installation
-  provisioner "shell" {
-    inline = [
-      "set -o xtrace",
-      "setup.v2.sh --resume",
-    ]
-  }
-
   # Setup querypie-first-boot.service
+  # This service will resume the installation of QueryPie.
   provisioner "file" {
     source      = "querypie-first-boot.service"
     destination = "/tmp/querypie-first-boot.service"
