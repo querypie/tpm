@@ -36,8 +36,8 @@ function packer::build() {
     -timestamp-ui \
     ${packer_option} \
     ami-build.pkr.hcl |
-    sed 's/ ==> build-querypie-ami\.amazon-ebs\.amazon-linux-2023://'
-    # Remove builder name of '==> build-querypie-ami.amazon-ebs.amazon-linux-2023:'
+    sed 's/ ==> amazon-ebs\.ami-build://'
+    # Remove the builder name of '==> amazon-ebs.ami-build:'
 }
 
 function aws::image_id() {

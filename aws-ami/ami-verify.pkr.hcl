@@ -42,12 +42,12 @@ locals {
 
 # Builder Configuration
 # source : Keyword to begin a source block
-# amazon-ebs : Type of source, or plugin name
-# querypie-suite : Name of the source block
-source "amazon-ebs" "querypie-suite" {
+# amazon-ebs : Type of builder, or plugin name
+# ami-verify : Name of the builder
+source "amazon-ebs" "ami-verify" {
   skip_create_ami = true
-  source_ami = local.source_ami
-  ami_name   = local.ami_name
+  source_ami      = local.source_ami
+  ami_name        = local.ami_name
 
   region        = local.region
   instance_type = local.instance_type
@@ -85,9 +85,8 @@ source "amazon-ebs" "querypie-suite" {
 
 # Build configuration
 build {
-  name = "verify-querypie-ami"
   sources = [
-    "source.amazon-ebs.querypie-suite"
+    "source.amazon-ebs.ami-verify"
   ]
 
   provisioner "shell" {
@@ -117,5 +116,15 @@ build {
       "set -o xtrace",
       "setup.v2.sh --verify-installation",
     ]
+  }
+
+  # Generate manifest
+  post-processor "manifest" {
+    output     = "manifest.json"
+    strip_path = true
+    custom_data = {
+      timestamp = local.timestamp
+      ami_name  = local.ami_name
+    }
   }
 }

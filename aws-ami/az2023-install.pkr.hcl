@@ -16,12 +16,6 @@ variable "querypie_version" {
   description = "Version of QueryPie to install"
 }
 
-variable "ami_name" {
-  type        = string
-  default     = "QueryPie-Suite-0.0.0"
-  description = "AMI name"
-}
-
 variable "docker_auth" {
   type        = string
   description = "Base64-encoded Docker registry authentication (username:password)"
@@ -31,7 +25,7 @@ variable "docker_auth" {
 # Local variables
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
-  ami_name = "${var.ami_name}"
+  ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
 
   region = "ap-northeast-2"
   instance_type = "t3.xlarge" # Use t3.xlarge to accelerate the build process
@@ -39,8 +33,8 @@ locals {
 
   common_tags = {
     CreatedBy = "Packer"
-    Owner     = "AMI-Builder"
-    Purpose   = "Automated QueryPie AMI Build"
+    Owner     = "AZ2023-Installer"
+    Purpose   = "Automated QueryPie Installer"
     BuildDate = local.timestamp
     Version   = var.querypie_version
   }
@@ -48,22 +42,7 @@ locals {
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "AMI-Builder-${local.ami_name}"
-    }
-  )
-  ami_tags = merge(
-    local.common_tags,
-    {
-      Name    = local.ami_name
-      OS      = "Amazon Linux 2023"
-      BaseAMI = data.amazon-ami.amazon-linux-2023.id
-    }
-  )
-  snapshot_tags = merge(
-    local.common_tags,
-    {
-      Name        = "${local.ami_name}-snapshot"
-      Description = "Snapshot of QueryPie AMI built on ${local.timestamp}"
+      Name = "AZ2023-Installer-${var.querypie_version}"
     }
   )
 }
@@ -86,10 +65,11 @@ data "amazon-ami" "amazon-linux-2023" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# ami-build : Name of the builder
-source "amazon-ebs" "ami-build" {
-  source_ami = data.amazon-ami.amazon-linux-2023.id
-  ami_name   = local.ami_name
+# az2023-install : Name of the builder
+source "amazon-ebs" "az2023-install" {
+  skip_create_ami = true
+  source_ami      = data.amazon-ami.amazon-linux-2023.id
+  ami_name        = local.ami_name
 
   region        = local.region
   instance_type = local.instance_type
@@ -123,18 +103,12 @@ source "amazon-ebs" "ami-build" {
 
   # Tags of the EC2 instance used for building the AMI
   run_tags = local.instance_tags
-
-  # Tags of the AMI created
-  tags = local.ami_tags
-
-  # Tags of the snapshot from VM
-  snapshot_tags = local.snapshot_tags
 }
 
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.ami-build"
+    "source.amazon-ebs.az2023-install"
   ]
 
   provisioner "shell" {
@@ -142,10 +116,6 @@ build {
       "set -o xtrace",
       "cloud-init status --wait",
       # Now this EC2 instance is ready for more software installation.
-
-      "# System updates",
-      "sudo dnf update -y",
-      "sudo dnf upgrade -y",
 
       "# Installing essential packages...",
       "sudo dnf install -y docker",
@@ -186,26 +156,8 @@ build {
   provisioner "shell" {
     inline = [
       "set -o xtrace",
-      "setup.v2.sh --install-partially-for-ami ${var.querypie_version}",
-    ]
-  }
-
-  # Setup querypie-first-boot.service
-  # This service will resume the installation of QueryPie.
-  provisioner "file" {
-    source      = "querypie-first-boot.service"
-    destination = "/tmp/querypie-first-boot.service"
-  }
-  provisioner "shell" {
-    inline = [
-      "set -o xtrace",
-      "sudo install -m 644 /tmp/querypie-first-boot.service /etc/systemd/system/querypie-first-boot.service",
-      "sudo systemctl enable querypie-first-boot.service",
-      "sudo systemctl daemon-reload",
-      # Please note that this service will run only once, at the first boot of the AMI.
-      # You can check the status of this service using `systemctl status querypie-first-boot.service`,
-      # after the AMI is launched.
-      # Unless this service is running, the QueryPie application will not be started automatically.
+      "setup.v2.sh --install ${var.querypie_version}",
+      "setup.v2.sh --verify-installation",
     ]
   }
 
@@ -231,10 +183,8 @@ build {
     output     = "manifest.json"
     strip_path = true
     custom_data = {
-      ami_name         = local.ami_name
+      timestmap        = local.timestamp
       querypie_version = var.querypie_version
-      timestamp        = local.timestamp
-      base_ami         = data.amazon-ami.amazon-linux-2023.name
     }
   }
 }
