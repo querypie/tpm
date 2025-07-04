@@ -355,6 +355,11 @@ END_OF_FAILURE_BANNER
   fi
 }
 
+function verify::get_version_of_querypie() {
+  local container=querypie-app-1
+  docker inspect --format '{{.Config.Image}}' $container | cut -d':' -f2
+}
+
 ################################################################################
 # Commands
 
@@ -467,6 +472,64 @@ function cmd::reset_credential() {
   cp "${tmp_file}" "${source_env_file}"
 }
 
+function cmd::verify_installation() {
+  echo >&2 "#"
+  echo >&2 "### Verify installation"
+  echo >&2 "#"
+  local status=0 try=0
+
+  if [[ -f /etc/systemd/system/querypie-first-boot.service ]]; then
+    echo >&2 "## querypie-first-boot systemd service is installed."
+    for try in {1..40}; do
+      if [[ -e /var/lib/querypie/first-boot-done ]]; then
+        echo >&2 "# QueryPie first boot is done."
+        break
+      fi
+      echo >&2 "# Waiting for QueryPie first boot to complete... (try ${try})"
+      sleep 5
+    done
+
+    if [[ ! -e /var/lib/querypie/first-boot-done ]]; then
+      echo >&2 "# QueryPie first boot is not done yet. There might be an issue with the first boot service."
+      ((status += 1))
+    fi
+
+    log::do systemctl is-active --quiet querypie-first-boot || {
+      log::error "QueryPie first boot service is not running. Please start the service."
+      ((status += 1))
+    }
+
+    log::do systemctl status querypie-first-boot || {
+      log::error "QueryPie first boot service status could not be retrieved."
+      log::do systemctl logs querypie-first-boot || true
+      ((status += 1))
+    }
+  fi
+
+  log::do docker inspect querypie-app-1 >/dev/null 2>&1 || {
+    log::error "QueryPie app container is not running. Please check the installation."
+    log::do docker logs --tail 100 querypie-app-1 || true
+    ((status += 1))
+  }
+
+  # Find out the version of the QueryPie app container.
+  echo >&2 "# QueryPie version: $(verify::get_version_of_querypie || true)"
+
+  log::do docker exec querypie-app-1 readyz || {
+    log::error "QueryPie app verification failed. Please check the installation."
+    log::do docker logs --tail 100 querypie-app-1 || true
+    ((status += 1))
+  }
+
+  if [[ status -gt 0 ]]; then
+    echo >&2 "# Installation verification failed with ${status} errors."
+    echo >&2 "# Please check the logs and fix the issues."
+    exit "${status}"
+  else
+    echo >&2 "# Installation verification completed successfully."
+  fi
+}
+
 ################################################################################
 # Input validations
 
@@ -564,8 +627,7 @@ function main() {
     cmd::resume
     ;;
   verify-installation)
-    echo >&2 "# Verify installation is not implemented yet."
-    exit 1
+    cmd::verify_installation
     ;;
   populate-env)
     require::compose_env_file "$@"
