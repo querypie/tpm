@@ -355,9 +355,39 @@ END_OF_FAILURE_BANNER
   fi
 }
 
+function upgrade::is_higher_version() {
+  local current=$1 target=$2 higher
+  higher=$(printf '%s\n%s' "$current" "$target" | sort -V | tail -n1)
+  if [[ "$higher" == "$target" && "$target" != "$current" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 function verify::get_version_of_querypie() {
   local container=querypie-app-1
   docker inspect --format '{{.Config.Image}}' $container | cut -d':' -f2
+}
+
+function verify::container_is_ready_for_service() {
+  local container=querypie-app-1
+  if log::do docker inspect --format '{{.State.Running}}' $container 2>/dev/null | grep -q 'true'; then
+    echo >&2 "# QueryPie app container, $container is running."
+  else
+    log::error "QueryPie app container, $container is not running. Please check the installation."
+    return 1
+  fi
+
+  # Find out the version of the QueryPie app container.
+  echo >&2 "# QueryPie version: $(verify::get_version_of_querypie || true)"
+
+  if log::do docker exec querypie-app-1 readyz wait; then
+    echo >&2 "# QueryPie app container, $container is ready for service."
+  else
+    log::error "QueryPie app container is not functioning properly. Please check the installation."
+    return 1
+  fi
 }
 
 ################################################################################
@@ -375,6 +405,14 @@ function install::get_package_version() {
     # If the version does not match the expected format, try replacing ending number with '.x'.
     echo "${image_version%.*}.x"
   fi
+}
+
+function install::make_symlink_of_current() {
+  echo >&2 "## Make a symbolic link, 'current' to ${QP_VERSION}"
+  log::do pushd "./querypie/"
+  log::do rm -f current
+  log::do ln -s "${QP_VERSION}" current
+  log::do popd
 }
 
 function cmd::install() {
@@ -415,9 +453,82 @@ function cmd::install() {
   }
   log::do popd
 
+  install::make_symlink_of_current
+
   local ip_address
   ip_address="$(hostname -i)"
   echo >&2 "### Completed installation successfully."
+  echo >&2 "### Please open your browser and access http://${ip_address}/ to use QueryPie."
+  echo >&2 "### You might need to figure out the public IP address of your host machine."
+}
+
+function cmd::upgrade() {
+  local QP_VERSION=${1:-} current_version
+
+  echo >&2 "### Upgrade QueryPie to ${QP_VERSION} ###"
+  echo >&2 "# QP_VERSION: ${QP_VERSION}"
+  PACKAGE_VERSION=$(install::get_package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
+  echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
+
+  verify::container_is_ready_for_service || {
+    log::error "Upgrade is aborted."
+    exit 1
+  }
+  current_version=$(verify::get_version_of_querypie)
+  echo >&2 "# Current QueryPie version: ${current_version}"
+  if ! upgrade::is_higher_version "${current_version}" "${QP_VERSION}"; then
+    echo >&2 "# The current version is already equal or higher than ${QP_VERSION}. No need to upgrade."
+    return
+  fi
+
+  install::config_files
+
+  log::do pushd "./querypie/${QP_VERSION}/"
+  echo >&2 "## Configure ./querypie/${QP_VERSION}/compose-env file of target version."
+  (
+    # shellcheck disable=SC1090
+    if [[ -e ../current/compose-env ]]; then
+      source ../current/compose-env
+    elif [[ -e ../${current_version}/compose-env ]]; then
+      source ../"${current_version}"/compose-env
+    else
+      log::error "No compose-env file found in ./querypie/current/ or ./querypie/${current_version}/."
+      exit 1
+    fi
+    cmd::populate_env "compose-env"
+  )
+  log::do docker-compose pull --quiet mysql redis tools app
+  log::do popd
+
+  log::do pushd "./querypie/${current_version}/"
+  log::do docker-compose --profile querypie down
+  log::do docker-compose --profile tools down || true
+  log::do popd
+
+  log::do pushd "./querypie/${QP_VERSION}/"
+  log::do docker-compose --profile tools up --detach
+  log::do tools::wait_and_print_banner
+
+  echo >&2 "## Run migrate.sh to populate MySQL for QueryPie."
+  # Save the long output of migrate.sh as querypie-migrate.1.log
+  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >>~/querypie-migrate.1.log
+  # Run migrate.sh again to ensure the migration is completed properly
+  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall | tee -a ~/querypie-migrate.log
+  log::do docker-compose --profile tools down
+  echo >&2 "## Almost done. Now QueryPie container is going to start up in about 2 minutes."
+  log::do docker-compose --profile querypie up --detach
+  log::do docker exec querypie-app-1 readyz || {
+    log::error "QueryPie container has failed to start up. Please check the logs."
+    log::do docker logs --tail 100 querypie-app-1 || true
+    exit 1
+  }
+  log::do popd
+
+  install::make_symlink_of_current
+
+  local ip_address
+  ip_address="$(hostname -i)"
+  echo >&2 "### Completed upgrade successfully."
   echo >&2 "### Please open your browser and access http://${ip_address}/ to use QueryPie."
   echo >&2 "### You might need to figure out the public IP address of your host machine."
 }
@@ -483,6 +594,8 @@ function cmd::resume() {
   log::do docker-compose --profile querypie up --detach
   log::do docker container ls --all
   log::do popd
+
+  install::make_symlink_of_current
 
   echo >&2 "### Completed installation successfully."
 }
@@ -552,17 +665,7 @@ function cmd::verify_installation() {
     }
   fi
 
-  log::do docker inspect querypie-app-1 >/dev/null 2>&1 || {
-    log::error "QueryPie app container is not running. Please check the installation."
-    log::do docker logs --tail 100 querypie-app-1 || true
-    ((status += 1))
-  }
-
-  # Find out the version of the QueryPie app container.
-  echo >&2 "# QueryPie version: $(verify::get_version_of_querypie || true)"
-
-  log::do docker exec querypie-app-1 readyz wait || {
-    log::error "QueryPie app verification failed. Please check the installation."
+  verify::container_is_ready_for_service || {
     log::do docker logs --tail 100 querypie-app-1 || true
     ((status += 1))
   }
@@ -662,8 +765,7 @@ function main() {
     ;;
   upgrade)
     require::version "$@"
-    echo >&2 "# Upgrade is not implemented yet."
-    exit 1
+    cmd::upgrade "$@"
     ;;
   install-partially-for-ami)
     require::version "$@"
