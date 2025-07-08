@@ -170,10 +170,14 @@ build {
     ]
   }
 
-  # Install scripts such as setup.v2.sh
+  provisioner "shell" {
+    script = "scripts/remove-ecs.sh"
+  }
+
+  # Install setup.v2.sh in /usr/local/bin
   provisioner "file" {
-    source      = "scripts/"
-    destination = "/tmp/"
+    source      = "scripts/setup.v2.sh"
+    destination = "/tmp/setup.v2.sh"
   }
   provisioner "shell" {
     inline = [
