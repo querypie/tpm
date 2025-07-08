@@ -9,7 +9,7 @@ show_help() {
     echo "Usage: $0 <service> <version> <action> [<subaction>] [<filename>]"
     echo
     echo "Parameters:"
-    echo "  service   : Service to manage (querypie or tools)"
+    echo "  service   : Service to manage (querypie, tools, database, or all)"
     echo "  version   : Version in format major.minor.patch (e.g., 1.0.0)"
     echo "  action    : Action to perform (up, down, restart, log, or license)"
     echo "  subaction : Subaction for license (upload or list)"
@@ -18,6 +18,10 @@ show_help() {
     echo "Examples:"
     echo "  $0 querypie 1.0.0 up"
     echo "  $0 tools 1.0.0 down"
+    echo "  $0 database 1.0.0 up"
+    echo "  $0 database 1.0.0 down"
+    echo "  $0 all 1.0.0 up"
+    echo "  $0 all 1.0.0 down"
     echo "  $0 querypie 1.0.0 restart"
     echo "  $0 querypie 1.0.0 log"
     echo "  $0 tools 1.0.0 log"
@@ -84,8 +88,8 @@ fi
 ORIGINAL_DIR=$(pwd)
 
 # Validate service parameter
-if [ "$SERVICE" != "querypie" ] && [ "$SERVICE" != "tools" ]; then
-    echo "Error: Service must be either 'querypie' or 'tools'"
+if [ "$SERVICE" != "querypie" ] && [ "$SERVICE" != "tools" ] && [ "$SERVICE" != "database" ] && [ "$SERVICE" != "all" ]; then
+    echo "Error: Service must be either 'querypie', 'tools', 'database', or 'all'"
     echo "Use '$0 -h' for help"
     exit 1
 fi
@@ -131,14 +135,42 @@ fi
 # Execute the requested action
 case $ACTION in
     "up")
-        docker-compose --env-file compose-env --profile "$SERVICE" up -d
-        if [ "$SERVICE" = "querypie" ]; then
+        if [ "$SERVICE" = "all" ]; then
+            # For "all" service, start database first
+            echo "Starting database service..."
+            docker-compose --env-file compose-env --profile database up -d
+
+            # Wait for 10 seconds
+            echo "Waiting for 10 seconds for database to start..."
+            sleep 10
+
+            # Then start querypie
+            echo "Starting querypie service..."
+            docker-compose --env-file compose-env --profile querypie up -d
+
+            # Show logs for querypie
             echo "Showing logs for querypie-app-1..."
             docker logs -f querypie-app-1
+        else
+            docker-compose --env-file compose-env --profile "$SERVICE" up -d
+            if [ "$SERVICE" = "querypie" ]; then
+                echo "Showing logs for querypie-app-1..."
+                docker logs -f querypie-app-1
+            fi
         fi
         ;;
     "down")
-        docker-compose --env-file compose-env --profile "$SERVICE" down
+        if [ "$SERVICE" = "all" ]; then
+            # For "all" service, stop querypie first
+            echo "Stopping querypie service..."
+            docker-compose --env-file compose-env --profile querypie down
+
+            # Then stop database
+            echo "Stopping database service..."
+            docker-compose --env-file compose-env --profile database down
+        else
+            docker-compose --env-file compose-env --profile "$SERVICE" down
+        fi
         ;;
     "restart")
         docker-compose --env-file compose-env --profile "$SERVICE" down
@@ -152,7 +184,7 @@ case $ACTION in
         if [ "$SERVICE" = "querypie" ]; then
             echo "Showing logs for querypie-app-1..."
             docker logs -f querypie-app-1
-        else
+        elif [ "$SERVICE" = "tools" ]; then
             echo "Showing logs for querypie-tools-1..."
             docker logs -f querypie-tools-1
         fi
