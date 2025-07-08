@@ -176,8 +176,25 @@ function install::config_files() {
   log::do curl -fsSL https://dl.querypie.com/releases/compose/"$PACKAGE_VERSION"/package.tar.gz -o package.tar.gz
   log::do tar zxvf package.tar.gz -C ./querypie/"$QP_VERSION"
   rm package.tar.gz
-  log::do sed -i.orig s/^VERSION=.*/VERSION="$QP_VERSION"/ ./querypie/"$QP_VERSION"/compose-env
+  log::do sed -i.orig \
+    -e "s#- \\./mysql:/var/lib/mysql#- ../mysql:/var/lib/mysql#" \
+    -e "s#harbor.chequer.io/querypie/#querypie/#" \
+    ./querypie/"$QP_VERSION"/docker-compose.yml
+  rm ./querypie/"$QP_VERSION"/docker-compose.yml.orig
+  log::do sed -i.orig \
+    -e "s#^VERSION=.*#VERSION=$QP_VERSION#" \
+    -e "s#CABINET_DATA_DIR=/data#CABINET_DATA_DIR=../data#" \
+    ./querypie/"$QP_VERSION"/compose-env
   rm ./querypie/"$QP_VERSION"/compose-env.orig
+
+  # Deprecated since 10.3.0
+  if grep -q CABINET_DATA_DIR ./querypie/"$QP_VERSION"/compose-env; then
+    log::do mkdir -p ./querypie/data
+  fi
+
+  if [[ ! -d ./querypie/mysql ]]; then
+    log::do mkdir -p ./querypie/mysql
+  fi
 
   # Create a symbolic link to the compose-env file,
   # so that user can skip --env-file option when running docker-compose commands.
@@ -244,8 +261,14 @@ function env_file::determine_value() {
   REDIS_NODES)
     echo host.docker.internal:6379
     ;;
+  REDIS_CONNECTION_MODE) # Deprecated since 10.3.0
+    echo STANDALONE
+    ;;
+  QUERYPIE_WEB_URL | AWS_ACCOUNT_ID) # Deprecated since 10.3.0
+    echo ""                          # Empty string for these variables.
+    ;;
   *)
-    log::error "Unexpected variable: ${name}"
+    echo >&2 "# Extra variable: ${name}"
     ;;
   esac
 }
@@ -609,9 +632,9 @@ function cmd::populate_env() {
   #shellcheck disable=SC2064
   trap "rm -f ${tmp_file}" EXIT
 
-  echo >&2 "## Generating a docker env file from ${source_env_file} as ${tmp_file}..."
+  echo >&2 "# Generating a docker env file from ${source_env_file} as ${tmp_file}..."
   env_file::populate_env "${source_env_file}" >"${tmp_file}"
-  echo >&2 "## Replacing the original file ${source_env_file} with the generated file ${tmp_file}..."
+  echo >&2 "# Replacing the original file ${source_env_file} with the generated file ${tmp_file}..."
   cp "${tmp_file}" "${source_env_file}"
 }
 
@@ -624,9 +647,9 @@ function cmd::reset_credential() {
   #shellcheck disable=SC2064
   trap "rm -f ${tmp_file}" EXIT
 
-  echo >&2 "## Resetting credentials in ${source_env_file}..."
+  echo >&2 "# Resetting credentials in ${source_env_file} as ${tmp_file}..."
   env_file::reset_credential_in_env "${source_env_file}" >"${tmp_file}"
-  echo >&2 "## Replacing the original file ${source_env_file} with the reset file ${tmp_file}..."
+  echo >&2 "# Replacing the original file ${source_env_file} with the reset file ${tmp_file}..."
   cp "${tmp_file}" "${source_env_file}"
 }
 
