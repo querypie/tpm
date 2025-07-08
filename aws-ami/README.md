@@ -32,24 +32,37 @@ Suppose you are building on macOS.
     ```
 5. Initialize the Packer project, which will download the necessary plugins and dependencies
     ```bash
-    packer init querypie-ami.pkr.hcl
+    packer init ami-build.pkr.hcl
     ```
-6. Copy `docker-config.tmpl.json` to `docker-config.json`, and populate the auth values.
-    ```json
-   {
-     "auths": {
-       "harbor.chequer.io": {
-         "auth": "<base64-encoded-username:password>"
-       }
-     }
-   }
-    ```
+6. Set an environment variable, DOCKER_AUTH.
+    `DOCKER_AUTH=<base64-encoded-username:password>`
    To generate the auth value, run: `echo -n 'username:password' | base64`
 
-## Build an AMI
+## Build an AMI, and verify the result
 
-Run `build-ami.sh <version>` to build an AMI where <version> is a version of QueryPie.
-`./build-ami.sh 10.3.0`
+Run `ami-build.sh <version>` to build an AMI where <version> is a version of QueryPie.
+`./ami-build.sh 10.3.4`
+
+After the build is complete, you will get an AMI ID. You can verify the AMI by this command:
+`./ami-verify.sh <AMI_ID>`
+
+`./ami-verify.sh` will create an EC2 instance using the AMI 
+and run a simple test to ensure that the QueryPie application is running correctly.
+
+## Verify installation procedure on Amazon Linux 2023
+
+Run `az2023-install.sh <version>` to verify the installation procedure on Amazon Linux 2023.
+`./az2023-install.sh 10.3.4`
+
+## Install QueryPie on a Linux instance
+
+To install QueryPie on a Linux instance, follow these steps:
+`setup.v2.sh --install <version>`
+
+## Upgrade QueryPie on a Linux instance
+
+To upgrade QueryPie on a Linux instance, follow these steps:
+`setup.v2.sh --upgrade <version>`
 
 ## Troubleshooting
 
