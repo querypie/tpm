@@ -388,12 +388,21 @@ function upgrade::is_higher_version() {
   fi
 }
 
-function verify::get_version_of_querypie() {
+function verify::version_of_current() {
+  readlink querypie/current || {
+    log::error "Unable to find the current version out in ./querypie."
+    exit 1
+  }
+}
+
+function verify::version_of_container() {
   local container=querypie-app-1
   docker inspect --format '{{.Config.Image}}' $container | cut -d':' -f2
 }
 
 function verify::container_is_ready_for_service() {
+  echo >&2 "## Verify that QueryPie app container is running properly."
+
   local container=querypie-app-1
   if log::do docker inspect --format '{{.State.Running}}' $container 2>/dev/null | grep -q 'true'; then
     echo >&2 "# QueryPie app container, $container is running."
@@ -403,7 +412,7 @@ function verify::container_is_ready_for_service() {
   fi
 
   # Find out the version of the QueryPie app container.
-  echo >&2 "# QueryPie version: $(verify::get_version_of_querypie || true)"
+  echo >&2 "# QueryPie version: $(verify::version_of_container || true)"
 
   if log::do docker exec querypie-app-1 readyz wait; then
     echo >&2 "# QueryPie app container, $container is ready for service."
@@ -432,6 +441,14 @@ function install::get_package_version() {
 
 function install::make_symlink_of_current() {
   echo >&2 "## Make a symbolic link, 'current' to ${QP_VERSION}"
+  local current_version
+  current_version=$(readlink ./querypie/current || true)
+  if [[ "$current_version" == "$QP_VERSION" ]]; then
+    echo >&2 "# ./querypie/current already exists and points to ${QP_VERSION}."
+    echo >&2 "# No need to create a new symbolic link."
+    return
+  fi
+
   log::do pushd "./querypie/"
   log::do rm -f current
   log::do ln -s "${QP_VERSION}" current
@@ -486,7 +503,7 @@ function cmd::install() {
 }
 
 function cmd::upgrade() {
-  local QP_VERSION=${1:-} current_version
+  local QP_VERSION=${1:-} current_version container_version
 
   echo >&2 "### Upgrade QueryPie to ${QP_VERSION} ###"
   echo >&2 "# QP_VERSION: ${QP_VERSION}"
@@ -497,8 +514,14 @@ function cmd::upgrade() {
     log::error "Upgrade is aborted."
     exit 1
   }
-  current_version=$(verify::get_version_of_querypie)
-  echo >&2 "# Current QueryPie version: ${current_version}"
+  current_version=$(verify::version_of_current)
+  container_version=$(verify::version_of_container)
+  if [[ ${current_version} != "${container_version}" ]]; then
+    log::error "The current version of QueryPie in ./querypie/current/ is ${current_version}, but the container version is ${container_version}."
+    log::error "Please make sure that you are running the correct version of QueryPie."
+    exit 1
+  fi
+
   if ! upgrade::is_higher_version "${current_version}" "${QP_VERSION}"; then
     echo >&2 "# The current version is already equal or higher than ${QP_VERSION}. No need to upgrade."
     return
@@ -506,33 +529,36 @@ function cmd::upgrade() {
 
   install::config_files
 
+  echo >&2 "## Configure ./querypie/${QP_VERSION}/compose-env file of the target version."
   log::do pushd "./querypie/${QP_VERSION}/"
-  echo >&2 "## Configure ./querypie/${QP_VERSION}/compose-env file of target version."
   (
-    # shellcheck disable=SC1090
     if [[ -e ../current/compose-env ]]; then
+      # shellcheck disable=SC1091
       source ../current/compose-env
-    elif [[ -e ../${current_version}/compose-env ]]; then
-      source ../"${current_version}"/compose-env
     else
-      log::error "No compose-env file found in ./querypie/current/ or ./querypie/${current_version}/."
+      log::error "No compose-env file found in ./querypie/current/."
       exit 1
     fi
+    VERSION="${QP_VERSION}" # Set the VERSION variable to the target version.
     cmd::populate_env "compose-env"
   )
+
+  echo >&2 "## Download docker images of the target version."
   log::do docker-compose pull --quiet mysql redis tools app
   log::do popd
 
+  echo >&2 "## Shutdown containers of the previous version."
   log::do pushd "./querypie/${current_version}/"
   log::do docker-compose --profile querypie down
   log::do docker-compose --profile tools down || true
   log::do popd
 
+  echo >&2 "## Start up querypie-tools container of the target version."
   log::do pushd "./querypie/${QP_VERSION}/"
   log::do docker-compose --profile tools up --detach
   log::do tools::wait_and_print_banner
 
-  echo >&2 "## Run migrate.sh to populate MySQL for QueryPie."
+  echo >&2 "## Run migrate.sh to apply schema changes of QueryPie MySQL."
   # Save the long output of migrate.sh as querypie-migrate.1.log
   log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >>~/querypie-migrate.1.log
   # Run migrate.sh again to ensure the migration is completed properly
@@ -546,6 +572,13 @@ function cmd::upgrade() {
     exit 1
   }
   log::do popd
+
+  container_version=$(verify::version_of_container)
+  if [[ ${QP_VERSION} != "${container_version}" ]]; then
+    log::error "The version of QueryPie container is ${container_version}, but the target version is ${QP_VERSION}."
+    log::error "Please report this problem to the technical support team of QueryPie."
+    exit 1
+  fi
 
   install::make_symlink_of_current
 
@@ -576,30 +609,17 @@ function cmd::install_partially_for_ami() {
   cmd::reset_credential "compose-env"
   log::do popd
 
-  echo >&2 "### Completed installation successfully."
-}
+  install::make_symlink_of_current
 
-function resume::find_out_version() {
-  local latest_version
-  latest_version=$(
-    find querypie -maxdepth 1 -type d -regextype posix-egrep -regex '.*/[0-9]+\.[0-9]+\.[0-9]+' |
-      sed 's:.*/::' |
-      sort -V | # Sort by version number
-      tail -n 1
-  )
-  if [[ -z "$latest_version" ]]; then
-    log::error "Unable to find a target directory in ./querypie."
-    exit 1
-  fi
-  echo "$latest_version"
+  echo >&2 "### Completed installation successfully."
 }
 
 function cmd::resume() {
   echo >&2 "### Resume a partially completed installation ###"
 
   local QP_VERSION
-  resume::find_out_version >/dev/null # Check if the version can be determined.
-  QP_VERSION=$(resume::find_out_version)
+  verify::version_of_current >/dev/null # Check if the version can be determined.
+  QP_VERSION=$(verify::version_of_current)
   echo >&2 "# QP_VERSION: ${QP_VERSION}"
 
   log::do pushd "./querypie/${QP_VERSION}/"
