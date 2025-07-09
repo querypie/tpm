@@ -5,12 +5,16 @@
 
 set -o nounset -o errexit -o errtrace -o pipefail
 
+# Version will be increased by author manually.
+SCRIPT_VERSION="25.07.0" # YY.MM.PATCH
+
 function print_usage_and_exit() {
   set +x
   local status=${1:-0} out=2 program_name
   program_name="$(basename "${BASH_SOURCE[0]}")"
   [[ status -eq 0 ]] && out=1
   cat >&"${out}" <<END
+setup.v2.sh ${SCRIPT_VERSION}, the QueryPie installation script.
 Usage: $program_name [options] <version>
     or $program_name [options] --install <version>
     or $program_name [options] --upgrade <version>
@@ -22,6 +26,7 @@ Usage: $program_name [options] <version>
     or $program_name [options] --help
 
 OPTIONS:
+  -V, --version       Show the version of this script.
   -x, --xtrace        Print commands and their arguments as they are executed.
   -h, --help          Show this help message.
 
@@ -179,6 +184,7 @@ function install::config_files() {
   log::do sed -i.orig \
     -e "s#- \\./mysql:/var/lib/mysql#- ../mysql:/var/lib/mysql#" \
     -e "s#harbor.chequer.io/querypie/#querypie/#" \
+    -e "s#source: /var/log/querypie#source: ../log#" \
     ./querypie/"$QP_VERSION"/docker-compose.yml
   rm ./querypie/"$QP_VERSION"/docker-compose.yml.orig
   log::do sed -i.orig \
@@ -192,8 +198,14 @@ function install::config_files() {
     log::do mkdir -p ./querypie/data
   fi
 
+  # ./querypie/mysql is used by default, instead of ./querypie/<version>/mysql.
   if [[ ! -d ./querypie/mysql ]]; then
     log::do mkdir -p ./querypie/mysql
+  fi
+
+  # ./querypie/log is used by default, instead of /var/log/querypie.
+  if [[ ! -d ./querypie/log ]]; then
+    log::do mkdir -p ./querypie/log
   fi
 
   # Create a symbolic link to the compose-env file,
@@ -201,11 +213,7 @@ function install::config_files() {
   [[ -e ./querypie/"$QP_VERSION"/.env ]] ||
     log::do ln -s compose-env ./querypie/"$QP_VERSION"/.env
 
-  log::sudo cp ./querypie/"$QP_VERSION"/logrotate /etc/logrotate.d/querypie
-
-  if [[ ! -d /var/log/querypie ]]; then
-    log::sudo mkdir -p /var/log/querypie
-  fi
+  log::sudo cp ./querypie/"$QP_VERSION"/logrotate /etc/logrotate.d/docker-querypie
 }
 
 ################################################################################
@@ -787,6 +795,10 @@ function main() {
     --populate-env | --reset-credential)
       cmd="${1#--}"
       shift
+      ;;
+    --version | -V)
+      echo "setup.v2.sh: ${SCRIPT_VERSION}"
+      exit 0
       ;;
     -*)
       # Got unexpected arguments
