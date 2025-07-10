@@ -88,11 +88,16 @@ fi
 ORIGINAL_DIR=$(pwd)
 
 # Validate service parameter
-if [ "$SERVICE" != "querypie" ] && [ "$SERVICE" != "tools" ] && [ "$SERVICE" != "database" ] && [ "$SERVICE" != "all" ]; then
-    echo "Error: Service must be either 'querypie', 'tools', 'database', or 'all'"
-    echo "Use '$0 -h' for help"
-    exit 1
-fi
+case "$SERVICE" in
+    querypie | tools | database | all )
+        # Valid service, continue
+        ;;
+    *)
+        echo "Error: Service must be either 'querypie', 'tools', 'database', or 'all'"
+        echo "Use '$0 -h' for help"
+        exit 1
+        ;;
+esac
 
 # Validate version format
 if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -102,11 +107,16 @@ if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 
 # Validate action parameter
-if [ "$ACTION" != "up" ] && [ "$ACTION" != "down" ] && [ "$ACTION" != "restart" ] && [ "$ACTION" != "log" ] && [ "$ACTION" != "license" ]; then
-    echo "Error: Action must be either 'up', 'down', 'restart', 'log', or 'license'"
-    echo "Use '$0 -h' for help"
-    exit 1
-fi
+case "$ACTION" in
+    up | down | restart | log | license )
+        # Valid action, continue
+        ;;
+    *)
+        echo "Error: Action must be either 'up', 'down', 'restart', 'log', or 'license'"
+        echo "Use '$0 -h' for help"
+        exit 1
+        ;;
+esac
 
 # Check if license file exists when action is license and subaction is upload
 if [ "$ACTION" = "license" ] && [ "$LICENSE_SUBACTION" = "upload" ]; then
