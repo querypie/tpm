@@ -6,7 +6,9 @@
 set -o nounset -o errexit -o errtrace -o pipefail
 
 # Version will be increased by author manually.
-SCRIPT_VERSION="25.07.0" # YY.MM.PATCH
+SCRIPT_VERSION="25.07.1"     # YY.MM.PATCH
+RECOMMENDED_VERSION="11.0.0" # QueryPie version to install by default.
+ASSUME_YES=false
 
 function print_usage_and_exit() {
   set +x
@@ -15,7 +17,7 @@ function print_usage_and_exit() {
   [[ status -eq 0 ]] && out=1
   cat >&"${out}" <<END
 setup.v2.sh ${SCRIPT_VERSION}, the QueryPie installation script.
-Usage: $program_name [options] <version>
+Usage: $program_name [options]
     or $program_name [options] --install <version>
     or $program_name [options] --upgrade <version>
     or $program_name [options] --install-partially-for-ami <version>
@@ -26,6 +28,7 @@ Usage: $program_name [options] <version>
     or $program_name [options] --help
 
 OPTIONS:
+  --yes               Assume "yes" to all prompts and run non-interactively.
   -V, --version       Show the version of this script.
   -x, --xtrace        Print commands and their arguments as they are executed.
   -h, --help          Show this help message.
@@ -463,6 +466,26 @@ function install::make_symlink_of_current() {
   log::do popd
 }
 
+function install::ask_yes() {
+  echo "$@" >&2
+  if [[ $ASSUME_YES == true ]]; then
+    echo 'Do you agree? [y/N] :' 'yes'
+    return
+  elif [[ ! -t 0 ]]; then
+    echo >&2 "# stdin is not a tty. I cannot get your input from stdin. Please try this way:"
+    echo >&2 "# bash <(curl -L https://dl.querypie.com/setup.v2.sh)"
+    echo 'Do you agree? [y/N] :' 'no'
+    return 1
+  fi
+
+  local answer
+  read -r -p 'Do you agree? [y/N] : ' answer
+  case "${answer}" in
+  y | Y | yes | YES | Yes) return ;;
+  *) return 1 ;;
+  esac
+}
+
 function cmd::install() {
   local QP_VERSION=${1:-}
 
@@ -730,6 +753,37 @@ function cmd::verify_installation() {
   fi
 }
 
+function cmd::install_recommended() {
+  echo >&2 "### Install QueryPie ($RECOMMENDED_VERSION) ###"
+  if [[ -d ./querypie ]]; then
+    if [[ -L ./querypie/current ]]; then
+      local current_version
+      current_version=$(readlink ./querypie/current || true)
+      echo >&2 "# A QueryPie ($current_version) is found at ./querypie/${current_version}/."
+      if [[ "${current_version}" == "${RECOMMENDED_VERSION}" ]]; then
+        echo >&2 "# The recommended version is already installed."
+        echo >&2 "# No need to install QueryPie (${RECOMMENDED_VERSION}) again."
+        return
+      else
+        install::ask_yes "Do you want to upgrade QueryPie from ${current_version} to ${RECOMMENDED_VERSION}?"
+        cmd::upgrade "${RECOMMENDED_VERSION}"
+      fi
+    else
+      log::error "./querypie/current is not a symbolic link."
+      echo >&2 "# ./querypie/current should be a symbolic link to the current version directory."
+      echo >&2 "# The target installation directory, ./querypie/, does not seem to be valid."
+      log::do ls -al ./querypie || true
+      log::do docker ps --all || true
+      echo >&2 "# Please report this problem to the technical support team of QueryPie."
+      exit 1
+    fi
+  else
+    echo >&2 "# ./querypie/ does not exist. It seems that QueryPie is not installed yet."
+    install::ask_yes "Do you want to install QueryPie (${RECOMMENDED_VERSION})?"
+    cmd::install "${RECOMMENDED_VERSION}"
+  fi
+}
+
 ################################################################################
 # Input validations
 
@@ -770,9 +824,13 @@ function require::compose_env_file() {
 function main() {
 
   local -a argv=()
-  local cmd="install"
+  local cmd="install_recommended"
   while [[ $# -gt 0 ]]; do
     case "$1" in
+    --yes)
+      ASSUME_YES=true
+      shift
+      ;;
     -x | --xtrace)
       set -o xtrace
       shift
@@ -814,6 +872,9 @@ function main() {
   set -- "${argv[@]}"
 
   case "$cmd" in
+  install_recommended)
+    cmd::install_recommended
+    ;;
   install)
     require::version "$@"
     cmd::install "$@"
