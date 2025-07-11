@@ -10,7 +10,7 @@
 set -o nounset -o errexit -o errtrace -o pipefail
 
 # Version will be manually increased by the author.
-SCRIPT_VERSION="25.07.1"     # YY.MM.PATCH
+SCRIPT_VERSION="25.07.2"     # YY.MM.PATCH
 RECOMMENDED_VERSION="11.0.0" # QueryPie version to install by default.
 ASSUME_YES=false
 
