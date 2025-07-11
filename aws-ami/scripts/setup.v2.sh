@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# This script is for quick and easy installation by followings:
-# $ curl -L https://dl.querypie.com/releases/compose/setup.v2.sh -o setup.v2.sh
-# $ bash setup.v2.sh 10.2.5
+# This script provides a quick and easy way to install QueryPie.
+# Run the following commands:
+# $ bash <(curl -s https://dl.querypie.com/setup.v2.sh)
+# or
+# $ curl -s https://dl.querypie.com/setup.v2.sh -o setup.v2.sh
+# $ bash setup.v2.sh --install <version>
+# $ bash setup.v2.sh --upgrade <version>
 
 set -o nounset -o errexit -o errtrace -o pipefail
 
-# Version will be increased by author manually.
-SCRIPT_VERSION="25.07.1"     # YY.MM.PATCH
+# Version will be manually increased by the author.
+SCRIPT_VERSION="25.07.2"     # YY.MM.PATCH
 RECOMMENDED_VERSION="11.0.0" # QueryPie version to install by default.
 ASSUME_YES=false
 
@@ -98,7 +102,7 @@ function command_exists() {
 
 function setup::sudo_privileges() {
   echo >&2 "#"
-  echo >&2 "## Setup sudo privileges"
+  echo >&2 "## Configure sudo privileges"
   echo >&2 "#"
 
   local user
@@ -118,11 +122,11 @@ function setup::sudo_privileges() {
 
 function install::docker() {
   echo >&2 "#"
-  echo >&2 "## Install docker"
+  echo >&2 "## Install Docker engine"
   echo >&2 "#"
 
   if command_exists docker; then
-    echo >&2 "# Skip installing docker, as it is found at $(command -v docker) "
+    echo >&2 "# Docker is already installed at $(command -v docker)"
     return
   fi
 
@@ -154,20 +158,20 @@ function install::docker() {
 
   log::sudo systemctl enable --now docker
   log::sudo usermod -aG docker "$user"
-  echo >&2 "# $user has been added to the docker group. Please log out and log back in to use the docker command."
+  echo >&2 "# User '$user' has been added to the Docker group. A logout and login is required to use Docker without sudo."
 }
 
 function install::docker_compose() {
   echo >&2 "#"
-  echo >&2 "## Install docker-compose"
+  echo >&2 "## Install Docker Compose tool"
   echo >&2 "#"
 
   if command_exists docker-compose; then
-    echo >&2 "# Skip installing docker-compose, as it is found at $(command -v docker-compose)."
+    echo >&2 "# Docker Compose is already installed at $(command -v docker-compose)"
     return
   fi
 
-  echo >&2 "# Install docker-compose, as it does not exist."
+  echo >&2 "# Docker Compose is not installed. Installing now."
   log::do curl -fsSL "https://dl.querypie.com/releases/bin/docker-compose-$(uname -s)-$(uname -m)" -o docker-compose
   log::sudo install -m 755 docker-compose /usr/local/bin
   rm docker-compose
@@ -175,10 +179,10 @@ function install::docker_compose() {
 
 function install::config_files() {
   echo >&2 "#"
-  echo >&2 "## Install config files: docker-compose.yml, compose-env, and more"
+  echo >&2 "## Install configuration files: docker-compose.yml, compose-env, and others"
   echo >&2 "#"
 
-  echo >&2 "# Target dir is ./querypie/${QP_VERSION}/"
+  echo >&2 "# Target directory is ./querypie/${QP_VERSION}/"
   mkdir -p ./querypie/"${QP_VERSION}"
 
   log::do curl -fsSL https://dl.querypie.com/releases/compose/"$PACKAGE_VERSION"/package.tar.gz -o package.tar.gz
@@ -412,7 +416,7 @@ function verify::version_of_container() {
 }
 
 function verify::container_is_ready_for_service() {
-  echo >&2 "## Verify that QueryPie app container is running properly."
+  echo >&2 "## Verify the QueryPie app container is running properly"
 
   local container=querypie-app-1
   if log::do docker inspect --format '{{.State.Running}}' $container 2>/dev/null | grep -q 'true'; then
@@ -451,7 +455,7 @@ function install::get_package_version() {
 }
 
 function install::make_symlink_of_current() {
-  echo >&2 "## Make a symbolic link, 'current' to ${QP_VERSION}"
+  echo >&2 "## Create a symbolic link 'current' pointing to ${QP_VERSION}"
   local current_version
   current_version=$(readlink ./querypie/current || true)
   if [[ "$current_version" == "$QP_VERSION" ]]; then
@@ -472,7 +476,7 @@ function install::ask_yes() {
     echo 'Do you agree? [y/N] :' 'yes'
     return
   elif [[ ! -t 0 ]]; then
-    echo >&2 "# stdin is not a tty. I cannot get your input from stdin. Please try this way:"
+    echo >&2 "# Standard input is not a terminal. Unable to receive user input. Please use the following method instead:"
     echo >&2 "# bash <(curl -L https://dl.querypie.com/setup.v2.sh)"
     echo 'Do you agree? [y/N] :' 'no'
     return 1
@@ -500,22 +504,22 @@ function cmd::install() {
   install::config_files
 
   log::do pushd "./querypie/${QP_VERSION}/"
-  echo >&2 "## Configure ./querypie/${QP_VERSION}/compose-env file."
+  echo >&2 "## Configure the compose-env file in ./querypie/${QP_VERSION}/"
   cmd::populate_env "compose-env"
   log::do docker-compose pull --quiet mysql redis tools app
-  echo >&2 "## Start up MySQL and Redis for QueryPie."
+  echo >&2 "## Start MySQL and Redis services for QueryPie"
   log::do docker-compose --profile database up --detach
   log::do sleep 10
   log::do docker-compose --profile tools up --detach
   log::do tools::wait_and_print_banner
 
-  echo >&2 "## Run migrate.sh to populate MySQL for QueryPie."
+  echo >&2 "## Run migrate.sh to initialize MySQL database for QueryPie"
   # Save the long output of migrate.sh as querypie-migrate.1.log
   log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.1.log
   # Run migrate.sh again to ensure the migration is completed properly
   log::do docker exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
   log::do docker-compose --profile tools down
-  echo >&2 "## Almost done. Now QueryPie container is going to start up in about 2 minutes."
+  echo >&2 "## Start the QueryPie container (initialization takes about 2 minutes)"
   log::do docker-compose --profile querypie up --detach
   log::do docker exec querypie-app-1 readyz || {
     log::error "QueryPie container has failed to start up. Please check the logs."
@@ -528,9 +532,9 @@ function cmd::install() {
 
   local ip_address
   ip_address="$(hostname -i)"
-  echo >&2 "### Completed installation successfully."
-  echo >&2 "### Please open your browser and access http://${ip_address}/ to use QueryPie."
-  echo >&2 "### You might need to figure out the public IP address of your host machine."
+  echo >&2 "### Installation completed successfully"
+  echo >&2 "### Access QueryPie at http://${ip_address}/ in your browser"
+  echo >&2 "### Determine the public IP address of your host machine if needed"
 }
 
 function cmd::upgrade() {
@@ -560,7 +564,7 @@ function cmd::upgrade() {
 
   install::config_files
 
-  echo >&2 "## Configure ./querypie/${QP_VERSION}/compose-env file of the target version."
+  echo >&2 "## Configure the compose-env file for target version at ./querypie/${QP_VERSION}/"
   log::do pushd "./querypie/${QP_VERSION}/"
   (
     if [[ -e ../current/compose-env ]]; then
@@ -574,28 +578,28 @@ function cmd::upgrade() {
     cmd::populate_env "compose-env"
   )
 
-  echo >&2 "## Download docker images of the target version."
+  echo >&2 "## Download Docker images for the target version"
   log::do docker-compose pull --quiet mysql redis tools app
   log::do popd
 
-  echo >&2 "## Shutdown containers of the previous version."
+  echo >&2 "## Stop containers from the previous version"
   log::do pushd "./querypie/${current_version}/"
   log::do docker-compose --profile querypie down
   log::do docker-compose --profile tools down || true
   log::do popd
 
-  echo >&2 "## Start up querypie-tools container of the target version."
+  echo >&2 "## Start the querypie-tools container for the target version"
   log::do pushd "./querypie/${QP_VERSION}/"
   log::do docker-compose --profile tools up --detach
   log::do tools::wait_and_print_banner
 
-  echo >&2 "## Run migrate.sh to apply schema changes of QueryPie MySQL."
+  echo >&2 "## Run migrate.sh to apply MySQL schema changes for QueryPie"
   # Save the long output of migrate.sh as querypie-migrate.1.log
   log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >>~/querypie-migrate.1.log
   # Run migrate.sh again to ensure the migration is completed properly
   log::do docker exec querypie-tools-1 /app/script/migrate.sh runall | tee -a ~/querypie-migrate.log
   log::do docker-compose --profile tools down
-  echo >&2 "## Almost done. Now QueryPie container is going to start up in about 2 minutes."
+  echo >&2 "## Start the QueryPie container (initialization takes about 2 minutes)"
   log::do docker-compose --profile querypie up --detach
   log::do docker exec querypie-app-1 readyz || {
     log::error "QueryPie container has failed to start up. Please check the logs."
@@ -615,15 +619,15 @@ function cmd::upgrade() {
 
   local ip_address
   ip_address="$(hostname -i)"
-  echo >&2 "### Completed upgrade successfully."
-  echo >&2 "### Please open your browser and access http://${ip_address}/ to use QueryPie."
-  echo >&2 "### You might need to figure out the public IP address of your host machine."
+  echo >&2 "### Upgrade completed successfully"
+  echo >&2 "### Access QueryPie at http://${ip_address}/ in your browser"
+  echo >&2 "### Determine the public IP address of your host machine if needed"
 }
 
 function cmd::install_partially_for_ami() {
   local QP_VERSION=${1}
 
-  echo >&2 "### Install partially for AWS AMI Build. ###"
+  echo >&2 "### Perform partial installation for AWS AMI Build ###"
   echo >&2 "# QP_VERSION: ${QP_VERSION}"
   PACKAGE_VERSION=$(install::get_package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
   echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
@@ -642,11 +646,11 @@ function cmd::install_partially_for_ami() {
 
   install::make_symlink_of_current
 
-  echo >&2 "### Completed installation successfully."
+  echo >&2 "### Installation completed successfully"
 }
 
 function cmd::resume() {
-  echo >&2 "### Resume a partially completed installation ###"
+  echo >&2 "### Resume the partially completed installation ###"
 
   local QP_VERSION
   verify::version_of_current >/dev/null # Check if the version can be determined.
@@ -671,7 +675,7 @@ function cmd::resume() {
 
   install::make_symlink_of_current
 
-  echo >&2 "### Completed installation successfully."
+  echo >&2 "### Installation completed successfully"
 }
 
 # Populate the environment variables in the source file.
@@ -683,9 +687,9 @@ function cmd::populate_env() {
   #shellcheck disable=SC2064
   trap "rm -f ${tmp_file}" EXIT
 
-  echo >&2 "# Generating a docker env file from ${source_env_file} as ${tmp_file}..."
+  echo >&2 "# Generating Docker environment file from ${source_env_file} to ${tmp_file}"
   env_file::populate_env "${source_env_file}" >"${tmp_file}"
-  echo >&2 "# Replacing the original file ${source_env_file} with the generated file ${tmp_file}..."
+  echo >&2 "# Replacing original file ${source_env_file} with generated file ${tmp_file}"
   cp "${tmp_file}" "${source_env_file}"
 }
 
@@ -698,32 +702,32 @@ function cmd::reset_credential() {
   #shellcheck disable=SC2064
   trap "rm -f ${tmp_file}" EXIT
 
-  echo >&2 "# Resetting credentials in ${source_env_file} as ${tmp_file}..."
+  echo >&2 "# Resetting credentials in ${source_env_file} to ${tmp_file}"
   env_file::reset_credential_in_env "${source_env_file}" >"${tmp_file}"
-  echo >&2 "# Replacing the original file ${source_env_file} with the reset file ${tmp_file}..."
+  echo >&2 "# Replacing original file ${source_env_file} with reset file ${tmp_file}"
   cp "${tmp_file}" "${source_env_file}"
 }
 
 function cmd::verify_installation() {
   echo >&2 "#"
-  echo >&2 "### Verify installation"
+  echo >&2 "### Verify the installation"
   echo >&2 "#"
   local status=0 try=0
 
   if [[ -f /etc/systemd/system/querypie-first-boot.service ]]; then
-    echo >&2 "## querypie-first-boot systemd service is installed."
+    echo >&2 "## Check the querypie-first-boot systemd service"
     for try in {1..30}; do
       if [[ -e /var/lib/querypie/first-boot-done ]]; then
         echo >&2 "# QueryPie first boot is done."
         break
       fi
-      echo >&2 "# Waiting for QueryPie first boot to complete... (try ${try})"
+      echo >&2 "# Currently waiting for QueryPie first boot to complete (attempt ${try}/30)"
       log::do systemctl status querypie-first-boot || true
       sleep 10
     done
 
     if [[ ! -e /var/lib/querypie/first-boot-done ]]; then
-      echo >&2 "# QueryPie first boot is not done yet. There might be an issue with the first boot service."
+      echo >&2 "# QueryPie first boot has not completed. There may be an issue with the first boot service."
       ((status += 1))
     fi
 
@@ -745,8 +749,8 @@ function cmd::verify_installation() {
   }
 
   if [[ status -gt 0 ]]; then
-    echo >&2 "# Installation verification failed with ${status} errors."
-    echo >&2 "# Please check the logs and fix the issues."
+    echo >&2 "# Installation verification failed with ${status} error(s). Please check the logs for details."
+    echo >&2 "# Resolve the identified issues before proceeding."
     exit "${status}"
   else
     echo >&2 "# Installation verification completed successfully."
@@ -754,12 +758,12 @@ function cmd::verify_installation() {
 }
 
 function cmd::install_recommended() {
-  echo >&2 "### Install QueryPie ($RECOMMENDED_VERSION) ###"
+  echo >&2 "### Install QueryPie version $RECOMMENDED_VERSION ###"
   if [[ -d ./querypie ]]; then
     if [[ -L ./querypie/current ]]; then
       local current_version
       current_version=$(readlink ./querypie/current || true)
-      echo >&2 "# A QueryPie ($current_version) is found at ./querypie/${current_version}/."
+      echo >&2 "# QueryPie version $current_version is already installed at ./querypie/${current_version}/"
       if [[ "${current_version}" == "${RECOMMENDED_VERSION}" ]]; then
         echo >&2 "# The recommended version is already installed."
         echo >&2 "# No need to install QueryPie (${RECOMMENDED_VERSION}) again."
@@ -771,14 +775,14 @@ function cmd::install_recommended() {
     else
       log::error "./querypie/current is not a symbolic link."
       echo >&2 "# ./querypie/current should be a symbolic link to the current version directory."
-      echo >&2 "# The target installation directory, ./querypie/, does not seem to be valid."
+      echo >&2 "# The target installation directory ./querypie/ appears to be in an invalid state."
       log::do ls -al ./querypie || true
       log::do docker ps --all || true
       echo >&2 "# Please report this problem to the technical support team of QueryPie."
       exit 1
     fi
   else
-    echo >&2 "# ./querypie/ does not exist. It seems that QueryPie is not installed yet."
+    echo >&2 "# Directory ./querypie/ does not exist. QueryPie has not been installed on this system."
     install::ask_yes "Do you want to install QueryPie (${RECOMMENDED_VERSION})?"
     cmd::install "${RECOMMENDED_VERSION}"
   fi
@@ -797,7 +801,7 @@ function require::version() {
 
   if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     log::error "Invalid version format: ${version}"
-    echo >&2 "# Version should be in the format of 'major.minor.patch' such as '10.2.5'."
+    echo >&2 "# Version must be in the format 'major.minor.patch' (e.g., '10.2.5')."
     print_usage_and_exit 1
   fi
 }
