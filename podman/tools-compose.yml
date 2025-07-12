@@ -1,0 +1,50 @@
+# Optimized for QueryPie 11.0.x - Tools Profile
+# Compatible with both Docker and Podman
+
+name: querypie-tools
+services:
+  tools:
+    networks:
+      - tools-network
+    image: docker.io/querypie/querypie-tools:${VERSION}
+    container_name: querypie-tools-1
+    ports:
+      - "8050:8050"
+    # Handle both Docker and Podman host references
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # For Docker
+      - "host.containers.internal:host-gateway" # For Podman
+    environment:
+      - VERSION=${VERSION:?ex. 11.0.0} # Validate VERSION here instead of in image reference
+      - DB_HOST=${DB_HOST:?ex. mysql.querypie.io}
+      - DB_PORT=${DB_PORT:?ex. 3306}
+      - DB_CATALOG=${DB_CATALOG:?ex. querypie}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+
+      - LOG_DB_HOST=${DB_HOST}
+      - LOG_DB_PORT=${DB_PORT}
+      - LOG_DB_CATALOG=${LOG_DB_CATALOG:?ex. querypie_log}
+      - LOG_DB_USERNAME=${DB_USERNAME}
+      - LOG_DB_PASSWORD=${DB_PASSWORD}
+
+      - ENG_DB_HOST=${DB_HOST}
+      - ENG_DB_PORT=${DB_PORT}
+      - ENG_DB_CATALOG=${ENG_DB_CATALOG:?ex. querypie_snapshot}
+      - ENG_DB_USERNAME=${DB_USERNAME}
+      - ENG_DB_PASSWORD=${DB_PASSWORD}
+
+      # The Key Encryption Key (KEK) encrypts the Data Encryption Key (DEK),
+      # which then encrypts sensitive data including database connection strings, SSH keys, and kubeconfig files.
+      # This two-layer encryption approach safeguards sensitive information even if the encrypted data is compromised.
+      # The KEK can be initially set to any string value, but must remain consistent after it has been established.
+      - KEK=${KEY_ENCRYPTION_KEY}
+
+networks:
+  tools-network:
+    name: querypie-tools
+    driver: bridge
+
+x-podman:
+  # Use - for container name separator to be compatible with Docker Compose v2.
+  name_separator_compat: true

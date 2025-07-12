@@ -1,13 +1,14 @@
 # Optimized for QueryPie 11.0.x - Database Profile
 # Compatible with both Docker and Podman
 
-name: querypie
+name: querypie-database
 services:
   mysql:
     hostname: mysql
     networks:
       - database-network
     image: docker.io/querypie/mysql:8.0.42
+    container_name: querypie-mysql-1
     volumes:
       - mysql-data:/var/lib/mysql
       - ./mysql_init:/docker-entrypoint-initdb.d:ro
@@ -25,6 +26,7 @@ services:
     networks:
       - database-network
     image: docker.io/querypie/redis:7.4.5
+    container_name: querypie-redis-1
     ports:
       - "6379:6379"
     restart: unless-stopped
