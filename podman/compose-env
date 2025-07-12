@@ -1,0 +1,32 @@
+# Version of QueryPie Docker Image to run: 11.0.0 or later.
+VERSION=
+
+# Common
+## Secret key for encrypting communication between QueryPie client agents and QueryPie over port 9000/tcp.
+## Must be exactly 32 characters in length.
+AGENT_SECRET=
+
+## Secret key used to encrypt sensitive information, such as database connection strings and SSH private keys.
+## This key can be any string but is immutable once set.
+KEY_ENCRYPTION_KEY=
+
+# DB
+DB_HOST=
+DB_PORT=3306
+DB_CATALOG=querypie
+LOG_DB_CATALOG=querypie_log
+ENG_DB_CATALOG=querypie_snapshot
+DB_USERNAME=
+DB_PASSWORD=
+DB_MAX_CONNECTION_SIZE=20
+## If you're using AWS Aurora, use the software.amazon.jdbc.Driver instead of org.mariadb.jdbc.Driver for automatic failover handling.
+DB_DRIVER_CLASS=org.mariadb.jdbc.Driver
+
+# Redis
+## REDIS_NODES should be specified as a "Host:Port" combination.
+## In CLUSTER MODE, when specifying multiple nodes, separate each address with a comma.
+## Example: Host1:6379,Host2:6379,Host3:6379
+REDIS_NODES=
+REDIS_PASSWORD=
+
+DAC_SKIP_SQL_COMMAND_RULE_FILE=skip_command_config.json
