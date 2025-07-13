@@ -1,0 +1,13 @@
+{
+  "mysql": [
+    "^(/\\*.*?\\*/)?\\s*SELECT\\s+@@session\\s*\\.\\s*\\w+\\s*$",
+    "^(/\\*.*?\\*/)?\\s*SET\\s+session\\s+transaction\\s+\\w+(\\s+\\w+)*\\s*$",
+    "^(/\\*.*?\\*/)?\\s*SET\\s+net_write_timeout\\s*=\\s*\\d+\\s*$",
+    "^(/\\*.*?\\*/)?\\s*SELECT\\s+database\\s*\\(\\s*\\)\\s*$",
+    "^(/\\*.*?\\*/)?\\s*SET\\s+SQL_SELECT_LIMIT\\s*=\\s*\\w+$",
+    "^SHOW\\s+VARIABLES\\s+LIKE\\s+'aurora\\\\_version'\\s*$",
+    "^SELECT\\s+version\\s*\\(\\s*\\)\\s*,\\s*@@version_comment\\s*,\\s*database\\s*\\(\\s*\\)\\s*$",
+    "^SET\\s+autocommit\\s*=\\s*\\d+$",
+    "^(/\\*.*?\\*/)\\s*SELECT\\s+((@@session\\s*\\.\\s*|@@)\\w+(\\s+AS\\s+\\w+)?(\\s*,\\s*)?)+\\s*$"
+  ]
+}
