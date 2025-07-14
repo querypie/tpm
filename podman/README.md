@@ -5,11 +5,13 @@ Podman, Podman Compose 를 지원하는 QueryPie 실행 환경을 제공합니�
 
 ## QueryPie 실행하기
 
-### MySQL, Redis 실행하기, 종료하기
+### MySQL, Redis 를 실행하기
 
-1. compose-env 파일을 편집하여, 필요한 환경변수 값을 설정합니다.
-2. `podman-compose -f database.yml up -d` 명령으로 Container 를 실행합니다.
-3. `podman-compose -f database.yml down` 명령으로 Container 를 종료합니다.
+1. `.env` 파일을 작성하기
+    - `.env.template`을 복사하여, `.env` 파일을 작성하고, 필요한 환경변수 값을 설정합니다.
+    - `cp .env.template .env`, `vi .env`
+2. 실행하기: `podman-compose -f database.yml up -d`
+3. 종료하기: `podman-compose -f database.yml down`
 
 ## Compose Yaml 의 변경사항
 
