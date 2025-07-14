@@ -10,7 +10,7 @@
 set -o nounset -o errexit -o errtrace -o pipefail
 
 # Version will be manually increased by the author.
-SCRIPT_VERSION="25.07.2"     # YY.MM.PATCH
+SCRIPT_VERSION="25.07.3"     # YY.MM.PATCH
 RECOMMENDED_VERSION="11.0.0" # QueryPie version to install by default.
 ASSUME_YES=false
 
@@ -190,7 +190,7 @@ function install::config_files() {
   rm package.tar.gz
   log::do sed -i.orig \
     -e "s#- \\./mysql:/var/lib/mysql#- ../mysql:/var/lib/mysql#" \
-    -e "s#harbor.chequer.io/querypie/#querypie/#" \
+    -e "s#harbor.chequer.io/querypie/#docker.io/querypie/#" \
     -e "s#source: /var/log/querypie#source: ../log#" \
     ./querypie/"$QP_VERSION"/docker-compose.yml
   rm ./querypie/"$QP_VERSION"/docker-compose.yml.orig
