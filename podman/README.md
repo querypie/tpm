@@ -10,8 +10,14 @@ Podman, Podman Compose 를 지원하는 QueryPie 실행 환경을 제공합니�
 1. `.env` 파일을 작성하기
     - `.env.template`을 복사하여, `.env` 파일을 작성하고, 필요한 환경변수 값을 설정합니다.
     - `cp .env.template .env`, `vi .env`
-2. 실행하기: `podman-compose -f database.yml up -d`
-3. 종료하기: `podman-compose -f database.yml down`
+2. 실행하기: `podman-compose -f database-compose.yml up -d`
+3. 종료하기: `podman-compose -f database-compose.yml down`
+
+### Tools 를 실행하기
+
+1. 실행하기: `podman-compose -f tools-compose.yml up -d`
+2. Migration 실행하기: `podman-compose -f tools-compose.yml exec tools /app/script/migrate.sh runall`
+3. 종료하기: `podman-compose -f tools-compose.yml down`
 
 ## Compose Yaml 의 변경사항
 
