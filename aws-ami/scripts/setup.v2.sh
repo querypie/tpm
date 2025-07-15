@@ -10,7 +10,7 @@
 set -o nounset -o errexit -o errtrace -o pipefail
 
 # Version will be manually increased by the author.
-SCRIPT_VERSION="25.07.3"     # YY.MM.PATCH
+SCRIPT_VERSION="25.07.4"     # YY.MM.PATCH
 RECOMMENDED_VERSION="11.0.0" # QueryPie version to install by default.
 ASSUME_YES=false
 
@@ -120,6 +120,41 @@ function setup::sudo_privileges() {
   fi
 }
 
+function install::verify_docker_installation() {
+  echo >&2 "#"
+  echo >&2 "## Verify Docker installation"
+  echo >&2 "#"
+
+  if docker ps >/dev/null 2>&1; then
+    echo >&2 "# Docker is already running and functional."
+    return
+  fi
+  if (docker ps 2>&1 || true) | grep -q "permission denied"; then
+    echo >&2 "# The current user does not have permission to run Docker commands."
+    echo >&2 "# The current groups for the user are:"
+    log::do id -Gn
+
+    local user
+    user="$(id -un 2>/dev/null || true)"
+    if getent group docker | grep -qw "$user"; then
+      log::do getent group docker
+      echo >&2 "# User '$user' is already in the Docker group."
+      echo >&2 "# Please log out and log back in to apply the group changes."
+    else
+      echo >&2 "# Adding user '$user' to the Docker group."
+      log::sudo usermod -aG docker "$user"
+      echo >&2 "# User '$user' has been added to the Docker group. A logout and login is required to use Docker without sudo."
+    fi
+    echo >&2 "# Please rerun this script after logging back in."
+    exit 1
+  fi
+
+  log::do docker ps || true
+  echo >&2 "# Docker installation verification failed. Please check above errors."
+  echo >&2 "# Resolve the identified issues before proceeding."
+  exit 1
+}
+
 function install::docker() {
   echo >&2 "#"
   echo >&2 "## Install Docker engine"
@@ -127,6 +162,8 @@ function install::docker() {
 
   if command_exists docker; then
     echo >&2 "# Docker is already installed at $(command -v docker)"
+
+    install::verify_docker_installation
     return
   fi
 
@@ -159,6 +196,8 @@ function install::docker() {
   log::sudo systemctl enable --now docker
   log::sudo usermod -aG docker "$user"
   echo >&2 "# User '$user' has been added to the Docker group. A logout and login is required to use Docker without sudo."
+  echo >&2 "# Please rerun this script after logging back in."
+  exit
 }
 
 function install::docker_compose() {
