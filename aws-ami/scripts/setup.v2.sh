@@ -10,7 +10,7 @@
 set -o nounset -o errexit -o errtrace -o pipefail
 
 # Version will be manually increased by the author.
-SCRIPT_VERSION="25.07.4"     # YY.MM.PATCH
+SCRIPT_VERSION="25.07.5"     # YY.MM.PATCH
 RECOMMENDED_VERSION="11.0.0" # QueryPie version to install by default.
 ASSUME_YES=false
 
@@ -812,13 +812,12 @@ function cmd::install_recommended() {
         cmd::upgrade "${RECOMMENDED_VERSION}"
       fi
     else
-      log::error "./querypie/current is not a symbolic link."
-      echo >&2 "# ./querypie/current should be a symbolic link to the current version directory."
-      echo >&2 "# The target installation directory ./querypie/ appears to be in an invalid state."
-      log::do ls -al ./querypie || true
-      log::do docker ps --all || true
-      echo >&2 "# Please report this problem to the technical support team of QueryPie."
-      exit 1
+      echo >&2 "# Directory ./querypie/ exists, but a symbolic link 'current' pointing to the current version is missing."
+      if [[ -e ./querypie/current ]]; then
+        log::do rm -rf ./querypie/current
+      fi
+      install::ask_yes "Do you want to install QueryPie (${RECOMMENDED_VERSION})?"
+      cmd::install "${RECOMMENDED_VERSION}"
     fi
   else
     echo >&2 "# Directory ./querypie/ does not exist. QueryPie has not been installed on this system."
