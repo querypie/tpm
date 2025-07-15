@@ -197,7 +197,7 @@ function install::docker() {
   log::sudo usermod -aG docker "$user"
   echo >&2 "# User '$user' has been added to the Docker group. A logout and login is required to use Docker without sudo."
   echo >&2 "# Please rerun this script after logging back in."
-  exit
+  exit 1 # It could not complete the installation. So, exit with error.
 }
 
 function install::docker_compose() {
