@@ -7,12 +7,16 @@
 # $ bash setup.v2.sh --install <version>
 # $ bash setup.v2.sh --upgrade <version>
 
+# The version will be manually increased by the author.
+SCRIPT_VERSION="25.07.8"     # YY.MM.PATCH
+echo -n >&2 "#### QueryPie Installer ${SCRIPT_VERSION}, "
+echo -n >&2 "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}"
+echo >&2 " on $(uname -s) $(uname -m) ####"
+
 # Ensure zsh compatibility
 [[ -n "${ZSH_VERSION:-}" ]] && emulate bash
 set -o nounset -o errexit -o pipefail
 
-# The version will be manually increased by the author.
-SCRIPT_VERSION="25.07.7"     # YY.MM.PATCH
 RECOMMENDED_VERSION="11.0.1" # QueryPie version to install by default.
 ASSUME_YES=false
 
@@ -568,8 +572,12 @@ function cmd::install() {
   log::do tools::wait_and_print_banner
 
   echo >&2 "## Run migrate.sh to initialize MySQL database for QueryPie"
+  echo >&2 "# This process may take more than a minute if this is the first installation."
   # Save the long output of migrate.sh as querypie-migrate.1.log
-  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.1.log
+  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall |
+    tee ~/querypie-migrate.1.log |
+    while IFS= read -r; do printf "." >&2 ; done
+  echo >&2 " Done."
   # Run migrate.sh again to ensure the migration is completed properly
   log::do docker exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
   log::do docker-compose --profile tools down
