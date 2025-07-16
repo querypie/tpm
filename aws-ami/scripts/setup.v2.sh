@@ -7,20 +7,25 @@
 # $ bash setup.v2.sh --install <version>
 # $ bash setup.v2.sh --upgrade <version>
 
-set -o nounset -o errexit -o errtrace -o pipefail
-
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.07.6"     # YY.MM.PATCH
+SCRIPT_VERSION="25.07.8"     # YY.MM.PATCH
+echo -n >&2 "#### QueryPie Installer ${SCRIPT_VERSION}, "
+echo -n >&2 "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}"
+echo >&2 " on $(uname -s) $(uname -m) ####"
+
+# Ensure zsh compatibility
+[[ -n "${ZSH_VERSION:-}" ]] && emulate bash
+set -o nounset -o errexit -o pipefail
+
 RECOMMENDED_VERSION="11.0.1" # QueryPie version to install by default.
 ASSUME_YES=false
 
 function print_usage_and_exit() {
   set +x
-  local status=${1:-0} out=2 program_name
-  program_name="$(basename "${BASH_SOURCE[0]}")"
-  [[ status -eq 0 ]] && out=1
+  local code=${1:-0} out=2 program_name=setup.v2.sh
+  [[ code -eq 0 ]] && out=1
   cat >&"${out}" <<END
-setup.v2.sh ${SCRIPT_VERSION}, the QueryPie installation script.
+$program_name ${SCRIPT_VERSION}, the QueryPie installation script.
 Usage: $program_name [options]
     or $program_name [options] --install <version>
     or $program_name [options] --upgrade <version>
@@ -38,7 +43,7 @@ OPTIONS:
   -h, --help          Show this help message.
 
 END
-  exit "${status}"
+  exit "${code}"
 }
 
 BOLD_CYAN="\e[1;36m"
@@ -284,9 +289,19 @@ function env_file::determine_value() {
   local name=$1 existing_value=$2
 
   # Priority 1: Use the value from the environment if it exists.
-  if [[ -n "${!name:-}" ]]; then
-    echo "${!name}"
-    return
+  if [[ -n "${ZSH_VERSION:-}" ]]; then
+    # zsh: use (P) for indirect expansion
+    # shellcheck disable=SC2296,SC2086
+    if [[ ${(P)name+_} ]]; then
+      print -r -- ${(P)name}
+      return
+    fi
+  else
+    # bash: use indirect expansion
+    if [[ -n "${!name+_}" ]]; then
+      echo "${!name}"
+      return
+    fi
   fi
 
   # Priority 2: Use the value from the source file if it exists.
@@ -480,15 +495,18 @@ function verify::container_is_ready_for_service() {
 # Commands
 
 function install::get_package_version() {
-  local package_version=$1 image_version=$2
+  local package_version=$1 image_version=$2 major minor rest
   if [[ -n "$package_version" ]]; then
     # If package_version is provided, return it directly.
     echo "$package_version"
   # Typically, the image version is in the format of 'major.minor.patch'.
-  elif [[ "$image_version" =~ ^([0-9]+)\.([0-9]+)\. ]]; then
-    echo "${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.x"
+  elif [[ "$image_version" == [0-9]*.[0-9]*.[0-9]* ]]; then
+    major="${image_version%%.*}" # Remove everything after the first dot.
+    rest="${image_version#*.}" # Remove everything before the first dot.
+    minor="${rest%%.*}" # Remove everything after the second dot.
+    echo "${major}.${minor}.x"
   else
-    # If the version does not match the expected format, try replacing ending number with '.x'.
+    # If the version does not match the expected format, try replacing the ending number with '.x'.
     echo "${image_version%.*}.x"
   fi
 }
@@ -521,8 +539,9 @@ function install::ask_yes() {
     return 1
   fi
 
+  printf 'Do you agree? [y/N] : '
   local answer
-  read -r -p 'Do you agree? [y/N] : ' answer
+  read -r answer # zsh compatibility: zsh does not support read -p prompt.
   case "${answer}" in
   y | Y | yes | YES | Yes) return ;;
   *) return 1 ;;
@@ -553,8 +572,12 @@ function cmd::install() {
   log::do tools::wait_and_print_banner
 
   echo >&2 "## Run migrate.sh to initialize MySQL database for QueryPie"
+  echo >&2 "# This process may take more than a minute if this is the first installation."
   # Save the long output of migrate.sh as querypie-migrate.1.log
-  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.1.log
+  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall |
+    tee ~/querypie-migrate.1.log |
+    while IFS= read -r; do printf "." >&2 ; done
+  echo >&2 " Done."
   # Run migrate.sh again to ensure the migration is completed properly
   log::do docker exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
   log::do docker-compose --profile tools down
@@ -865,7 +888,7 @@ function require::compose_env_file() {
 
 function main() {
 
-  local -a argv=()
+  local -a arguments=() # argv is reserved for zsh.
   local cmd="install_recommended"
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -906,12 +929,17 @@ function main() {
       print_usage_and_exit 1
       ;;
     *)
-      argv+=("$1")
+      arguments+=("$1")
       shift
       ;;
     esac
   done
-  set -- "${argv[@]}"
+
+  if [[ ${#arguments[@]} -gt 0 ]]; then
+    set -- "${arguments[@]}"
+  else
+    set --
+  fi
 
   case "$cmd" in
   install_recommended)
