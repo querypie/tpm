@@ -1,13 +1,13 @@
-# Optimized for QueryPie 11.0.x
+# Optimized for QueryPie 11.0.x - QueryPie Profile
+# Compatible with both Docker and Podman
 
-name: querypie
+name: querypie-app
 services:
   app:
-    profiles:
-      - querypie
     networks:
       - querypie-network
-    image: harbor.chequer.io/querypie/querypie:${VERSION:?ex. 11.0.0}
+    image: docker.io/querypie/querypie:${VERSION}
+    container_name: querypie-app-1
     volumes:
       - type: bind
         source: ../log
@@ -25,9 +25,9 @@ services:
 
     ports:
       # Nginx with HTTP
-      - 80:80
+      - 8000:80
       # Nginx with HTTPS (powered by fake cert)
-      - 443:443
+      - 1443:443
       # DAC, SAC Proxy Port
       - 9000:9000
       # KAC Proxy Port
@@ -37,21 +37,19 @@ services:
       # DAC Agentless Proxy Port
       # If you don't need to use the Agentless Proxy, Remove the following port forwarding.
       - ${PROXY_PORT_START:-40000}-${PROXY_PORT_END:-40030}:${PROXY_PORT_START:-40000}-${PROXY_PORT_END:-40030}
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # Compatible with Docker on Linux and Docker Desktop on macOS
 
+    # Handle both Docker and Podman host references
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # For Docker
+      - "host.containers.internal:host-gateway" # For Podman
+
+    env_file:
+      - .env
     environment:
-      # COMMON
-      - NODE_ENV=${NODE_ENV:-production}
-      - ENABLE_FILE_LOGGING=${ENABLE_FILE_LOGGING:-true}
+      - VERSION=${VERSION:?ex. 11.0.0} # Validate VERSION here instead of in image reference
       - REDIS_NODES=${REDIS_NODES:?ex. redis.querypie.io:6379,redis.querypie.io:6380,redis.querypie.io:6381}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_DB=0
       - AGENT_SECRET=${AGENT_SECRET:?32 ASCII characters}
-
-      # API
-      - API_JVM_HEAPSIZE=${API_JVM_HEAPSIZE:-2g}
-      #- CLASSIFIER_URL=${CLASSIFIER_URL:-http://classifier:8081}
 
       # QueryPie MetaDB
       - DB_HOST=${DB_HOST:?ex. mysql.querypie.io}
@@ -59,107 +57,19 @@ services:
       - DB_CATALOG=${DB_CATALOG:?ex. querypie}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_MAX_CONNECTION_SIZE=${DB_MAX_CONNECTION_SIZE}
-      - DB_DRIVER_CLASS=${DB_DRIVER_CLASS}
 
       # QueryPie LogDB
-      - LOG_DB_HOST=${LOG_DB_HOST:-${DB_HOST}}
-      - LOG_DB_PORT=${LOG_DB_PORT:-${DB_PORT}}
       - LOG_DB_CATALOG=${LOG_DB_CATALOG:?ex. querypie_log}
-      - LOG_DB_USERNAME=${LOG_DB_USERNAME:-${DB_USERNAME}}
-      - LOG_DB_PASSWORD=${LOG_DB_PASSWORD:-${DB_PASSWORD}}
-      - LOG_DB_MAX_CONNECTION_SIZE=${LOG_DB_MAX_CONNECTION_SIZE:-${DB_MAX_CONNECTION_SIZE}}
-      - LOG_DB_DRIVER_CLASS=${LOG_DB_DRIVER_CLASS:-${DB_DRIVER_CLASS}}
 
       # QueryPie SnapshotDB
-      - ENG_DB_HOST=${ENG_DB_HOST:-${DB_HOST}}
-      - ENG_DB_PORT=${ENG_DB_PORT:-${DB_PORT}}
       - ENG_DB_CATALOG=${ENG_DB_CATALOG:?ex. querypie_snapshot}
-      - ENG_DB_USERNAME=${ENG_DB_USERNAME:-${DB_USERNAME}}
-      - ENG_DB_PASSWORD=${ENG_DB_PASSWORD:-${DB_PASSWORD}}
-      - ENG_DB_DRIVER_CLASS=${ENG_DB_DRIVER_CLASS:-${DB_DRIVER_CLASS}}
       - PROXY_EXPERIMENTAL_SKIP_COMMAND_CONFIG_FILE=/app/arisa/skip_command_config.json
-      #- PROXY_EXPERIMENTAL_COMMAND_LIMIT=-1
-
-      # DAC HTTPS PROXY (target DB: Athena, Trino)
-      # If you don't need to use the DAC HTTPS proxy, Remove the following environment variables.
-      - ARISA_HTTPS_HOSTNAME=${PROXY_HTTPS_HOSTNAME-}
-      - ARISA_HTTPS_CERT_PATH=${PROXY_HTTPS_CERT_PATH-}
-      - ARISA_HTTPS_CERT_PASSWORD=${PROXY_HTTPS_CERT_PASSWORD-}
-
-      # Agentless PROXY
-      # If you don't need to use the Agentless Proxy, Remove the following environment variables.
-      - ARISA_PORT_START=${PROXY_PORT_START:-40000}
-      - ARISA_PORT_END=${PROXY_PORT_END:-40030}
 
       # The Key Encryption Key (KEK) encrypts Data Encryption Key (DEK) that encrypts a sensitive data such as database connection string, ssh key, and kubeconfig in order to protect the sensitive data even if those keys are compromised.
       # This value can initially be set to any string, but it must remain unchanged once established.
-      - KEK=${KEY_ENCRYPTION_KEY}
+      - KEY_ENCRYPTION_KEY=${KEY_ENCRYPTION_KEY}
 
-      # Cabinet Storage Environment
-      - STORAGE_DB_HOST=${STORAGE_DB_HOST:-${ENG_DB_HOST:-${DB_HOST}}}
-      - STORAGE_DB_PORT=${STORAGE_DB_PORT:-${ENG_DB_PORT:-${DB_PORT}}}
-      - STORAGE_DB_CATALOG=${STORAGE_DB_CATALOG:-${ENG_DB_CATALOG:?ex. querypie_snapshot}}
-      - STORAGE_DB_USER=${STORAGE_DB_USER:-${ENG_DB_USERNAME:-${DB_USERNAME}}}
-      - STORAGE_DB_PASSWORD=${STORAGE_DB_PASSWORD:-${ENG_DB_PASSWORD:-${DB_PASSWORD}}}
-      - STORAGE_DB_MAX_CONNECTION_SIZE=${STORAGE_DB_MAX_CONNECTION_SIZE:-${DB_MAX_CONNECTION_SIZE}}
-      - STORAGE_S3_ENABLED=${STORAGE_S3_ENABLED:-false}
-      - STORAGE_S3_MODE=${STORAGE_S3_MODE:-aws}
-      - STORAGE_S3_ENDPOINT=${STORAGE_S3_ENDPOINT:-}
-      - STORAGE_S3_BUCKET=${STORAGE_S3_BUCKET:-}
-      - STORAGE_S3_REGION=${STORAGE_S3_REGION:-}
-      - STORAGE_S3_CREDENTIAL_TYPE=${STORAGE_S3_CREDENTIAL_TYPE:-default}
-      - STORAGE_S3_CREDENTIAL_ACCESS_KEY_ID=${STORAGE_S3_CREDENTIAL_ACCESS_KEY_ID:-}
-      - STORAGE_S3_CREDENTIAL_SECRET_ACCESS_KEY=${STORAGE_S3_CREDENTIAL_SECRET_ACCESS_KEY:-}
-      - STORAGE_S3_CREDENTIAL_SESSION_TOKEN=${STORAGE_S3_CREDENTIAL_SESSION_TOKEN:-}
-
-      # Feature Flags
-      - FF_DISABLE_DAC_PROXY_COMMENT=${FF_DISABLE_DAC_PROXY_COMMENT:-false}
-      - FF_DISABLE_DAC_INDIRECT_POLICY=${FF_DISABLE_DAC_INDIRECT_POLICY:-false}
-
-      # Otel monitoring
-      - QP_OTEL_TRACE_ENABLE=${QP_OTEL_TRACE_ENABLE:-false}
-      - QP_OTEL_TRACE_EXPORTER_ENDPOINT=${QP_OTEL_TRACE_EXPORTER_ENDPOINT:-http://jaeger:4317}
-
-      # File upload size limit
-      - ENG_FILE_UPLOAD_SIZE_LIMIT_MB=${ENG_FILE_UPLOAD_SIZE_LIMIT_MB:-10}
-      - ENG_SQL_FILE_UPLOAD_SIZE_LIMIT_MB=${ENG_SQL_FILE_UPLOAD_SIZE_LIMIT_MB:-${ENG_FILE_UPLOAD_SIZE_LIMIT_MB:-10}}
-      - ENG_CSV_FILE_UPLOAD_SIZE_LIMIT_MB=${ENG_CSV_FILE_UPLOAD_SIZE_LIMIT_MB:-${ENG_FILE_UPLOAD_SIZE_LIMIT_MB:-10}}
-      - ENG_JSON_FILE_UPLOAD_SIZE_LIMIT_MB=${ENG_JSON_FILE_UPLOAD_SIZE_LIMIT_MB:-${ENG_FILE_UPLOAD_SIZE_LIMIT_MB:-10}}
-      - ENG_EXCEL_FILE_UPLOAD_SIZE_LIMIT_MB=${ENG_EXCEL_FILE_UPLOAD_SIZE_LIMIT_MB:-${ENG_FILE_UPLOAD_SIZE_LIMIT_MB:-10}}
-
-      # Host redirects to relevant service for DRM application
-      - EXPORT_PROXY_URL=${EXPORT_PROXY_URL:-}
-
-      # Redis tls
-      - REDIS_USE_SSL=${REDIS_USE_SSL:-false}
-      - REDIS_USERNAME=${REDIS_USERNAME:-}
-      - REDIS_SERVER_CERT_FILE=${REDIS_SERVER_CERT_FILE:-}
-      - REDIS_CLIENT_CERT_FILE=${REDIS_CLIENT_CERT_FILE:-}
-      - REDIS_CLIENT_KEY_FILE=${REDIS_CLIENT_KEY_FILE:-}
-      - REDIS_CLIENT_KEY_PASSWORD=${REDIS_CLIENT_KEY_PASSWORD:-}
-
-      # CUBE ONE decryption workflow type provided
-      - ENABLE_DECRYPTION_WORKFLOW=${ENABLE_DECRYPTION_WORKFLOW:-false}
-      - ENG_CUBE_ONE_URL=${ENG_CUBE_ONE_URL:-}
-
-      # Log level
-      - LOG_LEVEL_FILE=${LOG_LEVEL_FILE:-debug}
-      - LOG_LEVEL_CONSOLE=${LOG_LEVEL_CONSOLE:-info}
-
-      # query annotation
-      - ENABLE_QUERY_ANNOTATION=${ENABLE_QUERY_ANNOTATION:-false}
-
-      # vault ssh private key type
-      - HASHICORP_VAULT_CA_KEY_TYPE=${HASHICORP_VAULT_CA_KEY_TYPE:-rsa}
-      - HASHICORP_VAULT_CA_KEY_BITS=${HASHICORP_VAULT_CA_KEY_BITS:-2048}
-
-      # Setting table permissions received through workflow
-      - DEFAULT_DB_TABLE_ACCESS_TYPE=${DEFAULT_DB_TABLE_ACCESS_TYPE:-all}
-
-      # Disable query transmission for DB connection confirmation
-      - FF_DISABLE_DAC_VALIDATE_CONNECTION=${FF_DISABLE_DAC_VALIDATE_CONNECTION:-false}
-
+    # Works with both Docker and Podman
     sysctls:
       net.ipv4.ip_local_port_range: "10000 39999"
 
