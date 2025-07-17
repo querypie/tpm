@@ -19,6 +19,12 @@ Podman, Podman Compose 를 지원하는 QueryPie 실행 환경을 제공합니�
 2. Migration 실행하기: `podman-compose -f tools-compose.yml exec tools /app/script/migrate.sh runall`
 3. 종료하기: `podman-compose -f tools-compose.yml down`
 
+### QueryPie 를 실행하기
+
+1. 실행하기: `podman-compose -f querypie-compose.yml up -d`
+2. 실행성공 확인하기: `podman-compose -f querypie-compose.yml exec app readyz`
+3. 종료하기: `podman-compose -f querypie-compose.yml down`
+
 ## Compose Yaml 의 변경사항
 
 - Profile 설정을 사용하지 않고, database.yml, querypie.yml, tools.yml 등 Compose Yaml 을 세 개로 분리합니다.
@@ -49,6 +55,36 @@ Podman, Podman Compose 가 배포본 패키지로 제공되는 리눅스 배포�
   - `python3.11 --version`
   - `podman-compose --version`
     - 1.5.0 또는 이후 버전인지 확인합니다.
+
+## SELinux 설정 변경
+
+Red Hat Enterprise Linux 8.9 (Ootpa) 에서는 SELinux 가 활성화되어 있습니다.
+Podman Compose 를 사용하기 위해서는 SELinux 설정을 변경해야 합니다.
+
+- SELinux 설정을 변경하여 Container Volume Mounting 을 허용합니다.
+  - `cd podman`
+  - `sudo chcon -Rt container_file_t .`
+  - `sudo chcon -Rt container_file_t ../log`
+- Container Volume Mounting 대상의 SELinux 컨텍스트를 확인합니다.
+  - `cd podman`
+  - `ls -dlZ * ../log`
+  - `unconfined_u:object_r:container_file_t:s0` 또는 `system_u:object_r:container_file_t:s0` 와 같은 컨텍스트가 표시되어야 합니다.
+  - `user_home_t` 가 표시되는 경우, Container Volume Mounting 을 허용하지 않는 SELinux 설정입니다.
+```shell
+[ec2-user@ip-172-31-49-179 podman]$ ls -adlZ * ../log
+drwxrwxrwx. 2 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0     6 Jul 17 04:11 ../log
+-rw-rw-r--. 1 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0  3501 Jul 17 04:14 README.md
+drwxrwxr-x. 2 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0    22 Jul 13 09:52 certs
+-rw-rw-r--. 1 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0  1278 Jul 17 03:57 database-compose.yml
+-rw-rw-r--. 1 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0 10368 Jul 13 10:48 docker-compose.yml
+drwxr-xr-x. 2 ec2-user ec2-user system_u:object_r:container_file_t:s0        22 Jul 13 06:35 mysql_init
+drwxrwxr-x. 2 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0    38 Jul 13 09:52 nginx.d
+-rw-rw-r--. 1 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0  2800 Jul 17 04:23 querypie-compose.yml
+-rw-rw-r--. 1 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0     4 Jul 13 06:35 skip_command_config.json
+-rw-rw-r--. 1 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0   670 Jul 13 06:35 skip_command_config.json.example
+-rw-rw-r--. 1 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0  1850 Jul 13 11:43 tools-compose.yml
+[ec2-user@ip-172-31-49-179 podman]$ 
+```
 
 ## 테스트 환경
 
