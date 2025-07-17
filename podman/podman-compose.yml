@@ -1,0 +1,165 @@
+# Optimized for QueryPie 11.0.x
+# Compatible with both Docker and Podman
+
+name: querypie
+services:
+  mysql:
+    profiles:
+      - database
+      - mysql
+    hostname: mysql
+    networks:
+      - database-network
+    image: docker.io/querypie/mysql:8.0.42
+    volumes:
+      - ./mysql:/var/lib/mysql
+      - ./mysql_init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    environment:
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=${DB_CATALOG:?ex. querypie}
+
+  redis:
+    profiles:
+      - database
+      - redis
+    hostname: redis
+    networks:
+      - database-network
+    image: docker.io/querypie/redis:7.4.5
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"]
+
+  app:
+    profiles:
+      - app
+      - querypie
+    networks:
+      - querypie-network
+    image: docker.io/querypie/querypie:${VERSION}
+    volumes:
+      - type: bind
+        source: ../log
+        target: /var/log/querypie
+      - type: bind
+        source: ./nginx.d/ # Custom Nginx Configuration
+        target: /etc/nginx/nginx.d/ # Effective for 10.2.6 or later
+      - type: bind
+        source: ./certs/ # Custom TLS Certificates
+        target: /app/certs/
+      - type: bind
+        source: ${DAC_SKIP_SQL_COMMAND_RULE_FILE}
+        target: /app/arisa/skip_command_config.json
+    restart: always
+
+    ports:
+      # Nginx with HTTP
+      - 8000:80
+      # Nginx with HTTPS (powered by fake cert)
+      - 1443:443
+      # DAC, SAC Proxy Port
+      - 9000:9000
+      # KAC Proxy Port
+      - 6443:6443
+      # WAC Proxy Port
+      - 7447:7447
+      # DAC Agentless Proxy Port
+      # If you don't need to use the Agentless Proxy, Remove the following port forwarding.
+      - ${PROXY_PORT_START:-40000}-${PROXY_PORT_END:-40030}:${PROXY_PORT_START:-40000}-${PROXY_PORT_END:-40030}
+
+    # Handle both Docker and Podman host references
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # For Docker
+      - "host.containers.internal:host-gateway" # For Podman
+
+    env_file:
+      - .env
+    environment:
+      - VERSION=${VERSION:?ex. 11.0.0} # Validate VERSION here instead of in image reference
+      - REDIS_NODES=${REDIS_NODES:?ex. redis.querypie.io:6379,redis.querypie.io:6380,redis.querypie.io:6381}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - AGENT_SECRET=${AGENT_SECRET:?32 ASCII characters}
+
+      # QueryPie MetaDB
+      - DB_HOST=${DB_HOST:?ex. mysql.querypie.io}
+      - DB_PORT=${DB_PORT:?ex. 3306}
+      - DB_CATALOG=${DB_CATALOG:?ex. querypie}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+
+      # QueryPie LogDB
+      - LOG_DB_CATALOG=${LOG_DB_CATALOG:?ex. querypie_log}
+
+      # QueryPie SnapshotDB
+      - ENG_DB_CATALOG=${ENG_DB_CATALOG:?ex. querypie_snapshot}
+
+      # The Key Encryption Key (KEK) encrypts Data Encryption Key (DEK) that encrypts a sensitive data such as database connection string, ssh key, and kubeconfig in order to protect the sensitive data even if those keys are compromised.
+      # This value can initially be set to any string, but it must remain unchanged once established.
+      - KEY_ENCRYPTION_KEY=${KEY_ENCRYPTION_KEY}
+
+    # Works with both Docker and Podman
+    sysctls:
+      net.ipv4.ip_local_port_range: "10000 39999"
+
+  tools:
+    profiles:
+      - tools
+    networks:
+      - tools-network
+    image: docker.io/querypie/querypie-tools:${VERSION}
+    ports:
+      - "8050:8050"
+    # Handle both Docker and Podman host references
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # For Docker
+      - "host.containers.internal:host-gateway" # For Podman
+    environment:
+      - VERSION=${VERSION:?ex. 11.0.0} # Validate VERSION here instead of in image reference
+      - DB_HOST=${DB_HOST:?ex. mysql.querypie.io}
+      - DB_PORT=${DB_PORT:?ex. 3306}
+      - DB_CATALOG=${DB_CATALOG:?ex. querypie}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+
+      - LOG_DB_HOST=${DB_HOST}
+      - LOG_DB_PORT=${DB_PORT}
+      - LOG_DB_CATALOG=${LOG_DB_CATALOG:?ex. querypie_log}
+      - LOG_DB_USERNAME=${DB_USERNAME}
+      - LOG_DB_PASSWORD=${DB_PASSWORD}
+
+      - ENG_DB_HOST=${DB_HOST}
+      - ENG_DB_PORT=${DB_PORT}
+      - ENG_DB_CATALOG=${ENG_DB_CATALOG:?ex. querypie_snapshot}
+      - ENG_DB_USERNAME=${DB_USERNAME}
+      - ENG_DB_PASSWORD=${DB_PASSWORD}
+
+      # The Key Encryption Key (KEK) encrypts the Data Encryption Key (DEK),
+      # which then encrypts sensitive data including database connection strings, SSH keys, and kubeconfig files.
+      # This two-layer encryption approach safeguards sensitive information even if the encrypted data is compromised.
+      # The KEK can be initially set to any string value, but must remain consistent after it has been established.
+      - KEK=${KEY_ENCRYPTION_KEY}
+
+networks:
+  database-network: # Internal network identifier used in service definitions
+    name: querypie_database # Actual Docker network name visible in `docker network ls`
+    driver: bridge
+
+  querypie-network:
+    name: querypie_app
+    driver: bridge
+
+  tools-network:
+    name: querypie_tools
+    driver: bridge
+
+x-podman:
+  # Use - for container name separator to be compatible with Docker Compose v2.
+  name_separator_compat: true
