@@ -1,75 +1,81 @@
-# Podman Compose, Docker Compose 모두를 위한 QueryPie 실행 환경
+# QueryPie Execution Environment for both Podman Compose and Docker Compose
 
-Podman, Podman Compose 를 지원하는 QueryPie 실행 환경을 제공합니다.
-뿐만 아니라, Docker, Docker Compose 를 이용할 수도 있도록, 호환성을 유지하는 설정을 제공합니다.
+Last updated: July 28, 2025
 
-## QueryPie 실행하기
+This repository provides a QueryPie execution environment that supports both Podman and Podman Compose.
+It also includes compatibility settings that allow Docker and Docker Compose to be used as alternatives.
+The following guide provides instructions on how to run QueryPie using Podman and Podman Compose.
 
-### MySQL, Redis 를 실행하기
+## Running QueryPie
 
-1. `.env` 파일을 작성하기
-    - `.env.template`을 복사하여, `.env` 파일을 작성하고, 필요한 환경변수 값을 설정합니다.
-    - `cp .env.template .env`, `vi .env`
-2. 실행하기: `podman-compose --profile=database up -d`
-3. 종료하기: `podman-compose --profile=database down`
+### Running MySQL and Redis
 
-### Tools 를 실행하기
+1. Create a `.env` file
+  - Copy `.env.template` to create a `.env` file and set the necessary environment variable values.
+  - Commands: `cp .env.template .env`, then `vi .env`
+  - Note: Using the `setup.v2.sh` script will perform this step automatically.
+2. Start services: `podman-compose --profile=database up -d`
+3. Stop services: `podman-compose --profile=database down`
 
-1. 실행하기: `podman-compose --profile=tools up -d`
-2. Migration 실행하기: `podman-compose --profile=tools exec tools /app/script/migrate.sh runall`
-3. 종료하기: `podman-compose --profile=tools down`
+### Running Tools
 
-### QueryPie 를 실행하기
+1. Start tools: `podman-compose --profile=tools up -d`
+2. Run migration: `podman-compose --profile=tools exec tools /app/script/migrate.sh runall`
+3. Stop tools: `podman-compose --profile=tools down`
 
-1. 실행하기: `podman-compose --profile=app up -d`
-2. 실행성공 확인하기: `podman-compose  --profile=app exec app readyz`
-3. 종료하기: `podman-compose --profile=app down`
+### Running QueryPie Application
 
-## Compose Yaml 의 변경사항
+1. Start application: `podman-compose --profile=app up -d`
+2. Verify successful execution: `podman-compose --profile=app exec app readyz`
+3. Stop application: `podman-compose --profile=app down`
 
-- Profile 설정을 사용하지 않고, database.yml, querypie.yml, tools.yml 등 Compose Yaml 을 세 개로 분리합니다.
-  - Podman Compose 구버전은 Docker Compose 와 달리, Profile 설정을 지원하지 않습니다.
-  - 검증 범위를 좁히고, 실행 명령을 간단하게 만들기 위해, Profile 을 사용하지 않도록 변경합니다.
-- Container 이름을 지정할 때 사용하는 구분자를 `_`가 아닌 `-`를 사용하도록 설정을 추가합니다.
-  - Podman Compose 는 기본으로 `_`를 구분자로 사용합니다. Docker Compose v2 와 호환되려면, `-`를 사용해야 합니다.
-  - `x-podman: name_separator_compat: true` 라는 설정을 추가합니다.
-  - Docker Compose v1 은 `_`를 구분자로, v2 는 `-`를 구분자로 사용합니다.
-- MySQL 을 위한 `/var/lib/mysql` 데이터 디렉토리를 Host Filesystem 이 아닌 Container Volume 으로 제공합니다.
-  - Podman 에서는 Host Filesystem 을 제공하는 경우, 해당 디렉토리의 Ownership 을 변경하지 못하여, 오류가 발생합니다.
-- Docker Image 의 Registry 를 명시하여, `docker.io/` 라는 Registry 를 사용합니다.
-  - Registry 가 명시되지 않으면, Podman Compose 에서 이미지를 내려받을 때, RHEL 의 Registry 를 사용할 것인지 질문을 받게 됩니다.
+## Changes to Compose YAML
 
-## Podman, Podman Compose 설치 방법
+The following changes have been made to ensure compatibility between Podman Compose and Docker Compose:
 
-Podman, Podman Compose 가 배포본 패키지로 제공되는 리눅스 배포본이 다수입니다.
-그러나, Amazon Linux 2023 에서는 Podman 설치 패키지가 제공되지 않습니다.
+- Added settings to use `-` instead of `_` as the separator when specifying container names.
+  - Podman Compose uses `_` as the default separator. To be compatible with Docker Compose v2, `-` should be used.
+  - Added the setting `x-podman: name_separator_compat: true`.
+  - Note: Docker Compose v1 uses `_` as a separator, while v2 uses `-`.
+- Configured the `/var/lib/mysql` data directory as a Container Volume rather than a Host Filesystem.
+  - In Podman, when using a Host Filesystem, errors occur because Podman cannot change the ownership of that directory.
+- Specified the Docker Image Registry to use the `docker.io/` Registry.
+  - If the Registry is not specified, Podman Compose will prompt you to choose whether to use the RHEL Registry when downloading images.
 
-- Podman 설치 방법
+## Installation Methods for Podman and Podman Compose
+
+Many Linux distributions provide Podman and Podman Compose as distribution packages.
+However, Amazon Linux 2023 does not include Podman installation packages by default.
+
+### Installation Steps
+
+- Podman Installation:
   - `sudo dnf install podman`
-- Podman Compose 설치 방법
+- Podman Compose Installation:
   - `sudo dnf install -y python3.11 python3.11-pip python3.11-devel`
   - `python3.11 -m pip install --user podman-compose`
-- 설치결과를 확인하기
+- Verifying Installation:
   - `podman --version`
-    - 4.9.4-rhel 또는 이후 버전인지 확인합니다.
+    - Ensure that it is version 4.9.4-rhel or later.
   - `python3.11 --version`
   - `podman-compose --version`
-    - 1.5.0 또는 이후 버전인지 확인합니다.
+    - Ensure that it is version 1.5.0 or later.
 
-## SELinux 설정 변경
+## SELinux Configuration Changes
 
-Red Hat Enterprise Linux 8.9 (Ootpa) 에서는 SELinux 가 활성화되어 있습니다.
-Podman Compose 를 사용하기 위해서는 SELinux 설정을 변경해야 합니다.
+SELinux is enabled by default on Red Hat Enterprise Linux 8.9 (Ootpa).
+To use Podman Compose successfully, you need to modify the SELinux settings as follows:
 
-- SELinux 설정을 변경하여 Container Volume Mounting 을 허용합니다.
+- Change SELinux settings to allow Container Volume Mounting:
   - `cd podman`
   - `sudo chcon -Rt container_file_t .`
   - `sudo chcon -Rt container_file_t ../log`
-- Container Volume Mounting 대상의 SELinux 컨텍스트를 확인합니다.
+- Verify the SELinux context of the Container Volume Mounting target:
   - `cd podman`
   - `ls -dlZ * ../log`
-  - `unconfined_u:object_r:container_file_t:s0` 또는 `system_u:object_r:container_file_t:s0` 와 같은 컨텍스트가 표시되어야 합니다.
-  - `user_home_t` 가 표시되는 경우, Container Volume Mounting 을 허용하지 않는 SELinux 설정입니다.
+  - You should see contexts like `unconfined_u:object_r:container_file_t:s0` or `system_u:object_r:container_file_t:s0`.
+  - If `user_home_t` is displayed, it indicates a SELinux setting that does not permit Container Volume Mounting.
+
 ```shell
 [ec2-user@ip-172-31-49-179 podman]$ ls -adlZ * ../log
 drwxrwxrwx. 2 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0     6 Jul 17 04:11 ../log
@@ -86,11 +92,13 @@ drwxrwxr-x. 2 ec2-user ec2-user unconfined_u:object_r:container_file_t:s0    38 
 [ec2-user@ip-172-31-49-179 podman]$ 
 ```
 
-## 테스트 환경
+## Test Environment
 
-- Red Hat Enterprise Linux release 8.9 (Ootpa) with Podman, Podman Compose
+This configuration has been tested on the following environments:
+
+- Red Hat Enterprise Linux release 8.9 (Ootpa) with Podman and Podman Compose:
   - podman-compose version 1.5.0
   - podman version 4.9.4-rhel
-- Amazon Linux 2023 with Docker, Docker Compose
+- Amazon Linux 2023 with Docker and Docker Compose:
   - Docker version 25.0.8, build 0bab007
   - Docker Compose version v2.13.0
