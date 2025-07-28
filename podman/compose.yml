@@ -1,5 +1,6 @@
 # Optimized for QueryPie 11.0.x
 # Compatible with both Docker and Podman
+# Version of compose.yml: 25.07.1
 
 name: querypie
 services:
