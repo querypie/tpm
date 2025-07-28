@@ -63,15 +63,15 @@ services:
 
     ports:
       # Nginx with HTTP
-      - 8000:80
+      - "8000:80"
       # Nginx with HTTPS (powered by fake cert)
-      - 1443:443
+      - "8443:443"
       # DAC, SAC Proxy Port
-      - 9000:9000
+      - "9000:9000"
       # KAC Proxy Port
-      - 6443:6443
+      - "6443:6443"
       # WAC Proxy Port
-      - 7447:7447
+      - "7447:7447"
       # DAC Agentless Proxy Port
       # If you don't need to use the Agentless Proxy, Remove the following port forwarding.
       - ${PROXY_PORT_START:-40000}-${PROXY_PORT_END:-40030}:${PROXY_PORT_START:-40000}-${PROXY_PORT_END:-40030}
