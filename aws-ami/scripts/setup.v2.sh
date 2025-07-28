@@ -283,9 +283,9 @@ function install::config_files() {
   if [[ -f ./querypie/"$QP_VERSION"/.env.template ]]; then
     log::do cp ./querypie/"$QP_VERSION"/.env.template ./querypie/"$QP_VERSION"/.env
   elif [[ -f ./querypie/"$QP_VERSION"/compose-env ]]; then
-    # Create a symbolic link to the compose-env file,
+    log::do cp ./querypie/"$QP_VERSION"/compose-env ./querypie/"$QP_VERSION"/.env
+    # Use .env instead of compose-env,
     # so that user can skip --env-file option when running docker-compose commands.
-    log::do ln -s compose-env ./querypie/"$QP_VERSION"/.env
   fi
   log::do sed -i.orig \
     -e "s#^VERSION=.*#VERSION=$QP_VERSION#" \
@@ -308,6 +308,7 @@ function install::config_files() {
     log::do mkdir -p ./querypie/log
   fi
 
+  # Universal package does not have the config file, logrotate.
   if [[ -f ./querypie/"$QP_VERSION"/logrotate && -d /etc/logrotate.d/ ]]; then
     log::sudo cp ./querypie/"$QP_VERSION"/logrotate /etc/logrotate.d/docker-querypie
   fi
@@ -377,6 +378,7 @@ function install::base_url() {
     bind_port=${bind_port%%:*}
   fi
 
+  # The default values when bind_port could not be found in compose.yml
   if [[ -z $bind_port ]]; then
     if [[ $scheme == http ]]; then
       bind_port="80"
