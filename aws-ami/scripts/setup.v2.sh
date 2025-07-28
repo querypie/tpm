@@ -19,6 +19,8 @@ set -o nounset -o errexit -o pipefail
 
 RECOMMENDED_VERSION="11.0.1" # QueryPie version to install by default.
 ASSUME_YES=false
+DOCKER=docker # The default docker command
+COMPOSE=docker-compose # The default compose command
 
 function print_usage_and_exit() {
   set +x
@@ -29,11 +31,12 @@ $program_name ${SCRIPT_VERSION}, the QueryPie installation script.
 Usage: $program_name [options]
     or $program_name [options] --install <version>
     or $program_name [options] --upgrade <version>
+    or $program_name [options] --universal
     or $program_name [options] --install-partially-for-ami <version>
     or $program_name [options] --resume
     or $program_name [options] --verify-installation
-    or $program_name [options] --populate-env <compose-env-file>
-    or $program_name [options] --reset-credential <compose-env-file>
+    or $program_name [options] --populate-env <env-file>
+    or $program_name [options] --reset-credential <env-file>
     or $program_name [options] --help
 
 OPTIONS:
@@ -130,11 +133,24 @@ function install::verify_docker_installation() {
   echo >&2 "## Verify Docker installation"
   echo >&2 "#"
 
-  if docker ps >/dev/null 2>&1; then
+  if docker --version 2>/dev/null | grep -q "^Docker version"; then
+    DOCKER=docker
+    COMPOSE=docker-compose
+  elif podman --version 2>/dev/null | grep -q "^podman version"; then
+    DOCKER=podman
+    COMPOSE=podman-compose
+  else
+    echo >&2 "# Unknown version of Docker"
+    log::do docker --version
+    log::error "Please report this problem to the technical support team of QueryPie."
+    exit 1
+  fi
+
+  if $DOCKER ps >/dev/null 2>&1; then
     echo >&2 "# Docker is already running and functional."
     return
   fi
-  if (docker ps 2>&1 || true) | grep -q "permission denied"; then
+  if (${DOCKER} ps 2>&1 || true) | grep -q "permission denied"; then
     echo >&2 "# The current user does not have permission to run Docker commands."
     echo >&2 "# The current groups for the user are:"
     log::do id -Gn
@@ -154,7 +170,7 @@ function install::verify_docker_installation() {
     exit 1
   fi
 
-  log::do docker ps || true
+  log::do $DOCKER ps || true
   echo >&2 "# Docker installation verification failed. Please check above errors."
   echo >&2 "# Resolve the identified issues before proceeding."
   exit 1
@@ -169,6 +185,7 @@ function install::docker() {
     echo >&2 "# Docker is already installed at $(command -v docker)"
 
     install::verify_docker_installation
+    log::do $DOCKER --version
     return
   fi
 
@@ -210,42 +227,74 @@ function install::docker_compose() {
   echo >&2 "## Install Docker Compose tool"
   echo >&2 "#"
 
-  if command_exists docker-compose; then
-    echo >&2 "# Docker Compose is already installed at $(command -v docker-compose)"
-    return
+  if [[ ${COMPOSE} == docker-compose ]]; then
+    if command_exists docker-compose; then
+      echo >&2 "# Docker Compose is already installed at $(command -v docker-compose)"
+      return
+    else
+      echo >&2 "# Docker Compose is not installed. Installing now."
+      log::do curl -fsSL "https://dl.querypie.com/releases/bin/docker-compose-$(uname -s)-$(uname -m)" -o docker-compose
+      log::sudo install -m 755 docker-compose /usr/local/bin
+      rm docker-compose
+      return
+    fi
+  elif [[ ${COMPOSE} == podman-compose ]]; then
+    if command_exists podman-compose; then
+      echo >&2 "# Podman Compose is already installed at $(command -v podman-compose)"
+      return
+    else
+      echo >&2 "# Podman Compose is not installed. Please refer to the installation manual."
+      log::error "Please report this problem to the technical support team of QueryPie."
+      exit 1
+    fi
+  else
+    echo >&2 "# Docker Compose is not installed. Unknown version of Docker."
+    log::do docker --version
+    log::error "Please report this problem to the technical support team of QueryPie."
+    exit 1
   fi
-
-  echo >&2 "# Docker Compose is not installed. Installing now."
-  log::do curl -fsSL "https://dl.querypie.com/releases/bin/docker-compose-$(uname -s)-$(uname -m)" -o docker-compose
-  log::sudo install -m 755 docker-compose /usr/local/bin
-  rm docker-compose
 }
 
 function install::config_files() {
   echo >&2 "#"
-  echo >&2 "## Install configuration files: docker-compose.yml, compose-env, and others"
+  echo >&2 "## Install configuration files: docker-compose.yml, .env, and others"
   echo >&2 "#"
 
   echo >&2 "# Target directory is ./querypie/${QP_VERSION}/"
   mkdir -p ./querypie/"${QP_VERSION}"
 
-  log::do curl -fsSL https://dl.querypie.com/releases/compose/"$PACKAGE_VERSION"/package.tar.gz -o package.tar.gz
+  if [[ ! -r package.tar.gz ]]; then # Testing purpose
+    log::do curl -fsSL https://dl.querypie.com/releases/compose/"$PACKAGE_VERSION"/package.tar.gz -o package.tar.gz
+  fi
+  log::do umask 0022 # Use 644 for files and 755 for directories by default
   log::do tar zxvf package.tar.gz -C ./querypie/"$QP_VERSION"
   rm package.tar.gz
+
+  local compose_yml=compose.yml
+  [[ -f ./querypie/"$QP_VERSION"/${compose_yml} ]] || compose_yml=docker-compose.yml
   log::do sed -i.orig \
     -e "s#- \\./mysql:/var/lib/mysql#- ../mysql:/var/lib/mysql#" \
     -e "s#harbor.chequer.io/querypie/#docker.io/querypie/#" \
     -e "s#source: /var/log/querypie#source: ../log#" \
-    ./querypie/"$QP_VERSION"/docker-compose.yml
-  rm ./querypie/"$QP_VERSION"/docker-compose.yml.orig
+    ./querypie/"$QP_VERSION"/${compose_yml}
+  rm ./querypie/"$QP_VERSION"/${compose_yml}.orig
+
+  # Universal package.tar.gz has .env.template.
+  if [[ -f ./querypie/"$QP_VERSION"/.env.template ]]; then
+    log::do cp ./querypie/"$QP_VERSION"/.env.template ./querypie/"$QP_VERSION"/.env
+  elif [[ -f ./querypie/"$QP_VERSION"/compose-env ]]; then
+    # Create a symbolic link to the compose-env file,
+    # so that user can skip --env-file option when running docker-compose commands.
+    log::do ln -s compose-env ./querypie/"$QP_VERSION"/.env
+  fi
   log::do sed -i.orig \
-    -e "s#^VERSION=.*#VERSION=$QP_VERSION#" \
-    -e "s#CABINET_DATA_DIR=/data#CABINET_DATA_DIR=../data#" \
-    ./querypie/"$QP_VERSION"/compose-env
-  rm ./querypie/"$QP_VERSION"/compose-env.orig
+      -e "s#^VERSION=.*#VERSION=$QP_VERSION#" \
+      -e "s#CABINET_DATA_DIR=/data#CABINET_DATA_DIR=../data#" \
+      ./querypie/"$QP_VERSION"/.env
+  rm ./querypie/"$QP_VERSION"/.env.orig
 
   # Deprecated since 10.3.0
-  if grep -q CABINET_DATA_DIR ./querypie/"$QP_VERSION"/compose-env; then
+  if grep -q CABINET_DATA_DIR ./querypie/"$QP_VERSION"/.env; then
     log::do mkdir -p ./querypie/data
   fi
 
@@ -259,16 +308,52 @@ function install::config_files() {
     log::do mkdir -p ./querypie/log
   fi
 
-  # Create a symbolic link to the compose-env file,
-  # so that user can skip --env-file option when running docker-compose commands.
-  [[ -e ./querypie/"$QP_VERSION"/.env ]] ||
-    log::do ln -s compose-env ./querypie/"$QP_VERSION"/.env
+  if [[ -f ./querypie/"$QP_VERSION"/logrotate && -d /etc/logrotate.d/ ]]; then
+    log::sudo cp ./querypie/"$QP_VERSION"/logrotate /etc/logrotate.d/docker-querypie
+  fi
+}
 
-  log::sudo cp ./querypie/"$QP_VERSION"/logrotate /etc/logrotate.d/docker-querypie
+function install::verify_selinux() {
+  echo >&2 "#"
+  echo >&2 "## Verify SELinux settings"
+  echo >&2 "#"
+  if sestatus &>/dev/null; then
+    echo >&2 "# SELinux is installed on this system."
+  else
+    echo >&2 "# SELinux is not found. Skipping SELinux settings verification."
+    return
+  fi
+
+  if sestatus | grep "SELinux status:" | grep -q "enabled"; then
+    echo >&2 "# SELinux is enabled on this system."
+  else
+    echo >&2 "# SELinux is disabled. Skipping SELinux settings verification."
+    return
+  fi
+
+  if sestatus | grep "Current mode:" | grep -q "enforcing"; then
+    echo >&2 "# The current mode of SELinux is enforcing."
+  else
+    echo >&2 "# The current mode of SELinux is not enforcing. Verification complete."
+    sestatus | grep "Current mode:"
+    return
+  fi
+
+  echo >&2 "## You may need to change the SELinux context of the ./querypie directory."
+  echo >&2 "# A more permissive SELinux context (container_file_t) is required for ./querypie."
+  log::do ls -dZ ./querypie
+  echo >&2 "# The following sudo command is recommended:"
+  echo >&2 "#   sudo chcon -Rt container_file_t ./querypie"
+  echo >&2 "# Without this change, you may encounter container errors."
+  if install::ask_yes "Do you want to run the above sudo chcon -Rt container_file_t ./querypie command?"; then
+    log::sudo chcon -Rt container_file_t ./querypie
+  else
+    echo >&2 "# Understood. The sudo chcon command will not be executed."
+  fi
 }
 
 ################################################################################
-# compose-env related functions
+# env_file related functions
 
 function env_file::random_hex() {
   local length=${1:-32}
@@ -466,14 +551,14 @@ function verify::version_of_current() {
 
 function verify::version_of_container() {
   local container=querypie-app-1
-  docker inspect --format '{{.Config.Image}}' $container | cut -d':' -f2
+  ${DOCKER} inspect --format '{{.Config.Image}}' $container | cut -d':' -f2
 }
 
 function verify::container_is_ready_for_service() {
   echo >&2 "## Verify the QueryPie app container is running properly"
 
   local container=querypie-app-1
-  if log::do docker inspect --format '{{.State.Running}}' $container 2>/dev/null | grep -q 'true'; then
+  if log::do $DOCKER inspect --format '{{.State.Running}}' $container 2>/dev/null | grep -q 'true'; then
     echo >&2 "# QueryPie app container, $container is running."
   else
     log::error "QueryPie app container, $container is not running. Please check the installation."
@@ -483,7 +568,7 @@ function verify::container_is_ready_for_service() {
   # Find out the version of the QueryPie app container.
   echo >&2 "# QueryPie version: $(verify::version_of_container || true)"
 
-  if log::do docker exec querypie-app-1 readyz wait; then
+  if log::do $DOCKER exec querypie-app-1 readyz wait; then
     echo >&2 "# QueryPie app container, $container is ready for service."
   else
     log::error "QueryPie app container is not functioning properly. Please check the installation."
@@ -560,32 +645,36 @@ function cmd::install() {
   install::docker
   install::docker_compose
   install::config_files
+  install::verify_selinux
 
   log::do pushd "./querypie/${QP_VERSION}/"
-  echo >&2 "## Configure the compose-env file in ./querypie/${QP_VERSION}/"
-  cmd::populate_env "compose-env"
-  log::do docker-compose pull --quiet mysql redis tools app
+  echo >&2 "## Configure the .env file in ./querypie/${QP_VERSION}/"
+  cmd::populate_env ".env"
+
+  local pull_option=''
+  [[ $COMPOSE == docker-compose && ! -t 0 ]] && pull_option='--quiet'
+  log::do $COMPOSE --profile database --profile querypie --profile tools pull $pull_option
   echo >&2 "## Start MySQL and Redis services for QueryPie"
-  log::do docker-compose --profile database up --detach
+  log::do $COMPOSE --profile database up --detach
   log::do sleep 10
-  log::do docker-compose --profile tools up --detach
+  log::do $COMPOSE --profile tools up --detach
   log::do tools::wait_and_print_banner
 
   echo >&2 "## Run migrate.sh to initialize MySQL database for QueryPie"
   echo >&2 "# This process may take more than a minute if this is the first installation."
   # Save the long output of migrate.sh as querypie-migrate.1.log
-  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall |
+  log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall |
     tee ~/querypie-migrate.1.log |
     while IFS= read -r; do printf "." >&2 ; done
   echo >&2 " Done."
   # Run migrate.sh again to ensure the migration is completed properly
-  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
-  log::do docker-compose --profile tools down
+  log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
+  log::do $COMPOSE --profile tools down
   echo >&2 "## Start the QueryPie container (initialization takes about 2 minutes)"
-  log::do docker-compose --profile querypie up --detach
-  log::do docker exec querypie-app-1 readyz || {
+  log::do $COMPOSE --profile querypie up --detach
+  log::do $DOCKER exec querypie-app-1 readyz || {
     log::error "QueryPie container has failed to start up. Please check the logs."
-    log::do docker logs --tail 100 querypie-app-1 || true
+    log::do $DOCKER logs --tail 100 querypie-app-1 || true
     exit 1
   }
   log::do popd
@@ -607,6 +696,7 @@ function cmd::upgrade() {
   PACKAGE_VERSION=$(install::get_package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
   echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
 
+  install::verify_docker_installation
   verify::container_is_ready_for_service || {
     log::error "Upgrade is aborted."
     exit 1
@@ -626,46 +716,51 @@ function cmd::upgrade() {
 
   install::config_files
 
-  echo >&2 "## Configure the compose-env file for target version at ./querypie/${QP_VERSION}/"
+  echo >&2 "## Configure the .env file for target version at ./querypie/${QP_VERSION}/"
   log::do pushd "./querypie/${QP_VERSION}/"
   (
-    if [[ -e ../current/compose-env ]]; then
+    if [[ -e ../current/.env ]]; then
+      # shellcheck disable=SC1091
+      source ../current/.env
+    elif [[ -e ../current/compose-env ]]; then
       # shellcheck disable=SC1091
       source ../current/compose-env
     else
-      log::error "No compose-env file found in ./querypie/current/."
+      log::error "No .env or compose-env file found in ./querypie/current/."
       exit 1
     fi
     VERSION="${QP_VERSION}" # Set the VERSION variable to the target version.
-    cmd::populate_env "compose-env"
+    cmd::populate_env ".env"
   )
 
   echo >&2 "## Download Docker images for the target version"
-  log::do docker-compose pull --quiet mysql redis tools app
+  local pull_option=''
+  [[ $COMPOSE == docker-compose && ! -t 0 ]] && pull_option='--quiet'
+  log::do $COMPOSE --profile database --profile querypie --profile tools pull $pull_option
   log::do popd
 
   echo >&2 "## Stop containers from the previous version"
   log::do pushd "./querypie/${current_version}/"
-  log::do docker-compose --profile querypie down
-  log::do docker-compose --profile tools down || true
+  log::do $COMPOSE --profile querypie down
+  log::do $COMPOSE --profile tools down || true
   log::do popd
 
   echo >&2 "## Start the querypie-tools container for the target version"
   log::do pushd "./querypie/${QP_VERSION}/"
-  log::do docker-compose --profile tools up --detach
+  log::do $COMPOSE --profile tools up --detach
   log::do tools::wait_and_print_banner
 
   echo >&2 "## Run migrate.sh to apply MySQL schema changes for QueryPie"
   # Save the long output of migrate.sh as querypie-migrate.1.log
-  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >>~/querypie-migrate.1.log
+  log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall >>~/querypie-migrate.1.log
   # Run migrate.sh again to ensure the migration is completed properly
-  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall | tee -a ~/querypie-migrate.log
-  log::do docker-compose --profile tools down
+  log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall | tee -a ~/querypie-migrate.log
+  log::do $COMPOSE --profile tools down
   echo >&2 "## Start the QueryPie container (initialization takes about 2 minutes)"
-  log::do docker-compose --profile querypie up --detach
-  log::do docker exec querypie-app-1 readyz || {
+  log::do $COMPOSE --profile querypie up --detach
+  log::do $DOCKER exec querypie-app-1 readyz || {
     log::error "QueryPie container has failed to start up. Please check the logs."
-    log::do docker logs --tail 100 querypie-app-1 || true
+    log::do $DOCKER logs --tail 100 querypie-app-1 || true
     exit 1
   }
   log::do popd
@@ -700,10 +795,13 @@ function cmd::install_partially_for_ami() {
   install::config_files
 
   log::do pushd "./querypie/${QP_VERSION}/"
-  cmd::populate_env "compose-env"
-  log::do docker-compose pull --quiet mysql redis tools app
-  log::do docker image ls
-  cmd::reset_credential "compose-env"
+  cmd::populate_env ".env"
+
+  local pull_option=''
+  [[ $COMPOSE == docker-compose && ! -t 0 ]] && pull_option='--quiet'
+  log::do $COMPOSE --profile database --profile querypie --profile tools pull $pull_option
+  log::do $DOCKER image ls
+  cmd::reset_credential ".env"
   log::do popd
 
   install::make_symlink_of_current
@@ -719,20 +817,22 @@ function cmd::resume() {
   QP_VERSION=$(verify::version_of_current)
   echo >&2 "# QP_VERSION: ${QP_VERSION}"
 
+  install::verify_docker_installation
+
   log::do pushd "./querypie/${QP_VERSION}/"
-  cmd::populate_env "compose-env"
-  log::do docker-compose --profile database up --detach
+  cmd::populate_env ".env"
+  log::do $COMPOSE --profile database up --detach
   log::do sleep 10
-  log::do docker-compose --profile tools up --detach
+  log::do $COMPOSE --profile tools up --detach
   log::do tools::wait_and_print_banner
 
   # Save the long output of migrate.sh as querypie-migrate.1.log
-  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.1.log
+  log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.1.log
   # Run migrate.sh again to ensure the migration is completed properly
-  log::do docker exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
-  log::do docker-compose --profile tools down
-  log::do docker-compose --profile querypie up --detach
-  log::do docker container ls --all
+  log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
+  log::do $COMPOSE --profile tools down
+  log::do $COMPOSE --profile querypie up --detach
+  log::do $DOCKER container ls --all
   log::do popd
 
   install::make_symlink_of_current
@@ -744,7 +844,7 @@ function cmd::resume() {
 function cmd::populate_env() {
   local source_env_file=$1 tmp_file
 
-  tmp_file=$(mktemp /tmp/compose-env.XXXXXX)
+  tmp_file=$(mktemp /tmp/env_file.XXXXXX)
   # SC2064 Use single quotes, otherwise this expands now rather than when signaled.
   #shellcheck disable=SC2064
   trap "rm -f ${tmp_file}" EXIT
@@ -759,7 +859,7 @@ function cmd::populate_env() {
 function cmd::reset_credential() {
   local source_env_file=$1 tmp_file
 
-  tmp_file=$(mktemp /tmp/compose-env.XXXXXX)
+  tmp_file=$(mktemp /tmp/env_file.XXXXXX)
   # SC2064 Use single quotes, otherwise this expands now rather than when signaled.
   #shellcheck disable=SC2064
   trap "rm -f ${tmp_file}" EXIT
@@ -805,8 +905,9 @@ function cmd::verify_installation() {
     }
   fi
 
+  install::verify_docker_installation
   verify::container_is_ready_for_service || {
-    log::do docker logs --tail 100 querypie-app-1 || true
+    log::do $DOCKER logs --tail 100 querypie-app-1 || true
     ((status += 1))
   }
 
@@ -905,6 +1006,10 @@ function main() {
       ;;
     --install | --upgrade)
       cmd="${1#--}"
+      shift
+      ;;
+    --universal)
+      PACKAGE_VERSION=universal
       shift
       ;;
     --install-partially-for-ami | --resume)
