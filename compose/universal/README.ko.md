@@ -6,7 +6,25 @@
 또한 Docker 및 Docker Compose를 대안으로 사용할 수 있는 호환성 설정도 포함되어 있습니다.
 다음 가이드는 Podman 및 Podman Compose를 사용하여 QueryPie를 실행하는 방법에 대한 지침을 제공합니다.
 
-## QueryPie 실행하기
+## QueryPie 를 자동으로 설치하고 실행하기
+
+"Podman 및 Podman Compose 설치 방법" 섹션을 참고하여, podman, podman-compose 를 먼저 설치하여 주세요.
+
+리눅스 서버의 shell 에서 다음 명령을 실행합니다. `--universal` 옵션을 빠뜨리지 않아야 한다는 것에 주의하여 주세요.
+```shell
+$ bash <(curl -s https://dl.querypie.com/setup.v2.sh) --universal
+```
+또는 다음의 방법을 사용하여도 됩니다.
+```shell
+$ curl -s https://dl.querypie.com/setup.v2.sh -o setup.v2.sh
+$ bash setup.v2.sh --universal
+```
+
+`setup.v2.sh`를 이용한 설치 방법에 대한 상세한 가이드는 다음 문서를 참조하세요:
+[Installation Guide - setup.v2.sh (KO)](https://querypie.atlassian.net/wiki/spaces/QCP/pages/1177321474/Installation+Guide+-+setup.v2.sh+KO)
+
+
+## QueryPie 수작업 실행하기
 
 ### MySQL 및 Redis 실행하기
 
@@ -37,8 +55,6 @@ Podman Compose와 Docker Compose 간의 호환성을 보장하기 위해 다음�
   - Podman Compose는 기본 구분자로 `_`를 사용합니다. Docker Compose v2와 호환되려면 `-`를 사용해야 합니다.
   - `x-podman: name_separator_compat: true` 설정을 추가했습니다.
   - 참고: Docker Compose v1은 구분자로 `_`를 사용하고, v2는 `-`를 사용합니다.
-- `/var/lib/mysql` 데이터 디렉토리를 호스트 파일시스템이 아닌 컨테이너 볼륨으로 구성했습니다.
-  - Podman에서 호스트 파일시스템을 사용할 때, Podman이 해당 디렉토리의 소유권을 변경할 수 없어 오류가 발생합니다.
 - Docker 이미지 레지스트리를 `docker.io/` 레지스트리를 사용하도록 지정했습니다.
   - 레지스트리가 지정되지 않으면, 이미지를 다운로드할 때 Podman Compose가 RHEL 레지스트리를 사용할지 여부를 선택하라는 메시지를 표시합니다.
 
@@ -47,7 +63,7 @@ Podman Compose와 Docker Compose 간의 호환성을 보장하기 위해 다음�
 많은 Linux 배포판에서 Podman 및 Podman Compose를 배포 패키지로 제공합니다.
 그러나 Amazon Linux 2023은 기본적으로 Podman 설치 패키지를 포함하지 않습니다.
 
-### 설치 단계
+### RHEL8 에서 설치하는 방법
 
 - Podman 설치:
   - `sudo dnf install podman`

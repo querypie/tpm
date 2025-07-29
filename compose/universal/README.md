@@ -6,7 +6,25 @@ This repository provides a QueryPie execution environment that supports both Pod
 It also includes compatibility settings that allow Docker and Docker Compose to be used as alternatives.
 The following guide provides instructions on how to run QueryPie using Podman and Podman Compose.
 
-## Running QueryPie
+## Automatically Install and Run QueryPie
+
+Please refer to the "Installation Methods for Podman and Podman Compose" section to install podman and podman-compose first.
+
+Run the following command in the shell of your Linux server. Note that you must not omit the `--universal` option.
+```shell
+$ bash <(curl -s https://dl.querypie.com/setup.v2.sh) --universal
+```
+Or you can use the following method:
+```shell
+$ curl -s https://dl.querypie.com/setup.v2.sh -o setup.v2.sh
+$ bash setup.v2.sh --universal
+```
+
+For detailed guidance on installation using `setup.v2.sh`, please refer to the following document:
+[Installation Guide - setup.v2.sh (EN)](https://querypie.atlassian.net/wiki/spaces/QCP/pages/1176404033/Installation+Guide+-+setup.v2.sh+EN)
+
+
+## Manually Running QueryPie
 
 ### Running MySQL and Redis
 
@@ -37,8 +55,6 @@ The following changes have been made to ensure compatibility between Podman Comp
   - Podman Compose uses `_` as the default separator. To be compatible with Docker Compose v2, `-` should be used.
   - Added the setting `x-podman: name_separator_compat: true`.
   - Note: Docker Compose v1 uses `_` as a separator, while v2 uses `-`.
-- Configured the `/var/lib/mysql` data directory as a Container Volume rather than a Host Filesystem.
-  - In Podman, when using a Host Filesystem, errors occur because Podman cannot change the ownership of that directory.
 - Specified the Docker Image Registry to use the `docker.io/` Registry.
   - If the Registry is not specified, Podman Compose will prompt you to choose whether to use the RHEL Registry when downloading images.
 
@@ -47,7 +63,7 @@ The following changes have been made to ensure compatibility between Podman Comp
 Many Linux distributions provide Podman and Podman Compose as distribution packages.
 However, Amazon Linux 2023 does not include Podman installation packages by default.
 
-### Installation Steps
+### Installation on RHEL8
 
 - Podman Installation:
   - `sudo dnf install podman`
