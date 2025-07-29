@@ -8,9 +8,9 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.07.8"     # YY.MM.PATCH
-echo -n >&2 "#### QueryPie Installer ${SCRIPT_VERSION}, "
-echo -n >&2 "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}"
+SCRIPT_VERSION="25.07.9" # YY.MM.PATCH
+echo -n "#### QueryPie Installer ${SCRIPT_VERSION}, " >&2
+echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
 
 # Ensure zsh compatibility
@@ -19,7 +19,7 @@ set -o nounset -o errexit -o pipefail
 
 RECOMMENDED_VERSION="11.0.1" # QueryPie version to install by default.
 ASSUME_YES=false
-DOCKER=docker # The default docker command
+DOCKER=docker          # The default docker command
 COMPOSE=docker-compose # The default compose command
 
 function print_usage_and_exit() {
@@ -283,14 +283,14 @@ function install::config_files() {
   if [[ -f ./querypie/"$QP_VERSION"/.env.template ]]; then
     log::do cp ./querypie/"$QP_VERSION"/.env.template ./querypie/"$QP_VERSION"/.env
   elif [[ -f ./querypie/"$QP_VERSION"/compose-env ]]; then
-    # Create a symbolic link to the compose-env file,
+    log::do cp ./querypie/"$QP_VERSION"/compose-env ./querypie/"$QP_VERSION"/.env
+    # Use .env instead of compose-env,
     # so that user can skip --env-file option when running docker-compose commands.
-    log::do ln -s compose-env ./querypie/"$QP_VERSION"/.env
   fi
   log::do sed -i.orig \
-      -e "s#^VERSION=.*#VERSION=$QP_VERSION#" \
-      -e "s#CABINET_DATA_DIR=/data#CABINET_DATA_DIR=../data#" \
-      ./querypie/"$QP_VERSION"/.env
+    -e "s#^VERSION=.*#VERSION=$QP_VERSION#" \
+    -e "s#CABINET_DATA_DIR=/data#CABINET_DATA_DIR=../data#" \
+    ./querypie/"$QP_VERSION"/.env
   rm ./querypie/"$QP_VERSION"/.env.orig
 
   # Deprecated since 10.3.0
@@ -308,6 +308,7 @@ function install::config_files() {
     log::do mkdir -p ./querypie/log
   fi
 
+  # Universal package does not have the config file, logrotate.
   if [[ -f ./querypie/"$QP_VERSION"/logrotate && -d /etc/logrotate.d/ ]]; then
     log::sudo cp ./querypie/"$QP_VERSION"/logrotate /etc/logrotate.d/docker-querypie
   fi
@@ -350,6 +351,53 @@ function install::verify_selinux() {
   else
     echo >&2 "# Understood. The sudo chcon command will not be executed."
   fi
+}
+
+function install::base_url() {
+  local scheme=$1 compose_yml bind_port ip_addr yaml
+
+  for yaml in \
+    ./querypie/${QP_VERSION}/compose.yml \
+    ./querypie/${QP_VERSION}/docker-compose.yml \
+    compose.yml docker-compose.yml; do
+    if [[ -f $yaml ]]; then
+      compose_yml=$yaml
+      break
+    fi
+  done
+
+  if [[ $scheme == http ]]; then
+    bind_port=$(grep -E ':80"?$' "$compose_yml" 2>/dev/null || true)
+    bind_port=${bind_port#*- }
+    bind_port=${bind_port#*\"}
+    bind_port=${bind_port%%:*}
+  else
+    bind_port=$(grep -E ':443"?$' "$compose_yml" 2>/dev/null || true)
+    bind_port=${bind_port#*- }
+    bind_port=${bind_port#*\"}
+    bind_port=${bind_port%%:*}
+  fi
+
+  # The default values when bind_port could not be found in compose.yml
+  if [[ -z $bind_port ]]; then
+    if [[ $scheme == http ]]; then
+      bind_port="80"
+    else
+      bind_port="443"
+    fi
+  fi
+
+  if command -v ip >/dev/null 2>&1; then
+    ip_addr=$(ip route get 8.8.8.8 | grep -oP 'src \K[\d.]+')
+  elif [[ "$OSTYPE" == "darwin"* ]]; then
+    local iface
+    iface=$(route get default | awk '/interface:/ {print $2}')
+    ip_addr=$(ipconfig getifaddr "$iface")
+  else
+    ip_addr=$(hostname -i)
+  fi
+
+  echo "${scheme}://${ip_addr}:${bind_port}"
 }
 
 ################################################################################
@@ -587,8 +635,8 @@ function install::get_package_version() {
   # Typically, the image version is in the format of 'major.minor.patch'.
   elif [[ "$image_version" == [0-9]*.[0-9]*.[0-9]* ]]; then
     major="${image_version%%.*}" # Remove everything after the first dot.
-    rest="${image_version#*.}" # Remove everything before the first dot.
-    minor="${rest%%.*}" # Remove everything after the second dot.
+    rest="${image_version#*.}"   # Remove everything before the first dot.
+    minor="${rest%%.*}"          # Remove everything after the second dot.
     echo "${major}.${minor}.x"
   else
     # If the version does not match the expected format, try replacing the ending number with '.x'.
@@ -665,7 +713,7 @@ function cmd::install() {
   # Save the long output of migrate.sh as querypie-migrate.1.log
   log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall |
     tee ~/querypie-migrate.1.log |
-    while IFS= read -r; do printf "." >&2 ; done
+    while IFS= read -r; do printf "." >&2; done
   echo >&2 " Done."
   # Run migrate.sh again to ensure the migration is completed properly
   log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
@@ -681,10 +729,8 @@ function cmd::install() {
 
   install::make_symlink_of_current
 
-  local ip_address
-  ip_address="$(hostname -i)"
   echo >&2 "### Installation completed successfully"
-  echo >&2 "### Access QueryPie at http://${ip_address}/ in your browser"
+  echo >&2 "### Access QueryPie at $(install::base_url http) or $(install::base_url https) in your browser"
   echo >&2 "### Determine the public IP address of your host machine if needed"
 }
 
@@ -774,10 +820,8 @@ function cmd::upgrade() {
 
   install::make_symlink_of_current
 
-  local ip_address
-  ip_address="$(hostname -i)"
   echo >&2 "### Upgrade completed successfully"
-  echo >&2 "### Access QueryPie at http://${ip_address}/ in your browser"
+  echo >&2 "### Access QueryPie at $(install::base_url http) or $(install::base_url https) in your browser"
   echo >&2 "### Determine the public IP address of your host machine if needed"
 }
 
