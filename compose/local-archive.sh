@@ -19,4 +19,5 @@ tar zcvf ~/package.tar.gz .
 
 
 [[ -f ~/setup.v2.sh ]] && rm -f ~/setup.v2.sh
-cp ../aws-ami/scripts/setup.v2.sh ~/setup.v2.sh
+[[ -f ../../aws-ami/scripts/setup.v2.sh ]] &&
+  cp ../../aws-ami/scripts/setup.v2.sh ~/setup.v2.sh
