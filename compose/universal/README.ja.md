@@ -6,7 +6,25 @@
 また、代替として Docker と Docker Compose を使用できる互換性設定も含まれています。
 以下のガイドでは、Podman と Podman Compose を使用して QueryPie を実行する方法について説明します。
 
-## QueryPie の実行
+## QueryPie を自動的にインストールして実行する
+
+「Podman と Podman Compose のインストール方法」セクションを参照して、まず podman と podman-compose をインストールしてください。
+
+Linux サーバーのシェルで次のコマンドを実行します。`--universal` オプションを省略してはいけないことに注意してください。
+```shell
+$ bash <(curl -s https://dl.querypie.com/setup.v2.sh) --universal
+```
+または、次の方法を使用することもできます：
+```shell
+$ curl -s https://dl.querypie.com/setup.v2.sh -o setup.v2.sh
+$ bash setup.v2.sh --universal
+```
+
+`setup.v2.sh` を使用したインストールの詳細なガイドについては、次のドキュメントを参照してください：
+[Installation Guide - setup.v2.sh (JA)](https://querypie.atlassian.net/wiki/spaces/QCP/pages/1177387032/Installation+Guide+-+setup.v2.sh+JA)
+
+
+## QueryPie を手動で実行する
 
 ### MySQL と Redis の実行
 
@@ -37,8 +55,6 @@ Podman Compose と Docker Compose 間の互換性を確保するために、以�
   - Podman Compose はデフォルトの区切り文字として `_` を使用します。Docker Compose v2 と互換性を持たせるには、`-` を使用する必要があります。
   - `x-podman: name_separator_compat: true` の設定を追加しました。
   - 注意: Docker Compose v1 は区切り文字として `_` を使用し、v2 は `-` を使用します。
-- `/var/lib/mysql` データディレクトリをホストファイルシステムではなく、コンテナボリュームとして構成しました。
-  - Podman でホストファイルシステムを使用する場合、Podman がそのディレクトリの所有権を変更できないためエラーが発生します。
 - Docker イメージレジストリとして `docker.io/` レジストリを使用するように指定しました。
   - レジストリが指定されていない場合、イメージをダウンロードする際に Podman Compose は RHEL レジストリを使用するかどうかを選択するプロンプトを表示します。
 
@@ -47,7 +63,7 @@ Podman Compose と Docker Compose 間の互換性を確保するために、以�
 多くの Linux ディストリビューションでは、Podman と Podman Compose をディストリビューションパッケージとして提供しています。
 ただし、Amazon Linux 2023 はデフォルトで Podman インストールパッケージを含んでいません。
 
-### インストール手順
+### RHEL8 でのインストール
 
 - Podman のインストール:
   - `sudo dnf install podman`
