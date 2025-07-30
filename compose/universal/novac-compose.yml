@@ -1,0 +1,18 @@
+# Optimized for QueryPie 11.0.x or later
+# Compatible with both Docker and Podman
+# Version of novac-compose.yml: 25.07.2
+
+name: querypie-novac
+services:
+  novac:
+    container_name: querypie-novac
+    profiles:
+      - novac
+    image: docker.io/querypie/novac:${VERSION}
+    restart: always
+    environment:
+      - VERSION=${VERSION:?ex. 11.0.0} # Validate VERSION here instead of in image reference
+      - NOVAC_SERVER=example-novac-1.querypie.com:9022,example-novac-2.querypie.com:9022  # Needs to be modified
+      - NOVAC_TOKEN=e1134c60-d28f-4773-ade8-5001b412f778 # Needs to be modified
+      - NOVAC_NAME=example_novac1 # Needs to be modified
+      - NOVAC_TAGS=VPC=dev_infra;Env=Production # Needs to be modified

@@ -8,7 +8,7 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.07.11" # YY.MM.PATCH
+SCRIPT_VERSION="25.07.12" # YY.MM.PATCH
 echo -n "#### QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
@@ -319,8 +319,7 @@ function install::config_files() {
     log::do mkdir -p ./querypie/log
   fi
 
-  # Universal package does not have the config file, logrotate.
-  if [[ -f ./querypie/"$QP_VERSION"/logrotate && -d /etc/logrotate.d/ ]]; then
+  if [[ $DOCKER == "docker" && -d /etc/logrotate.d/ && -f ./querypie/"$QP_VERSION"/logrotate ]]; then
     log::sudo cp ./querypie/"$QP_VERSION"/logrotate /etc/logrotate.d/docker-querypie
   fi
 }

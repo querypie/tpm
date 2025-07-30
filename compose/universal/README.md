@@ -1,6 +1,7 @@
 # QueryPie Execution Environment for both Podman Compose and Docker Compose
 
-Last updated: July 28, 2025
+Version of compose.yml: 25.07.2
+Last updated: July 30, 2025
 
 This repository provides a QueryPie execution environment that supports both Podman and Podman Compose.
 It also includes compatibility settings that allow Docker and Docker Compose to be used as alternatives.

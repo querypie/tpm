@@ -1,0 +1,20 @@
+# This configuration manages the rotation of Docker daemon log files.
+# By default, Docker daemon logs are not automatically rotated.
+# The QueryPie container can generate a substantial volume of logs during active usage.
+# This logrotate configuration will be installed at /etc/logrotate.d/docker-querypie.
+
+/var/lib/docker/containers/**/*.log {
+    daily
+    rotate 14
+
+    size 100M
+    dateext
+    # The date format includes hour and minute (-%H%M) to prevent conflicts with previously rotated files.
+    dateformat -%Y%m%d-%H%M
+
+    copytruncate
+
+    compress
+    missingok
+    notifempty
+}
