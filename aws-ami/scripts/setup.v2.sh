@@ -50,6 +50,7 @@ END
 }
 
 BOLD_CYAN="\e[1;36m"
+BOLD_YELLOW="\e[1;33m"
 BOLD_RED="\e[1;91m"
 RESET="\e[0m"
 
@@ -62,6 +63,10 @@ function log::do() {
     log::error "Failed to run: $*"
     return 1
   fi
+}
+
+function log::warning() {
+  printf "%bWARNING: %s%b\n" "$BOLD_YELLOW" "$*" "$RESET" 1>&2
 }
 
 function log::error() {
@@ -639,14 +644,14 @@ function install::get_package_version() {
     # If package_version is provided, return it directly.
     echo "$package_version"
   # Typically, the image version is in the format of 'major.minor.patch'.
-  elif [[ "$image_version" == [0-9]*.[0-9]*.[0-9]* ]]; then
+  elif [[ "$image_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     major="${image_version%%.*}" # Remove everything after the first dot.
     rest="${image_version#*.}"   # Remove everything before the first dot.
     minor="${rest%%.*}"          # Remove everything after the second dot.
     echo "${major}.${minor}.x"
   else
-    # If the version does not match the expected format, try replacing the ending number with '.x'.
-    echo "${image_version%.*}.x"
+    # If the version does not match the expected format, use 'universal'.
+    echo universal
   fi
 }
 
@@ -1011,10 +1016,11 @@ function require::version() {
     print_usage_and_exit 1
   fi
 
-  if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    log::error "Invalid version format: ${version}"
-    echo >&2 "# Version must be in the format 'major.minor.patch' (e.g., '10.2.5')."
-    print_usage_and_exit 1
+  if [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return
+  else
+    log::warning "Unexpected version format: ${version}"
+    install::ask_yes "Do you want to install this version? ${version}"
   fi
 }
 
