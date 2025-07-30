@@ -1,0 +1,6 @@
+email,loginId,name,password,role
+user1@example.com,user1,사용자1,password123,ADMIN
+user2@example.com,user2,사용자2,password456,USER
+user3@example.com,user3,사용자3,password789,MANAGER
+user4@example.com,user4,사용자4,password010,ADMIN;USER
+user5@example.com,user5,사용자5,password011,USER;MANAGER;ADMIN 
