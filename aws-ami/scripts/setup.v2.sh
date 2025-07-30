@@ -644,7 +644,7 @@ function install::get_package_version() {
     # If package_version is provided, return it directly.
     echo "$package_version"
   # Typically, the image version is in the format of 'major.minor.patch'.
-  elif [[ "$image_version" == [0-9]*.[0-9]*.[0-9]* ]]; then
+  elif [[ "$image_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     major="${image_version%%.*}" # Remove everything after the first dot.
     rest="${image_version#*.}"   # Remove everything before the first dot.
     minor="${rest%%.*}"          # Remove everything after the second dot.
