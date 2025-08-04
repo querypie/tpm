@@ -35,8 +35,8 @@ function packer::install() {
     -timestamp-ui \
     ${packer_option} \
     ubuntu24.04-install.pkr.hcl |
-    sed 's/ ==> amazon-ebs\.ubuntu24.04-install://'
-    # Remove the builder name of '==> amazon-ebs.ubuntu24.04-install:'
+    sed 's/ ==> amazon-ebs\.ubuntu24-04-install://'
+    # Remove the builder name of '==> amazon-ebs.ubuntu24-04-install:'
 }
 
 function validate_environment() {

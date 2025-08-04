@@ -134,7 +134,7 @@ build {
     ]
     inline = [
       "set -o xtrace",
-      "[[ -d ~/.docker ]] || mkdir -p -m 700 ~/.docker",
+      "[ -d ~/.docker ] || mkdir -p -m 700 ~/.docker",
       "sed 's/<base64-encoded-username:password>/${var.docker_auth}/g' /tmp/docker-config.tmpl.json > ~/.docker/config.json",
       "chmod 600 ~/.docker/config.json"
     ]
