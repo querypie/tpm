@@ -16,12 +16,6 @@ variable "querypie_version" {
   description = "Version of QueryPie to install"
 }
 
-variable "docker_auth" {
-  type        = string
-  description = "Base64-encoded Docker registry authentication (username:password)"
-  # No default value for security reasons, must be provided at runtime
-}
-
 # Local variables
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
@@ -112,8 +106,8 @@ build {
   ]
 
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
-      "set -o xtrace",
       "cloud-init status --wait",
       # Now this EC2 instance is ready for more software installation.
 
@@ -123,39 +117,22 @@ build {
     ]
   }
 
-  # Setup .docker/config.json for Docker registry authentication
-  provisioner "file" {
-    source      = "docker-config.tmpl.json"
-    destination = "/tmp/docker-config.tmpl.json"
-  }
-  provisioner "shell" {
-    environment_vars = [
-      "DOCKER_AUTH=${var.docker_auth}"
-    ]
-    inline = [
-      "set -o xtrace",
-      "[ -d ~/.docker ] || mkdir -p -m 700 ~/.docker",
-      "sed 's/<base64-encoded-username:password>/${var.docker_auth}/g' /tmp/docker-config.tmpl.json > ~/.docker/config.json",
-      "chmod 600 ~/.docker/config.json"
-    ]
-  }
-
   # Install scripts such as setup.v2.sh
   provisioner "file" {
     source      = "scripts/"
     destination = "/tmp/"
   }
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
-      "set -o xtrace",
       "sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh",
     ]
   }
 
   # Install QueryPie Deployment Package
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
-      "set -o xtrace",
       "setup.v2.sh --install ${var.querypie_version}",
       "setup.v2.sh --verify-installation",
     ]
@@ -163,10 +140,9 @@ build {
 
   # Final cleanup
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
       "echo '# Performing final cleanup...'",
-      "set -o xtrace",
-      "rm ~/.docker/config.json",
       "sudo dnf clean all",
       "sudo rm -rf /tmp/*",
       "sudo rm -rf /var/tmp/*",

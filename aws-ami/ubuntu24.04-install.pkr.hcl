@@ -16,12 +16,6 @@ variable "querypie_version" {
   description = "Version of QueryPie to install"
 }
 
-variable "docker_auth" {
-  type        = string
-  description = "Base64-encoded Docker registry authentication (username:password)"
-  # No default value for security reasons, must be provided at runtime
-}
-
 # Local variables
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
@@ -147,24 +141,6 @@ build {
     ]
   }
 
-  # Setup .docker/config.json for Docker registry authentication
-  provisioner "file" {
-    source      = "docker-config.tmpl.json"
-    destination = "/tmp/docker-config.tmpl.json"
-  }
-  provisioner "shell" {
-    inline_shebang = "/bin/bash -ex"
-    environment_vars = [
-      "DOCKER_AUTH=${var.docker_auth}"
-    ]
-    inline = [
-      "ps ux", "id -Gn",
-      "[ -d ~/.docker ] || mkdir -p -m 700 ~/.docker",
-      "sed 's/<base64-encoded-username:password>/${var.docker_auth}/g' /tmp/docker-config.tmpl.json > ~/.docker/config.json",
-      "chmod 600 ~/.docker/config.json"
-    ]
-  }
-
   # Install scripts such as setup.v2.sh
   provisioner "file" {
     source      = "scripts/"
@@ -191,7 +167,6 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "echo '# Performing final cleanup...'",
-      "rm ~/.docker/config.json",
       "sudo apt clean",
       "sudo apt autoremove -y",
       "sudo rm -rf /tmp/*",

@@ -90,8 +90,8 @@ build {
   ]
 
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
-      "set -o xtrace",
       "cloud-init status --wait",
       # Now this EC2 instance is ready for more software installation.
     ]
@@ -104,16 +104,16 @@ build {
     destination = "/tmp/"
   }
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
-      "set -o xtrace",
       "sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh",
     ]
   }
 
   # Verify QueryPie installation
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
-      "set -o xtrace",
       "setup.v2.sh --verify-installation",
     ]
   }
