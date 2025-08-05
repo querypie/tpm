@@ -138,8 +138,8 @@ build {
   ]
 
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
-      "set -o xtrace",
       "cloud-init status --wait",
       # Now this EC2 instance is ready for more software installation.
 
@@ -163,16 +163,16 @@ build {
     destination = "/tmp/setup.v2.sh"
   }
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
-      "set -o xtrace",
       "sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh",
     ]
   }
 
   # Install QueryPie Deployment Package
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
-      "set -o xtrace",
       "setup.v2.sh --install-partially-for-ami ${var.querypie_version}",
     ]
   }
@@ -184,8 +184,8 @@ build {
     destination = "/tmp/querypie-first-boot.service"
   }
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
-      "set -o xtrace",
       "sudo install -m 644 /tmp/querypie-first-boot.service /etc/systemd/system/querypie-first-boot.service",
       "sudo systemctl enable querypie-first-boot.service",
       "sudo systemctl daemon-reload",
@@ -198,10 +198,9 @@ build {
 
   # Final cleanup
   provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
     inline = [
       "echo '# Performing final cleanup...'",
-      "set -o xtrace",
-      "rm ~/.docker/config.json",
       "sudo dnf clean all",
       "sudo rm -rf /tmp/*",
       "sudo rm -rf /var/tmp/*",

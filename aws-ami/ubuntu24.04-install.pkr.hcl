@@ -173,7 +173,6 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "echo '# Performing final cleanup...'",
-      "rm ~/.docker/config.json",
       "sudo apt clean",
       "sudo apt autoremove -y",
       "sudo rm -rf /tmp/*",
