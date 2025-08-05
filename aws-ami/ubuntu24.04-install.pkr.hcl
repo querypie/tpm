@@ -16,12 +16,6 @@ variable "querypie_version" {
   description = "Version of QueryPie to install"
 }
 
-variable "docker_auth" {
-  type        = string
-  description = "Base64-encoded Docker registry authentication (username:password)"
-  # No default value for security reasons, must be provided at runtime
-}
-
 # Local variables
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")

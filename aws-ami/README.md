@@ -34,9 +34,6 @@ Suppose you are building on macOS.
     ```bash
     packer init ami-build.pkr.hcl
     ```
-6. Set an environment variable, DOCKER_AUTH.
-    `DOCKER_AUTH=<base64-encoded-username:password>`
-   To generate the auth value, run: `echo -n 'username:password' | base64`
 
 ## Build an AMI, and verify the result
 
