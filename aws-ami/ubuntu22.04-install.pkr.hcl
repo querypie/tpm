@@ -23,11 +23,11 @@ locals {
 
   region = "ap-northeast-2"
   instance_type = "t3.xlarge" # Use t3.xlarge to accelerate the build process
-  ssh_username = "ec2-user" # SSH username for Amazon Linux 2023
+  ssh_username = "ubuntu" # SSH username for Ubuntu 22.04
 
   common_tags = {
     CreatedBy = "Packer"
-    Owner     = "AZ2023-Installer"
+    Owner     = "Ubuntu22.04-Installer"
     Purpose   = "Automated QueryPie Installer"
     BuildDate = local.timestamp
     Version   = var.querypie_version
@@ -36,33 +36,35 @@ locals {
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "AZ2023-Installer-${var.querypie_version}"
+      Name = "Ubuntu22.04-Installer-${var.querypie_version}"
     }
   )
 }
 
-# Data source for latest Amazon Linux 2023 AMI
+# Data source for latest Ubuntu 22.04 LTS AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# amazon-linux-2023 : Name of the data source
-data "amazon-ami" "amazon-linux-2023" {
+# ubuntu-22-04 : Name of the data source
+data "amazon-ami" "ubuntu-22-04" {
+  # For detailed information of the AMI:
+  # `aws ec2 describe-images --image-ids ami-08943a151bd468f4e`
   filters = {
-    name                = "al2023-ami-*-x86_64"
+    name                = "ubuntu/images/*/ubuntu-jammy-22.04-amd64-server-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
   }
   most_recent = true
-  owners = ["amazon"]
+  owners = ["099720109477"] # # Canonical's AWS Account ID
   region      = local.region
 }
 
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# az2023-install : Name of the builder
-source "amazon-ebs" "az2023-install" {
+# ubuntu22-04-install : Name of the builder
+source "amazon-ebs" "ubuntu22-04-install" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.amazon-linux-2023.id
+  source_ami      = data.amazon-ami.ubuntu-22-04.id
   ami_name        = local.ami_name
 
   region        = local.region
@@ -76,7 +78,8 @@ source "amazon-ebs" "az2023-install" {
 
   # Root volume configuration
   launch_block_device_mappings {
-    device_name           = "/dev/xvda"
+    # device_name is confirmed from: `aws ec2 describe-images --image-ids ami-08943a151bd468f4e`
+    device_name           = "/dev/sda1"
     volume_size           = 32
     volume_type           = "gp3"
     iops = 16000 # Max: 16000 IOPS for gp3
@@ -102,16 +105,28 @@ source "amazon-ebs" "az2023-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.az2023-install"
+    "source.amazon-ebs.ubuntu22-04-install"
   ]
 
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "cloud-init status --wait",
-      # Now this EC2 instance is ready for more software installation.
+      "cloud-init status --wait", # Now this EC2 instance is ready for more software installation.
       "ps ux", "id -Gn", # Show the current process list and group information
-      "docker ps", # Amazon Linux 2023 has already docker installed.
+    ]
+  }
+
+  provisioner "shell" {
+    script = "scripts/install-docker-on-ubuntu.sh"
+  }
+
+  # Force SSH reconnection to ensure fresh session
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
+    expect_disconnect = true # It will logout at the end of this provisioner.
+    inline = [
+      "echo 'Forcing SSH reconnection...'",
+      "killall sshd",
     ]
   }
 
@@ -123,6 +138,7 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
+      "ps ux", "id -Gn", # Show the current process list and group information
       "sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh",
     ]
   }
@@ -141,7 +157,8 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "echo '# Performing final cleanup...'",
-      "sudo dnf clean all",
+      "sudo apt clean",
+      "sudo apt autoremove -y",
       "sudo rm -rf /tmp/*",
       "sudo rm -rf /var/tmp/*",
       "history -c",

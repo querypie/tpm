@@ -111,24 +111,13 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "cloud-init status --wait",
-      # Now this EC2 instance is ready for more software installation.
-      "# Show the current process list and group information",
-      "ps ux", "id -Gn",
-      "# Installing essential packages...",
-      "sudo apt -qq update",
-      "curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /tmp/docker.asc",
-      "sudo install -m 0755 -d /etc/apt/keyrings",
-      "sudo install -m 0644 /tmp/docker.asc /etc/apt/keyrings/docker.asc",
-      "echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable' | sudo tee /etc/apt/sources.list.d/docker.list",
-      "sudo apt -qq update",
-      "DEBIAN_FRONTEND=noninteractive sudo -E apt-get -y -qq install docker-ce docker-ce-cli containerd.io docker-compose-plugin docker-ce-rootless-extras docker-buildx-plugin docker-model-plugin",
-
-      "sudo systemctl start docker",
-      "sudo systemctl enable docker",
-
-      "sudo usermod -aG docker ${local.ssh_username}",
+      "cloud-init status --wait", # Now this EC2 instance is ready for more software installation.
+      "ps ux", "id -Gn", # Show the current process list and group information
     ]
+  }
+
+  provisioner "shell" {
+    script = "scripts/install-docker-on-ubuntu.sh"
   }
 
   # Force SSH reconnection to ensure fresh session
@@ -149,6 +138,7 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
+      "ps ux", "id -Gn", # Show the current process list and group information
       "sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh",
     ]
   }
