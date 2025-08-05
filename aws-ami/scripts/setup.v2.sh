@@ -241,29 +241,39 @@ function install::docker_compose() {
   if [[ ${COMPOSE} == docker-compose ]]; then
     if command_exists docker-compose; then
       echo >&2 "# Docker Compose is already installed at $(command -v docker-compose)"
+      log::do docker-compose --version
       return
     else
-      echo >&2 "# Docker Compose is not installed. Installing now."
-      log::do curl -fsSL "https://dl.querypie.com/releases/bin/docker-compose-$(uname -s)-$(uname -m)" -o docker-compose
-      log::sudo install -m 755 docker-compose /usr/local/bin
-      rm docker-compose
-      return
+      local kernel hardware
+      kernel=$(uname -s | tr '[:upper:]' '[:lower:]')
+      hardware=$(uname -m | tr '[:upper:]' '[:lower:]')
+      [[ $hardware == arm64 ]] && hardware=aarch64
+      if [[ $kernel == linux || $kernel == darwin ]] && [[ $hardware == x86_64 || $hardware == aarch64 ]]; then
+        echo >&2 "# Docker Compose is not installed. Installing now."
+        log::do curl -fsSL "https://dl.querypie.com/releases/bin/v2.39.1/docker-compose-${kernel}-${hardware}" -o docker-compose
+        log::sudo install -m 755 docker-compose /usr/local/bin
+        rm docker-compose
+        log::do docker-compose --version
+        return
+      fi
     fi
   elif [[ ${COMPOSE} == podman-compose ]]; then
     if command_exists podman-compose; then
       echo >&2 "# Podman Compose is already installed at $(command -v podman-compose)"
+      log::do podman-compose --version
       return
     else
       echo >&2 "# Podman Compose is not installed. Please refer to the installation manual."
       log::error "Please report this problem to the technical support team of QueryPie."
       exit 1
     fi
-  else
-    echo >&2 "# Docker Compose is not installed. Unknown version of Docker."
-    log::do docker --version
-    log::error "Please report this problem to the technical support team of QueryPie."
-    exit 1
   fi
+
+  echo >&2 "# Docker Compose is not installed. It seems to be an unsupported platform."
+  log::do uname -a
+  log::do ${DOCKER} --version
+  log::error "Please report this problem to the technical support team of QueryPie."
+  exit 1
 }
 
 function install::config_files() {
