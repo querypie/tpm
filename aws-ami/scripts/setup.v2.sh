@@ -8,7 +8,7 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.07.12" # YY.MM.PATCH
+SCRIPT_VERSION="25.08.1" # YY.MM.PATCH
 echo -n "#### QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
@@ -724,7 +724,7 @@ function cmd::install() {
   log::do $COMPOSE --profile database --profile querypie --profile tools pull $pull_option
   echo >&2 "## Start MySQL and Redis services for QueryPie"
   log::do $COMPOSE --profile database up --detach
-  log::do sleep 10
+  log::do sleep 20 # TODO(JK): Utilize wait-for-mysqld later.
   log::do $COMPOSE --profile tools up --detach
   log::do tools::wait_and_print_banner
 
