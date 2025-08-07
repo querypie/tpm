@@ -15,7 +15,7 @@ packages=(
   docker-model-plugin # version_gte 28.2
 )
 
-function install_docker() {
+function install_docker_and_compose() {
   local lsb_dist distro_version
 
   DEBIAN_FRONTEND=noninteractive sudo -E sudo apt -qq update
@@ -39,8 +39,24 @@ function install_docker() {
   sudo usermod -aG docker "$USER"
 }
 
+function test_if_docker_installed_already {
+  # Show the current process list and group information
+  ps ux
+  id -Gn
+  docker ps
+}
+
+function shutdown_ssh_session {
+  killall sshd
+}
+
 function main() {
-  install_docker
+  if test_if_docker_installed_already; then
+    :
+  else
+    install_docker_and_compose
+    shutdown_ssh_session
+  fi
 }
 
 main "$@"

@@ -16,6 +16,12 @@ variable "querypie_version" {
   description = "Version of QueryPie to install"
 }
 
+variable "resource_owner" {
+  type        = string
+  default     = "Ubuntu24.04-Installer"
+  description = "Owner of AWS Resources"
+}
+
 # Local variables
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
@@ -23,11 +29,11 @@ locals {
 
   region = "ap-northeast-2"
   instance_type = "t3.xlarge" # Use t3.xlarge to accelerate the build process
-  ssh_username = "ubuntu" # SSH username for Ubuntu 22.04
+  ssh_username = "ubuntu" # SSH username for Ubuntu 24.04
 
   common_tags = {
     CreatedBy = "Packer"
-    Owner     = "Ubuntu22.04-Installer"
+    Owner     = var.resource_owner
     Purpose   = "Automated QueryPie Installer"
     BuildDate = local.timestamp
     Version   = var.querypie_version
@@ -36,20 +42,20 @@ locals {
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "Ubuntu22.04-Installer-${var.querypie_version}"
+      Name = "Ubuntu24.04-Installer-${var.querypie_version}"
     }
   )
 }
 
-# Data source for latest Ubuntu 22.04 LTS AMI
+# Data source for latest Ubuntu 24.04 LTS AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# ubuntu-22-04 : Name of the data source
-data "amazon-ami" "ubuntu-22-04" {
+# ubuntu-24-04 : Name of the data source
+data "amazon-ami" "ubuntu-24-04" {
   # For detailed information of the AMI:
-  # `aws ec2 describe-images --image-ids ami-08943a151bd468f4e`
+  # `aws ec2 describe-images --image-ids ami-0662f4965dfc70aca`
   filters = {
-    name                = "ubuntu/images/*/ubuntu-jammy-22.04-amd64-server-*"
+    name                = "ubuntu/images/*/ubuntu-noble-24.04-amd64-server-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
   }
@@ -61,10 +67,10 @@ data "amazon-ami" "ubuntu-22-04" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# ubuntu22-04-install : Name of the builder
-source "amazon-ebs" "ubuntu22-04-install" {
+# ubuntu24-04-install : Name of the builder
+source "amazon-ebs" "ubuntu24-04-install" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.ubuntu-22-04.id
+  source_ami      = data.amazon-ami.ubuntu-24-04.id
   ami_name        = local.ami_name
 
   region        = local.region
@@ -78,7 +84,7 @@ source "amazon-ebs" "ubuntu22-04-install" {
 
   # Root volume configuration
   launch_block_device_mappings {
-    # device_name is confirmed from: `aws ec2 describe-images --image-ids ami-08943a151bd468f4e`
+    # device_name is confirmed from: `aws ec2 describe-images --image-ids ami-0662f4965dfc70aca`
     device_name           = "/dev/sda1"
     volume_size           = 32
     volume_type           = "gp3"
@@ -105,29 +111,19 @@ source "amazon-ebs" "ubuntu22-04-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.ubuntu22-04-install"
+    "source.amazon-ebs.ubuntu24-04-install"
   ]
 
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "cloud-init status --wait", # Now this EC2 instance is ready for more software installation.
-      "ps ux", "id -Gn", # Show the current process list and group information
     ]
   }
 
   provisioner "shell" {
-    script = "scripts/install-docker-on-ubuntu.sh"
-  }
-
-  # Force SSH reconnection to ensure fresh session
-  provisioner "shell" {
-    inline_shebang = "/bin/bash -ex"
     expect_disconnect = true # It will logout at the end of this provisioner.
-    inline = [
-      "echo 'Forcing SSH reconnection...'",
-      "killall sshd",
-    ]
+    script = "scripts/install-docker-on-ubuntu.sh"
   }
 
   # Install scripts such as setup.v2.sh
