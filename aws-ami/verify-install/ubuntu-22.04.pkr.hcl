@@ -16,6 +16,12 @@ variable "querypie_version" {
   description = "Version of QueryPie to install"
 }
 
+variable "architecture" {
+  type = string
+  default = "x86_64"
+  description = "x86_64 | arm64"
+}
+
 variable "resource_owner" {
   type        = string
   default     = "Ubuntu22.04-Installer"
@@ -28,7 +34,6 @@ locals {
   ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
 
   region = "ap-northeast-2"
-  instance_type = "t3.xlarge" # Use t3.xlarge to accelerate the build process
   ssh_username = "ubuntu" # SSH username for Ubuntu 22.04
 
   common_tags = {
@@ -51,13 +56,24 @@ locals {
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
 # ubuntu-22-04 : Name of the data source
+###
+# aws ec2 describe-images --image-ids ami-08943a151bd468f4e
+# "Name": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20250516"
+# "Description": "Canonical, Ubuntu, 22.04, amd64 jammy image"
+# "Architecture": "x86_64"
+# "DeviceName": "/dev/sda1"
+###
+# aws ec2 describe-images --image-ids ami-081f3c5131ba55215
+# "Name": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-arm64-server-20250516"
+# "Description": "Canonical, Ubuntu, 22.04, arm64 jammy image"
+# "Architecture": "arm64"
+# "DeviceName": "/dev/sda1"
 data "amazon-ami" "ubuntu-22-04" {
-  # For detailed information of the AMI:
-  # `aws ec2 describe-images --image-ids ami-08943a151bd468f4e`
   filters = {
-    name                = "ubuntu/images/*/ubuntu-jammy-22.04-amd64-server-*"
+    name                = "ubuntu/images/*/ubuntu-jammy-22.04-*-server-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
+    architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
   }
   most_recent = true
   owners = ["099720109477"] # # Canonical's AWS Account ID
@@ -74,17 +90,21 @@ source "amazon-ebs" "ubuntu22-04-install" {
   ami_name        = local.ami_name
 
   region        = local.region
-  instance_type = local.instance_type
   ssh_username = local.ssh_username
+  # ssh_private_key_file = "demo-targets.pem"
+  # ssh_keypair_name = "demo-targets"
+
+  # spot_instance_types = ["t4g.xlarge"]
+  spot_instance_types = var.architecture == "arm64" ? ["t4g.xlarge"] : ["t3.xlarge"]
+  spot_price = "0.09" # the maximum hourly price
+  # $0.0646 for t4g.xlarge instance in ap-northeast-2
+  # $0.078 for t3.xlarge instance
 
   # EBS configuration
   ebs_optimized = true
-  ena_support   = true
-  sriov_support = true
 
   # Root volume configuration
   launch_block_device_mappings {
-    # device_name is confirmed from: `aws ec2 describe-images --image-ids ami-08943a151bd468f4e`
     device_name           = "/dev/sda1"
     volume_size           = 32
     volume_type           = "gp3"
@@ -143,7 +163,7 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --install ${var.querypie_version}",
+      "setup.v2.sh --yes --install ${var.querypie_version}",
       "setup.v2.sh --verify-installation",
     ]
   }

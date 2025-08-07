@@ -22,7 +22,7 @@ function log::error() {
 }
 
 function packer::install() {
-  local distro=$1 version=$2 packer_option="${PACKER_OPTION:-}" packer
+  local version=$1 distro=$2 architecture=$3 packer_option="${PACKER_OPTION:-}" packer
   # NOTE(JK): Use `PACKER_OPTION=-on-error=abort` to allow debugging the AMI build process.
   echo >&2 "### Install QueryPie and Verify with Packer ###"
   echo >&2 "PACKER_OPTION: $packer_option"
@@ -37,6 +37,7 @@ function packer::install() {
   # shellcheck disable=SC2086
   log::do packer build \
     -var "querypie_version=$version" \
+    -var "architecture=${architecture}" \
     -var "resource_owner=${USER:-Unknown}" \
     -timestamp-ui \
     ${packer_option} \
@@ -53,16 +54,17 @@ function validate_environment() {
 }
 
 function main() {
-  local distro=${1:-} querypie_version=${2:-}
-  if [[ -z "${distro}" || -z "$querypie_version" ]]; then
+  local querypie_version=${1:-} distro=${2:-amazon-linux-2023} architecture=${3:-x86_64}
+  if [[ -z "$querypie_version" ]]; then
     cat <<END_OF_USAGE
-Usage: $0 <distro> <querypie_version>
+Usage: $0 <querypie_version> [<distro>] [<architecture>]
 
 EXAMPLE:
-  $0 az2023 11.0.1
-  $0 ubuntu24.04 11.0.1
-  $0 ubuntu22.04 11.0.1
-  PACKER_OPTION=-on-error=abort $0 az2023 11.0.1
+  $0 11.0.1 amazon-linux-2023
+  $0 11.0.1 amazon-linux-2023 arm64
+  $0 11.0.1 ubuntu-24.04
+  $0 11.0.1 ubuntu-22.04
+  PACKER_OPTION=-on-error=abort $0 11.0.1 amazon-linux-2023
 
 END_OF_USAGE
     exit 1
@@ -70,7 +72,7 @@ END_OF_USAGE
 
   validate_environment
 
-  packer::install "$distro" "$querypie_version"
+  packer::install "$querypie_version" "$distro" "$architecture"
 }
 
 main "$@"

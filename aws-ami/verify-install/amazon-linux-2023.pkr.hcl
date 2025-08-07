@@ -16,6 +16,12 @@ variable "querypie_version" {
   description = "Version of QueryPie to install"
 }
 
+variable "architecture" {
+  type = string
+  default = "x86_64"
+  description = "x86_64 | arm64"
+}
+
 variable "resource_owner" {
   type        = string
   default     = "AL2023-Installer"
@@ -28,7 +34,6 @@ locals {
   ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
 
   region = "ap-northeast-2"
-  instance_type = "t3.xlarge" # Use t3.xlarge to accelerate the build process
   ssh_username = "ec2-user" # SSH username for Amazon Linux 2023
 
   common_tags = {
@@ -55,12 +60,20 @@ locals {
 # aws ec2 describe-images --image-ids ami-0811349cae530179a
 # "Name": "al2023-ami-2023.8.20250804.0-kernel-6.1-x86_64"
 # "Description": "Amazon Linux 2023 AMI 2023.8.20250804.0 x86_64 HVM kernel-6.1"
+# "Architecture": "x86_64"
+# "DeviceName": "/dev/xvda"
+###
+# aws ec2 describe-images --image-ids ami-0de81378d4317284d
+# "Name": "al2023-ami-2023.8.20250804.0-kernel-6.1-arm64"
+# "Description": "Amazon Linux 2023 AMI 2023.8.20250804.0 arm64 HVM kernel-6.1"
+# "Architecture": "arm64"
 # "DeviceName": "/dev/xvda"
 data "amazon-ami" "amazon-linux-2023" {
   filters = {
-    name                = "al2023-ami-*-x86_64"
+    name                = "al2023-ami-2023.8.*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
+    architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
   }
   most_recent = true
   owners = ["amazon"]
@@ -76,16 +89,19 @@ source "amazon-ebs" "amazon-linux-2023" {
   source_ami      = data.amazon-ami.amazon-linux-2023.id
   ami_name        = local.ami_name
 
-  region        = local.region
-  instance_type = local.instance_type
+  region       = local.region
   ssh_username = local.ssh_username
   # ssh_private_key_file = "demo-targets.pem"
   # ssh_keypair_name = "demo-targets"
 
+  # spot_instance_types = ["t4g.xlarge"]
+  spot_instance_types = var.architecture == "arm64" ? ["t4g.xlarge"] : ["t3.xlarge"]
+  spot_price = "0.09" # the maximum hourly price
+  # $0.0646 for t4g.xlarge instance in ap-northeast-2
+  # $0.078 for t3.xlarge instance
+
   # EBS configuration
   ebs_optimized = true
-  ena_support   = true
-  sriov_support = true
 
   # Root volume configuration
   launch_block_device_mappings {
@@ -119,7 +135,6 @@ build {
   ]
 
   provisioner "shell" {
-    expect_disconnect = true # It will logout at the end of this provisioner.
     inline_shebang = "/bin/bash -ex"
     inline = [
       "cloud-init status --wait", # Now this EC2 instance is ready for more software installation.
@@ -148,7 +163,7 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --install ${var.querypie_version}",
+      "setup.v2.sh --yes --install ${var.querypie_version}",
       "setup.v2.sh --verify-installation",
     ]
   }
