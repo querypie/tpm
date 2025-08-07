@@ -22,13 +22,14 @@ function log::error() {
 }
 
 function packer::install() {
-  local distro=$1 version=$2 packer_option="${PACKER_OPTION:-}"
+  local distro=$1 version=$2 packer_option="${PACKER_OPTION:-}" packer
   # NOTE(JK): Use `PACKER_OPTION=-on-error=abort` to allow debugging the AMI build process.
   echo >&2 "### Install QueryPie and Verify with Packer ###"
   echo >&2 "PACKER_OPTION: $packer_option"
 
-  if [[ ! -f $distro-install.pkr.hcl ]]; then
-    log::error "No such distro available: $distro"
+  packer=verify-install/${distro}.pkr.hcl
+  if [[ ! -f ${packer} ]]; then
+    log::error "No such distro available: $distro as ${packer}"
     exit 1
   fi
 
@@ -36,10 +37,11 @@ function packer::install() {
   # shellcheck disable=SC2086
   log::do packer build \
     -var "querypie_version=$version" \
+    -var "resource_owner=${USER:-Unknown}" \
     -timestamp-ui \
     ${packer_option} \
-    $distro-install.pkr.hcl |
-    sed 's/ ==> amazon-ebs\..*-install://'
+    ${packer} |
+    sed 's/ ==> amazon-ebs\.[a-zA-Z0-9_.-]*://'
   # Remove the builder name of '==> amazon-ebs.ubuntu24-04-install:'
 }
 

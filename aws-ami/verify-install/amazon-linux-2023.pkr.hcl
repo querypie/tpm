@@ -16,6 +16,12 @@ variable "querypie_version" {
   description = "Version of QueryPie to install"
 }
 
+variable "resource_owner" {
+  type        = string
+  default     = "AL2023-Installer"
+  description = "Owner of AWS Resources"
+}
+
 # Local variables
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
@@ -23,11 +29,11 @@ locals {
 
   region = "ap-northeast-2"
   instance_type = "t3.xlarge" # Use t3.xlarge to accelerate the build process
-  ssh_username = "ubuntu" # SSH username for Ubuntu 24.04
+  ssh_username = "ec2-user" # SSH username for Amazon Linux 2023
 
   common_tags = {
     CreatedBy = "Packer"
-    Owner     = "Ubuntu24.04-Installer"
+    Owner     = var.resource_owner
     Purpose   = "Automated QueryPie Installer"
     BuildDate = local.timestamp
     Version   = var.querypie_version
@@ -36,40 +42,45 @@ locals {
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "Ubuntu24.04-Installer-${var.querypie_version}"
+      Name = "AL2023-Installer-${var.querypie_version}"
     }
   )
 }
 
-# Data source for latest Ubuntu 24.04 LTS AMI
+# Data source for latest Amazon Linux 2023 AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# ubuntu-24-04 : Name of the data source
-data "amazon-ami" "ubuntu-24-04" {
-  # For detailed information of the AMI:
-  # `aws ec2 describe-images --image-ids ami-0662f4965dfc70aca`
+# amazon-linux-2023 : Name of the data source
+###
+# aws ec2 describe-images --image-ids ami-0811349cae530179a
+# "Name": "al2023-ami-2023.8.20250804.0-kernel-6.1-x86_64"
+# "Description": "Amazon Linux 2023 AMI 2023.8.20250804.0 x86_64 HVM kernel-6.1"
+# "DeviceName": "/dev/xvda"
+data "amazon-ami" "amazon-linux-2023" {
   filters = {
-    name                = "ubuntu/images/*/ubuntu-noble-24.04-amd64-server-*"
+    name                = "al2023-ami-*-x86_64"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
   }
   most_recent = true
-  owners = ["099720109477"] # # Canonical's AWS Account ID
+  owners = ["amazon"]
   region      = local.region
 }
 
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# ubuntu24-04-install : Name of the builder
-source "amazon-ebs" "ubuntu24-04-install" {
+# amazon-linux-2023 : Name of the builder
+source "amazon-ebs" "amazon-linux-2023" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.ubuntu-24-04.id
+  source_ami      = data.amazon-ami.amazon-linux-2023.id
   ami_name        = local.ami_name
 
   region        = local.region
   instance_type = local.instance_type
   ssh_username = local.ssh_username
+  # ssh_private_key_file = "demo-targets.pem"
+  # ssh_keypair_name = "demo-targets"
 
   # EBS configuration
   ebs_optimized = true
@@ -78,8 +89,7 @@ source "amazon-ebs" "ubuntu24-04-install" {
 
   # Root volume configuration
   launch_block_device_mappings {
-    # device_name is confirmed from: `aws ec2 describe-images --image-ids ami-0662f4965dfc70aca`
-    device_name           = "/dev/sda1"
+    device_name           = "/dev/xvda"
     volume_size           = 32
     volume_type           = "gp3"
     iops = 16000 # Max: 16000 IOPS for gp3
@@ -105,29 +115,20 @@ source "amazon-ebs" "ubuntu24-04-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.ubuntu24-04-install"
+    "source.amazon-ebs.amazon-linux-2023"
   ]
 
   provisioner "shell" {
+    expect_disconnect = true # It will logout at the end of this provisioner.
     inline_shebang = "/bin/bash -ex"
     inline = [
       "cloud-init status --wait", # Now this EC2 instance is ready for more software installation.
-      "ps ux", "id -Gn", # Show the current process list and group information
     ]
   }
 
   provisioner "shell" {
-    script = "scripts/install-docker-on-ubuntu.sh"
-  }
-
-  # Force SSH reconnection to ensure fresh session
-  provisioner "shell" {
-    inline_shebang = "/bin/bash -ex"
     expect_disconnect = true # It will logout at the end of this provisioner.
-    inline = [
-      "echo 'Forcing SSH reconnection...'",
-      "killall sshd",
-    ]
+    script = "scripts/install-docker-on-amazon-linux-2023.sh"
   }
 
   # Install scripts such as setup.v2.sh
@@ -157,8 +158,7 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "echo '# Performing final cleanup...'",
-      "sudo apt clean",
-      "sudo apt autoremove -y",
+      "sudo dnf clean all",
       "sudo rm -rf /tmp/*",
       "sudo rm -rf /var/tmp/*",
       "history -c",
