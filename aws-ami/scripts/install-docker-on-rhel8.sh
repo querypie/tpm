@@ -3,19 +3,26 @@
 set -o nounset -o errexit -o errtrace -o pipefail
 set -o xtrace
 
+packages=(
+  docker-ce
+  docker-ce-cli # version_gte 18.09
+  containerd.io # version_gte 18.09
+  docker-compose-plugin # version_gte 20.10
+  docker-ce-rootless-extras # version_gte 20.10
+  docker-buildx-plugin # version_gte 23.0
+  docker-model-plugin # version_gte 28.2
+)
+
 function install_docker_and_compose() {
   local hardware
   hardware=$(uname -m)
 
-  sudo dnf install -y docker
-  curl -SL https://github.com/docker/compose/releases/download/v2.39.1/docker-compose-linux-"${hardware}" \
-    -o /tmp/docker-compose
-  if file /tmp/docker-compose | grep -q "ELF 64-bit LSB executable"; then
-    if [[ -d /usr/libexec/docker/cli-plugins/ ]]; then
-      sudo install -m 755 /tmp/docker-compose /usr/libexec/docker/cli-plugins/docker-compose
-    fi
-    sudo install -m 755 /tmp/docker-compose /usr/local/bin/docker-compose
-  fi
+  sudo dnf -y -q --setopt=install_weak_deps=False install dnf-plugins-core
+  sudo rm -f /etc/yum.repos.d/docker-ce.repo  /etc/yum.repos.d/docker-ce-staging.repo
+  sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+  sudo dnf makecache
+
+  sudo dnf -y -q --best install "${packages[@]}"
 
   sudo systemctl start docker
   sudo systemctl enable docker
