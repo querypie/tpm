@@ -57,15 +57,15 @@ locals {
 # amazon-ami : Type of data source, or plugin name
 # rhel-8 : Name of the data source
 ###
-# aws ec2 describe-images --image-ids ami-08943a151bd468f4e
-# "Name": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20250516"
-# "Description": "Canonical, Ubuntu, 22.04, amd64 jammy image"
+# aws ec2 describe-images --image-ids ami-0aa790f1c5e7a301e
+# "Name": "RHEL-8.10.0_HVM-20250529-x86_64-1792-Hourly2-GP3"
+# "Description": "Provided by Red Hat, Inc."
 # "Architecture": "x86_64"
 # "DeviceName": "/dev/sda1"
 ###
-# aws ec2 describe-images --image-ids ami-081f3c5131ba55215
-# "Name": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-arm64-server-20250516"
-# "Description": "Canonical, Ubuntu, 22.04, arm64 jammy image"
+# aws ec2 describe-images --image-ids ami-0d6118ae1d3e19b26
+# "Name": "RHEL-8.10.0_HVM-20250529-arm64-1788-Hourly2-GP3"
+# "Description": "Provided by Red Hat, Inc."
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
 data "amazon-ami" "ubuntu-22-04" {
