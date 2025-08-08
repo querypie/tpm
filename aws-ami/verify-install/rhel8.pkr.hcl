@@ -68,10 +68,9 @@ locals {
 # "Description": "Provided by Red Hat, Inc."
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
-data "amazon-ami" "ubuntu-22-04" {
 data "amazon-ami" "rhel8" {
   filters = {
-    name                = "RHEL-8*"
+    name                = "RHEL-8.*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
@@ -90,7 +89,7 @@ source "amazon-ebs" "rhel8-install" {
   source_ami      = data.amazon-ami.rhel8.id
   ami_name        = local.ami_name
 
-  region        = local.region
+  region       = local.region
   ssh_username = local.ssh_username
   # ssh_private_key_file = "demo-targets.pem"
   # ssh_keypair_name = "demo-targets"
@@ -175,7 +174,6 @@ build {
     inline = [
       "echo '# Performing final cleanup...'",
       "sudo dnf clean all",
-      "sudo dnf autoremove -y",
       "sudo rm -rf /tmp/*",
       "sudo rm -rf /var/tmp/*",
       "history -c",
