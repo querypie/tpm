@@ -55,7 +55,7 @@ locals {
 # Data source for latest RHEL 8 AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# rhel-8 : Name of the data source
+# rhel8 : Name of the data source
 ###
 # aws ec2 describe-images --image-ids ami-0aa790f1c5e7a301e
 # "Name": "RHEL-8.10.0_HVM-20250529-x86_64-1792-Hourly2-GP3"
@@ -69,7 +69,7 @@ locals {
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
 data "amazon-ami" "ubuntu-22-04" {
-data "amazon-ami" "rhel-8" {
+data "amazon-ami" "rhel8" {
   filters = {
     name                = "RHEL-8*"
     root-device-type    = "ebs"
@@ -87,7 +87,7 @@ data "amazon-ami" "rhel-8" {
 # rhel8-install : Name of the builder
 source "amazon-ebs" "rhel8-install" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.rhel-8.id
+  source_ami      = data.amazon-ami.rhel8.id
   ami_name        = local.ami_name
 
   region        = local.region
