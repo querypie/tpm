@@ -24,7 +24,7 @@ variable "architecture" {
 
 variable "resource_owner" {
   type        = string
-  default     = "Ubuntu22.04-Installer"
+  default     = "RHEL8-Installer"
   description = "Owner of AWS Resources"
 }
 
@@ -34,7 +34,7 @@ locals {
   ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
 
   region = "ap-northeast-2"
-  ssh_username = "ubuntu" # SSH username for Ubuntu 22.04
+  ssh_username = "ec2-user" # SSH username for RHEL 8
 
   common_tags = {
     CreatedBy = "Packer"
@@ -47,15 +47,15 @@ locals {
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "Ubuntu22.04-Installer-${var.querypie_version}"
+      Name = "RHEL8-Installer-${var.querypie_version}"
     }
   )
 }
 
-# Data source for latest Ubuntu 22.04 LTS AMI
+# Data source for latest RHEL 8 AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# ubuntu-22-04 : Name of the data source
+# rhel-8 : Name of the data source
 ###
 # aws ec2 describe-images --image-ids ami-08943a151bd468f4e
 # "Name": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20250516"
@@ -69,24 +69,25 @@ locals {
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
 data "amazon-ami" "ubuntu-22-04" {
+data "amazon-ami" "rhel-8" {
   filters = {
-    name                = "ubuntu/images/*/ubuntu-jammy-22.04-*-server-*"
+    name                = "RHEL-8*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
   }
   most_recent = true
-  owners = ["099720109477"] # # Canonical's AWS Account ID
+  owners = ["309956199498"] # Red Hat's AWS Account ID
   region      = local.region
 }
 
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# ubuntu22-04-install : Name of the builder
-source "amazon-ebs" "ubuntu22-04-install" {
+# rhel8-install : Name of the builder
+source "amazon-ebs" "rhel8-install" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.ubuntu-22-04.id
+  source_ami      = data.amazon-ami.rhel-8.id
   ami_name        = local.ami_name
 
   region        = local.region
@@ -131,7 +132,7 @@ source "amazon-ebs" "ubuntu22-04-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.ubuntu22-04-install"
+    "source.amazon-ebs.rhel8-install"
   ]
 
   provisioner "shell" {
@@ -143,7 +144,7 @@ build {
 
   provisioner "shell" {
     expect_disconnect = true # It will logout at the end of this provisioner.
-    script = "scripts/install-docker-on-ubuntu.sh"
+    script = "scripts/install-docker-on-amazon-linux-2023.sh"
   }
 
   # Install scripts such as setup.v2.sh
@@ -173,8 +174,8 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "echo '# Performing final cleanup...'",
-      "sudo apt clean",
-      "sudo apt autoremove -y",
+      "sudo dnf clean all",
+      "sudo dnf autoremove -y",
       "sudo rm -rf /tmp/*",
       "sudo rm -rf /var/tmp/*",
       "history -c",
