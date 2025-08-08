@@ -96,7 +96,8 @@ source "amazon-ebs" "rhel8-install" {
 
   # spot_instance_types = ["t4g.xlarge"]
   spot_instance_types = var.architecture == "arm64" ? ["t4g.xlarge"] : ["t3.xlarge"]
-  spot_price = "0.09" # the maximum hourly price
+  spot_price = "0.16" # the maximum hourly price
+  # + $0.08 for software cost
   # $0.0646 for t4g.xlarge instance in ap-northeast-2
   # $0.078 for t3.xlarge instance
 
