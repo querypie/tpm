@@ -27,7 +27,7 @@ function packer::install() {
   echo >&2 "### Install QueryPie and Verify with Packer ###"
   echo >&2 "PACKER_OPTION: $packer_option"
 
-  packer=verify-install/${distro}.pkr.hcl
+  packer=./${distro}.pkr.hcl
   if [[ ! -f ${packer} ]]; then
     log::error "No such distro available: $distro as ${packer}"
     exit 1

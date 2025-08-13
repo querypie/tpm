@@ -24,7 +24,7 @@ variable "architecture" {
 
 variable "resource_owner" {
   type        = string
-  default     = "Ubuntu24.04-Installer"
+  default     = "Ubuntu22.04-Installer"
   description = "Owner of AWS Resources"
 }
 
@@ -34,7 +34,7 @@ locals {
   ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
 
   region = "ap-northeast-2"
-  ssh_username = "ubuntu" # SSH username for Ubuntu 24.04
+  ssh_username = "ubuntu" # SSH username for Ubuntu 22.04
 
   common_tags = {
     CreatedBy = "Packer"
@@ -47,30 +47,30 @@ locals {
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "Ubuntu24.04-Installer-${var.querypie_version}"
+      Name = "Ubuntu22.04-Installer-${var.querypie_version}"
     }
   )
 }
 
-# Data source for latest Ubuntu 24.04 LTS AMI
+# Data source for latest Ubuntu 22.04 LTS AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# ubuntu-24-04 : Name of the data source
+# ubuntu-22-04 : Name of the data source
 ###
-# aws ec2 describe-images --image-ids ami-0811349cae530179a
-# "Name": "ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-20250610"
-# "Description": "Canonical, Ubuntu, 24.04, amd64 noble image"
+# aws ec2 describe-images --image-ids ami-08943a151bd468f4e
+# "Name": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20250516"
+# "Description": "Canonical, Ubuntu, 22.04, amd64 jammy image"
 # "Architecture": "x86_64"
 # "DeviceName": "/dev/sda1"
 ###
-# aws ec2 describe-images --image-ids ami-09ed9bca6a01cd74a
-# "Name": "ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-arm64-server-20250610"
-# "Description": "Canonical, Ubuntu, 24.04, arm64 noble image"
+# aws ec2 describe-images --image-ids ami-081f3c5131ba55215
+# "Name": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-arm64-server-20250516"
+# "Description": "Canonical, Ubuntu, 22.04, arm64 jammy image"
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
-data "amazon-ami" "ubuntu-24-04" {
+data "amazon-ami" "ubuntu-22-04" {
   filters = {
-    name                = "ubuntu/images/*/ubuntu-noble-24.04-*-server-*"
+    name                = "ubuntu/images/*/ubuntu-jammy-22.04-*-server-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
@@ -83,13 +83,13 @@ data "amazon-ami" "ubuntu-24-04" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# ubuntu24-04-install : Name of the builder
-source "amazon-ebs" "ubuntu24-04-install" {
+# ubuntu22-04-install : Name of the builder
+source "amazon-ebs" "ubuntu22-04-install" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.ubuntu-24-04.id
+  source_ami      = data.amazon-ami.ubuntu-22-04.id
   ami_name        = local.ami_name
 
-  region       = local.region
+  region        = local.region
   ssh_username = local.ssh_username
   # ssh_private_key_file = "demo-targets.pem"
   # ssh_keypair_name = "demo-targets"
@@ -131,7 +131,7 @@ source "amazon-ebs" "ubuntu24-04-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.ubuntu24-04-install"
+    "source.amazon-ebs.ubuntu22-04-install"
   ]
 
   provisioner "shell" {
@@ -143,12 +143,12 @@ build {
 
   provisioner "shell" {
     expect_disconnect = true # It will logout at the end of this provisioner.
-    script = "scripts/install-docker-on-ubuntu.sh"
+    script = "../scripts/install-docker-on-ubuntu.sh"
   }
 
   # Install scripts such as setup.v2.sh
   provisioner "file" {
-    source      = "scripts/"
+    source      = "../scripts/"
     destination = "/tmp/"
   }
   provisioner "shell" {

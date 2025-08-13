@@ -143,12 +143,12 @@ build {
 
   provisioner "shell" {
     expect_disconnect = true # It will logout at the end of this provisioner.
-    script = "scripts/install-docker-on-amazon-linux-2023.sh"
+    script = "../scripts/install-docker-on-amazon-linux-2023.sh"
   }
 
   # Install scripts such as setup.v2.sh
   provisioner "file" {
-    source      = "scripts/"
+    source      = "../scripts/"
     destination = "/tmp/"
   }
   provisioner "shell" {

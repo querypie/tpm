@@ -1,4 +1,4 @@
-# How to build an AMI for AWS Marketplace
+# How to verify setup.v2.sh installation on AWS AMIs
 
 ## Prepare the build environment
 
@@ -32,24 +32,13 @@ Suppose you are building on macOS.
     ```
 5. Initialize the Packer project, which will download the necessary plugins and dependencies
     ```bash
-    packer init ami-build.pkr.hcl
+    packer init amazon-linux-2023.pkr.hcl
     ```
-
-## Build an AMI, and verify the result
-
-Run `ami-build.sh <version>` to build an AMI where <version> is a version of QueryPie.
-`./ami-build.sh 10.3.4`
-
-After the build is complete, you will get an AMI ID. You can verify the AMI by this command:
-`./ami-verify.sh <AMI_ID>`
-
-`./ami-verify.sh` will create an EC2 instance using the AMI 
-and run a simple test to ensure that the QueryPie application is running correctly.
 
 ## Verify installation procedure on Amazon Linux 2023
 
-Run `az2023-install.sh <version>` to verify the installation procedure on Amazon Linux 2023.
-`./az2023-install.sh 10.3.4`
+Run `verify-install.sh <version> amazon-linux-2023` to verify the installation procedure on Amazon Linux 2023.
+`./verify-install.sh <version> amazon-linux-2023`
 
 ## Install QueryPie on a Linux instance
 
