@@ -1031,11 +1031,11 @@ function cmd::verify_installation() {
   }
 
   if [[ status -gt 0 ]]; then
-    echo >&2 "# Installation verification failed with ${status} error(s). Please check the logs for details."
+    echo >&2 "## Installation verification failed with ${status} error(s). Please check the logs for details."
     echo >&2 "# Resolve the identified issues before proceeding."
     exit "${status}"
   else
-    echo >&2 "# Installation verification completed successfully."
+    echo >&2 "## Installation verification completed successfully."
   fi
 }
 
@@ -1090,10 +1090,10 @@ function cmd::verify_not_installed() {
   done
 
   if [[ status -gt 0 ]]; then
-    echo >&2 "# Not-installed verification failed with ${status} error(s). Please check the logs for details."
+    echo >&2 "## Not-installed verification failed with ${status} error(s). Please check the logs for details."
     exit "${status}"
   else
-    echo >&2 "# Not-installed verification completed successfully."
+    echo >&2 "## Not-installed verification completed successfully."
   fi
 }
 
