@@ -148,12 +148,12 @@ build {
   }
 
   provisioner "shell" {
-    script = "scripts/remove-ecs.sh"
+    script = "../scripts/remove-ecs.sh"
   }
 
   # Install setup.v2.sh in /usr/local/bin
   provisioner "file" {
-    source      = "scripts/setup.v2.sh"
+    source      = "../scripts/setup.v2.sh"
     destination = "/tmp/setup.v2.sh"
   }
   provisioner "shell" {

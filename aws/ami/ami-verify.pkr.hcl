@@ -100,7 +100,7 @@ build {
   # Install scripts such as setup.v2.sh
   # TODO(JK): Remove this provisioner when setup.v2.sh is completed.
   provisioner "file" {
-    source      = "scripts/"
+    source      = "../scripts/"
     destination = "/tmp/"
   }
   provisioner "shell" {
