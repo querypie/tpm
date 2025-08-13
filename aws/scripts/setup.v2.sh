@@ -8,7 +8,7 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.08.1" # YY.MM.PATCH
+SCRIPT_VERSION="25.08.2" # YY.MM.PATCH
 echo -n "#### QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
@@ -17,7 +17,7 @@ echo >&2 " on $(uname -s) $(uname -m) ####"
 [[ -n "${ZSH_VERSION:-}" ]] && emulate bash
 set -o nounset -o errexit -o pipefail
 
-RECOMMENDED_VERSION="11.0.1" # QueryPie version to install by default.
+RECOMMENDED_VERSION="11.1.1" # QueryPie version to install by default.
 ASSUME_YES=false
 DOCKER=docker          # The default docker command
 COMPOSE=docker-compose # The default compose command
@@ -31,6 +31,7 @@ $program_name ${SCRIPT_VERSION}, the QueryPie installation script.
 Usage: $program_name [options]
     or $program_name [options] --install <version>
     or $program_name [options] --upgrade <version>
+    or $program_name [options] --uninstall
     or $program_name [options] --universal
     or $program_name [options] --install-partially-for-ami <version>
     or $program_name [options] --resume
@@ -133,7 +134,7 @@ function setup::sudo_privileges() {
   fi
 }
 
-function install::verify_docker_installation() {
+function verify::docker_installation() {
   echo >&2 "#"
   echo >&2 "## Verify Docker installation"
   echo >&2 "#"
@@ -189,13 +190,13 @@ function install::docker() {
   if command_exists docker; then
     echo >&2 "# Docker is already installed at $(command -v docker)"
 
-    install::verify_docker_installation
+    verify::docker_installation
     log::do $DOCKER --version
     return
   elif command_exists podman; then
     echo >&2 "# Podman is already installed at $(command -v podman)"
 
-    install::verify_docker_installation
+    verify::docker_installation
     log::do $DOCKER --version
     return
   fi
@@ -619,7 +620,7 @@ function verify::version_of_current() {
 
 function verify::version_of_container() {
   local container=querypie-app-1
-  ${DOCKER} inspect --format '{{.Config.Image}}' $container | cut -d':' -f2
+  ${DOCKER} inspect --format '{{.Config.Image}}' $container 2>/dev/null | cut -d':' -f2
 }
 
 function verify::container_is_ready_for_service() {
@@ -641,6 +642,12 @@ function verify::container_is_ready_for_service() {
   else
     log::error "QueryPie app container is not functioning properly. Please check the installation."
     return 1
+  fi
+}
+
+function verify::mysql_data() {
+  if [[ -d ./querypie/mysql ]]; then
+    echo "./querypie/mysql"
   fi
 }
 
@@ -762,7 +769,7 @@ function cmd::upgrade() {
   PACKAGE_VERSION=$(install::get_package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
   echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
 
-  install::verify_docker_installation
+  verify::docker_installation
   verify::container_is_ready_for_service || {
     log::error "Upgrade is aborted."
     exit 1
@@ -845,6 +852,39 @@ function cmd::upgrade() {
   echo >&2 "### Determine the public IP address of your host machine if needed"
 }
 
+function cmd::uninstall() {
+  echo >&2 "### Uninstall QueryPie ###"
+
+  local current_version mysql_data container_version
+  container_version=$(verify::version_of_container) || true
+
+  echo >&2 "# Container version: ${container_version:-(Unknown! Probably QueryPie is not running)}"
+  for container in querypie-app-1 querypie-tools-1 querypie-redis-1 querypie-mysql-1; do
+    if $DOCKER inspect --format '{{.State.Running}}' $container &>/dev/null; then
+      log::do $DOCKER stop $container
+      log::do $DOCKER rm $container
+    else
+      echo >&2 "# Container '$container' does not exist."
+    fi
+  done
+
+  mysql_data=$(verify::mysql_data)
+  echo >&2 "# MySQL data: ${mysql_data:-(Unknown! MySQL is not running locally)}"
+  if [[ -n "$mysql_data" ]]; then
+    log::sudo rm -rf "$mysql_data"
+  fi
+
+  current_version=$(verify::version_of_current 2>/dev/null) || true
+  echo >&2 "# Current version: ${current_version:-(Unknown! Probably QueryPie is not running)}"
+  if [[ -n "$current_version" ]]; then
+    echo >&2 "# Current directory: ./querypie/${current_version}/"
+    log::do rm -rf ./querypie/"$current_version"
+    log::do rm -f ./querypie/current
+  fi
+
+  echo >&2 "## Uninstall completed successfully"
+}
+
 function cmd::install_partially_for_ami() {
   local QP_VERSION=${1}
 
@@ -881,7 +921,7 @@ function cmd::resume() {
   QP_VERSION=$(verify::version_of_current)
   echo >&2 "# QP_VERSION: ${QP_VERSION}"
 
-  install::verify_docker_installation
+  verify::docker_installation
 
   log::do pushd "./querypie/${QP_VERSION}/"
   cmd::populate_env ".env"
@@ -969,7 +1009,7 @@ function cmd::verify_installation() {
     }
   fi
 
-  install::verify_docker_installation
+  verify::docker_installation
   verify::container_is_ready_for_service || {
     log::do $DOCKER logs --tail 100 querypie-app-1 || true
     ((status += 1))
@@ -1069,7 +1109,7 @@ function main() {
     -h | --help)
       print_usage_and_exit 0
       ;;
-    --install | --upgrade)
+    --install | --upgrade | --uninstall)
       cmd="${1#--}"
       shift
       ;;
@@ -1122,6 +1162,9 @@ function main() {
   upgrade)
     require::version "$@"
     cmd::upgrade "$@"
+    ;;
+  uninstall)
+    cmd::uninstall "$@"
     ;;
   install-partially-for-ami)
     require::version "$@"
