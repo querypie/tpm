@@ -17,7 +17,7 @@ echo >&2 " on $(uname -s) $(uname -m) ####"
 [[ -n "${ZSH_VERSION:-}" ]] && emulate bash
 set -o nounset -o errexit -o pipefail
 
-RECOMMENDED_VERSION="11.0.1" # QueryPie version to install by default.
+RECOMMENDED_VERSION="11.1.1" # QueryPie version to install by default.
 ASSUME_YES=false
 DOCKER=docker          # The default docker command
 COMPOSE=docker-compose # The default compose command
