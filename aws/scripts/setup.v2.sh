@@ -8,7 +8,7 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.08.2" # YY.MM.PATCH
+SCRIPT_VERSION="25.08.3" # YY.MM.PATCH
 echo -n "#### QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
@@ -1010,6 +1010,21 @@ function cmd::verify_installation() {
   fi
 
   verify::docker_installation
+
+  local container_version current_version
+  current_version=$(verify::version_of_current)
+  container_version=$(verify::version_of_container)
+  echo >&2 "# Container version: ${container_version}"
+  echo >&2 "# Current of ./querypie/current: ${current_version}"
+  if [[ $container_version == "$current_version" ]]; then
+    echo >&2 "# The container version is the same as the current version."
+    echo >&2 "# The installation looks good so far."
+  else
+    log::error "The container version and the current version of ./querypie/current/ do not match."
+    log::error "Please make sure that you are running the correct version of QueryPie."
+    ((status += 1))
+  fi
+
   verify::container_is_ready_for_service || {
     log::do $DOCKER logs --tail 100 querypie-app-1 || true
     ((status += 1))
@@ -1021,6 +1036,64 @@ function cmd::verify_installation() {
     exit "${status}"
   else
     echo >&2 "# Installation verification completed successfully."
+  fi
+}
+
+function cmd::verify_not_installed() {
+  echo >&2 "#"
+  echo >&2 "### Verify QueryPie is not installed on this machine"
+  echo >&2 "#"
+  local status=0
+
+  if [[ -d ./querypie ]]; then
+    echo >&2 "# ./querypie directory exists."
+
+    if [[ -e ./querypie/current ]]; then
+      log::warning "./querypie/current symbolic link exists."
+      ((status += 1))
+
+      # Check if the version can be determined.
+      if verify::version_of_current &>/dev/null; then
+        log::warning "./querypie/current/ points to a directory, $(verify::version_of_current)."
+        ((status += 1))
+      fi
+    else
+      echo >&2 "# ./querypie/current symbolic link does not exist."
+    fi
+
+    if [[ -d ./querypie/mysql ]]; then
+      log::warning "./querypie/mysql/ directory exists."
+      ((status += 1))
+      log::do ls -al ./querypie/mysql/
+    else
+      echo >&2 "# ./querypie/mysql/ directory does not exist."
+    fi
+  else
+    echo >&2 "# ./querypie directory does not exist."
+  fi
+
+  local container_version
+  container_version=$(verify::version_of_container) || true
+  if [[ -n "$container_version" ]]; then
+    log::warning "Container version: ${container_version}"
+    ((status += 1))
+  fi
+
+  local container
+  for container in querypie-app-1 querypie-tools-1 querypie-redis-1 querypie-mysql-1; do
+    if $DOCKER inspect --format '{{.State.Running}}' $container &>/dev/null; then
+      log::warning "Container '${container}' exists."
+      ((status += 1))
+    else
+      echo >&2 "# Container '${container}' does not exist."
+    fi
+  done
+
+  if [[ status -gt 0 ]]; then
+    echo >&2 "# Not-installed verification failed with ${status} error(s). Please check the logs for details."
+    exit "${status}"
+  else
+    echo >&2 "# Not-installed verification completed successfully."
   fi
 }
 
@@ -1121,7 +1194,7 @@ function main() {
       cmd="${1#--}"
       shift
       ;;
-    --verify-installation)
+    --verify-installation | --verify-not-installed)
       cmd="${1#--}"
       shift
       ;;
@@ -1175,6 +1248,9 @@ function main() {
     ;;
   verify-installation)
     cmd::verify_installation
+    ;;
+  verify-not-installed)
+    cmd::verify_not_installed
     ;;
   populate-env)
     require::compose_env_file "$@"

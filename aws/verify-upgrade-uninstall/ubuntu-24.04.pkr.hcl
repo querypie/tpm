@@ -10,10 +10,16 @@ packer {
 }
 
 # Variables
-variable "querypie_version" {
+variable "initial_version" {
   type        = string
-  default     = "10.3.0"
+  default     = "11.0.1"
   description = "Version of QueryPie to install"
+}
+
+variable "upgrade_version" {
+  type        = string
+  default     = "11.1.1"
+  description = "Version of QueryPie to upgrade"
 }
 
 variable "architecture" {
@@ -24,7 +30,7 @@ variable "architecture" {
 
 variable "resource_owner" {
   type        = string
-  default     = "Ubuntu22.04-Installer"
+  default     = "Ubuntu24.04-Installer"
   description = "Owner of AWS Resources"
 }
 
@@ -34,43 +40,43 @@ locals {
   ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
 
   region = "ap-northeast-2"
-  ssh_username = "ubuntu" # SSH username for Ubuntu 22.04
+  ssh_username = "ubuntu" # SSH username for Ubuntu 24.04
 
   common_tags = {
     CreatedBy = "Packer"
     Owner     = var.resource_owner
     Purpose   = "Automated QueryPie Installer"
     BuildDate = local.timestamp
-    Version   = var.querypie_version
+    Version   = var.initial_version
   }
 
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "Ubuntu22.04-Installer-${var.querypie_version}"
+      Name = "Ubuntu24.04-Installer-${var.initial_version}"
     }
   )
 }
 
-# Data source for latest Ubuntu 22.04 LTS AMI
+# Data source for latest Ubuntu 24.04 LTS AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# ubuntu-22-04 : Name of the data source
+# ubuntu-24-04 : Name of the data source
 ###
-# aws ec2 describe-images --image-ids ami-08943a151bd468f4e
-# "Name": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20250516"
-# "Description": "Canonical, Ubuntu, 22.04, amd64 jammy image"
+# aws ec2 describe-images --image-ids ami-0811349cae530179a
+# "Name": "ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-20250610"
+# "Description": "Canonical, Ubuntu, 24.04, amd64 noble image"
 # "Architecture": "x86_64"
 # "DeviceName": "/dev/sda1"
 ###
-# aws ec2 describe-images --image-ids ami-081f3c5131ba55215
-# "Name": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-arm64-server-20250516"
-# "Description": "Canonical, Ubuntu, 22.04, arm64 jammy image"
+# aws ec2 describe-images --image-ids ami-09ed9bca6a01cd74a
+# "Name": "ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-arm64-server-20250610"
+# "Description": "Canonical, Ubuntu, 24.04, arm64 noble image"
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
-data "amazon-ami" "ubuntu-22-04" {
+data "amazon-ami" "ubuntu-24-04" {
   filters = {
-    name                = "ubuntu/images/*/ubuntu-jammy-22.04-*-server-*"
+    name                = "ubuntu/images/*/ubuntu-noble-24.04-*-server-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
@@ -83,10 +89,10 @@ data "amazon-ami" "ubuntu-22-04" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# ubuntu22-04-install : Name of the builder
-source "amazon-ebs" "ubuntu22-04-install" {
+# ubuntu24-04-install : Name of the builder
+source "amazon-ebs" "ubuntu24-04-install" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.ubuntu-22-04.id
+  source_ami      = data.amazon-ami.ubuntu-24-04.id
   ami_name        = local.ami_name
 
   region       = local.region
@@ -131,7 +137,7 @@ source "amazon-ebs" "ubuntu22-04-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.ubuntu22-04-install"
+    "source.amazon-ebs.ubuntu24-04-install"
   ]
 
   provisioner "shell" {
@@ -159,12 +165,31 @@ build {
     ]
   }
 
-  # Install QueryPie Deployment Package
+  # Install QueryPie
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --install ${var.querypie_version}",
+      "setup.v2.sh --yes --install ${var.initial_version}",
       "setup.v2.sh --verify-installation",
+    ]
+  }
+
+  # Upgrade QueryPie
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      "setup.v2.sh --yes --upgrade ${var.upgrade_version}",
+      "setup.v2.sh --verify-installation",
+    ]
+  }
+
+  # Uninstall QueryPie
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      "setup.v2.sh --uninstall",
+      "docker ps --all",
+      "setup.v2.sh --verify-not-installed",
     ]
   }
 
@@ -191,7 +216,8 @@ build {
     strip_path = true
     custom_data = {
       timestmap        = local.timestamp
-      querypie_version = var.querypie_version
+      initial_version = var.initial_version
+      upgrade_version = var.upgrade_version
     }
   }
 }

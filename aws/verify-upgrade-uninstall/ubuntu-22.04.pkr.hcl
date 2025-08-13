@@ -10,10 +10,16 @@ packer {
 }
 
 # Variables
-variable "querypie_version" {
+variable "initial_version" {
   type        = string
-  default     = "10.3.0"
+  default     = "11.0.1"
   description = "Version of QueryPie to install"
+}
+
+variable "upgrade_version" {
+  type        = string
+  default     = "11.1.1"
+  description = "Version of QueryPie to upgrade"
 }
 
 variable "architecture" {
@@ -41,13 +47,13 @@ locals {
     Owner     = var.resource_owner
     Purpose   = "Automated QueryPie Installer"
     BuildDate = local.timestamp
-    Version   = var.querypie_version
+    Version   = var.initial_version
   }
 
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "Ubuntu22.04-Installer-${var.querypie_version}"
+      Name = "Ubuntu22.04-Installer-${var.initial_version}"
     }
   )
 }
@@ -159,12 +165,31 @@ build {
     ]
   }
 
-  # Install QueryPie Deployment Package
+  # Install QueryPie
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --install ${var.querypie_version}",
+      "setup.v2.sh --yes --install ${var.initial_version}",
       "setup.v2.sh --verify-installation",
+    ]
+  }
+
+  # Upgrade QueryPie
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      "setup.v2.sh --yes --upgrade ${var.upgrade_version}",
+      "setup.v2.sh --verify-installation",
+    ]
+  }
+
+  # Uninstall QueryPie
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      "setup.v2.sh --uninstall",
+      "docker ps --all",
+      "setup.v2.sh --verify-not-installed",
     ]
   }
 
@@ -191,7 +216,8 @@ build {
     strip_path = true
     custom_data = {
       timestmap        = local.timestamp
-      querypie_version = var.querypie_version
+      initial_version = var.initial_version
+      upgrade_version = var.upgrade_version
     }
   }
 }
