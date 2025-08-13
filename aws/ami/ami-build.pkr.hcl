@@ -22,6 +22,18 @@ variable "ami_name" {
   description = "AMI name"
 }
 
+variable "architecture" {
+  type = string
+  default = "x86_64"
+  description = "x86_64 | arm64"
+}
+
+variable "resource_owner" {
+  type        = string
+  default     = "AL2023-Installer"
+  description = "Owner of AWS Resources"
+}
+
 # Local variables
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
@@ -66,11 +78,24 @@ locals {
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
 # amazon-linux-2023 : Name of the data source
+###
+# aws ec2 describe-images --image-ids ami-0811349cae530179a
+# "Name": "al2023-ami-2023.8.20250804.0-kernel-6.1-x86_64"
+# "Description": "Amazon Linux 2023 AMI 2023.8.20250804.0 x86_64 HVM kernel-6.1"
+# "Architecture": "x86_64"
+# "DeviceName": "/dev/xvda"
+###
+# aws ec2 describe-images --image-ids ami-0de81378d4317284d
+# "Name": "al2023-ami-2023.8.20250804.0-kernel-6.1-arm64"
+# "Description": "Amazon Linux 2023 AMI 2023.8.20250804.0 arm64 HVM kernel-6.1"
+# "Architecture": "arm64"
+# "DeviceName": "/dev/xvda"
 data "amazon-ami" "amazon-linux-2023" {
   filters = {
-    name                = "al2023-ami-*-x86_64"
+    name                = "al2023-ami-2023.8.*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
+    architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
   }
   most_recent = true
   owners = ["amazon"]
@@ -80,19 +105,24 @@ data "amazon-ami" "amazon-linux-2023" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# ami-build : Name of the builder
-source "amazon-ebs" "ami-build" {
+# amazon-linux-2023 : Name of the builder
+source "amazon-ebs" "amazon-linux-2023" {
   source_ami = data.amazon-ami.amazon-linux-2023.id
   ami_name   = local.ami_name
 
-  region        = local.region
-  instance_type = local.instance_type
+  region       = local.region
   ssh_username = local.ssh_username
+  # ssh_private_key_file = "demo-targets.pem"
+  # ssh_keypair_name = "demo-targets"
+
+  # spot_instance_types = ["t4g.xlarge"]
+  spot_instance_types = var.architecture == "arm64" ? ["t4g.xlarge"] : ["t3.xlarge"]
+  spot_price = "0.09" # the maximum hourly price
+  # $0.0646 for t4g.xlarge instance in ap-northeast-2
+  # $0.078 for t3.xlarge instance
 
   # EBS configuration
   ebs_optimized = true
-  ena_support   = true
-  sriov_support = true
 
   # Root volume configuration
   launch_block_device_mappings {
@@ -128,27 +158,19 @@ source "amazon-ebs" "ami-build" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.ami-build"
+    "source.amazon-ebs.amazon-linux-2023"
   ]
 
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "cloud-init status --wait",
-      # Now this EC2 instance is ready for more software installation.
-
-      "# System updates",
-      "sudo dnf update -y",
-      "sudo dnf upgrade -y",
-
-      "# Installing essential packages...",
-      "sudo dnf install -y docker",
-      "sudo usermod -aG docker ${local.ssh_username}",
+      "cloud-init status --wait", # Now this EC2 instance is ready for more software installation.
     ]
   }
 
   provisioner "shell" {
-    script = "../scripts/remove-ecs.sh"
+    expect_disconnect = true # It will logout at the end of this provisioner.
+    script = "../scripts/install-docker-on-amazon-linux-2023.sh"
   }
 
   # Install setup.v2.sh in /usr/local/bin
@@ -159,6 +181,7 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
+      "ps ux", "id -Gn", # Show the current process list and group information
       "sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh",
     ]
   }

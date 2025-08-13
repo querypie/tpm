@@ -22,21 +22,25 @@ function log::error() {
 }
 
 function packer::build() {
-  local version=$1 ami_name=$2 packer_option="${PACKER_OPTION:-}"
+  local version=$1 distro=$2 architecture=$3 ami_name=$4 packer_option="${PACKER_OPTION:-}"
   # NOTE(JK): Use `PACKER_OPTION=-on-error=abort` to allow debugging the AMI build process.
   echo >&2 "### Build AMI with Packer ###"
   echo >&2 "PACKER_OPTION: $packer_option"
+
+  # TODO(JK): distro does not work yet.
 
   # Disable SC2086(Use double quotes to prevent word splitting) to allow expansion of variables.
   # shellcheck disable=SC2086
   log::do packer build \
     -var "querypie_version=$version" \
+    -var "architecture=${architecture}" \
+    -var "resource_owner=${USER:-Unknown}" \
     -var "ami_name=$ami_name" \
     -timestamp-ui \
     ${packer_option} \
     ami-build.pkr.hcl |
-    sed 's/ ==> amazon-ebs\.ami-build://'
-    # Remove the builder name of '==> amazon-ebs.ami-build:'
+    sed 's/ ==> amazon-ebs\.[a-zA-Z0-9_.-]*://'
+    # Remove the builder name of '==> amazon-ebs.amazon-linux-2023:'
 }
 
 function aws::image_id() {
@@ -62,15 +66,25 @@ function validate_environment() {
 }
 
 function main() {
-  local querypie_version=${1:-} ami_name timestamp
+  local querypie_version=${1:-} distro=${2:-amazon-linux-2023} architecture=${3:-x86_64}
   if [[ -z "$querypie_version" ]]; then
-    echo "Usage: $0 <querypie_version>"
-    echo "  MODE=release $0 <querypie_version>"
+    cat <<END_OF_USAGE
+Usage: $0 <querypie_version> [<distro>] [<architecture>]
+
+EXAMPLE:
+  $0 11.0.1 amazon-linux-2023
+  $0 11.0.1 amazon-linux-2023 arm64
+  $0 11.0.1 ubuntu-24.04
+  $0 11.0.1 ubuntu-22.04
+  PACKER_OPTION=-on-error=abort $0 11.0.1 amazon-linux-2023
+
+END_OF_USAGE
     exit 1
   fi
 
   validate_environment
 
+  local timestamp ami_name
   timestamp=$(date +%Y%m%d%H%M)
   if [[ "${MODE:-}" == "release" ]]; then
     ami_name="QueryPie-Suite-${querypie_version}"
@@ -78,7 +92,7 @@ function main() {
     ami_name="QueryPie-Suite-${querypie_version}-${timestamp}"
   fi
 
-  packer::build "$querypie_version" "${ami_name}"
+  packer::build "$querypie_version" "$distro" "$architecture" "${ami_name}"
 
   local image_id
   image_id=$(aws::image_id "$ami_name")
