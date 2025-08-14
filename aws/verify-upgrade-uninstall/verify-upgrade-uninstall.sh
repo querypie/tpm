@@ -22,9 +22,10 @@ function log::error() {
 }
 
 function packer::build() {
-  local version=$1 distro=$2 architecture=$3 packer_option="${PACKER_OPTION:-}" packer
+  local initial_version=$1 upgrade_version=$2 distro=$3 architecture=$4
+  local packer_option="${PACKER_OPTION:-}" packer
   # NOTE(JK): Use `PACKER_OPTION=-on-error=abort` to allow debugging the AMI build process.
-  echo >&2 "### Install QueryPie and Verify with Packer ###"
+  echo >&2 "### Install, Upgrade, and Uninstall QueryPie and Verify with Packer ###"
   echo >&2 "PACKER_OPTION: $packer_option"
 
   packer=./${distro}.pkr.hcl
@@ -36,7 +37,8 @@ function packer::build() {
   # Disable SC2086(Use double quotes to prevent word splitting) to allow expansion of variables.
   # shellcheck disable=SC2086
   log::do packer build \
-    -var "querypie_version=$version" \
+    -var "initial_version=$initial_version" \
+    -var "upgrade_version=$upgrade_version" \
     -var "architecture=${architecture}" \
     -var "resource_owner=${USER:-Unknown}" \
     -timestamp-ui \
@@ -54,17 +56,17 @@ function validate_environment() {
 }
 
 function main() {
-  local querypie_version=${1:-} distro=${2:-amazon-linux-2023} architecture=${3:-x86_64}
-  if [[ -z "$querypie_version" ]]; then
+  local initial_version=${1:-} upgrade_version=${2:-} distro=${3:-amazon-linux-2023} architecture=${4:-x86_64}
+  if [[ -z "$initial_version" || -z "$upgrade_version" ]]; then
     cat <<END_OF_USAGE
-Usage: $0 <querypie_version> [<distro>] [<architecture>]
+Usage: $0 <initial_version> <upgrade_version> [<distro>] [<architecture>]
 
 EXAMPLE:
-  $0 11.0.1 amazon-linux-2023
-  $0 11.0.1 amazon-linux-2023 arm64
-  $0 11.0.1 ubuntu-24.04
-  $0 11.0.1 ubuntu-22.04
-  PACKER_OPTION=-on-error=abort $0 11.0.1 amazon-linux-2023
+  $0 11.0.1 11.1.1 amazon-linux-2023
+  $0 11.0.1 11.1.1 amazon-linux-2023 arm64
+  $0 11.0.1 11.1.1 ubuntu-24.04
+  $0 11.0.1 11.1.1 ubuntu-22.04
+  PACKER_OPTION=-on-error=abort $0 11.0.1 11.1.1 amazon-linux-2023
 
 END_OF_USAGE
     exit 1
@@ -72,7 +74,7 @@ END_OF_USAGE
 
   validate_environment
 
-  packer::build "$querypie_version" "$distro" "$architecture"
+  packer::build "$initial_version" "$upgrade_version" "$distro" "$architecture"
 }
 
 main "$@"

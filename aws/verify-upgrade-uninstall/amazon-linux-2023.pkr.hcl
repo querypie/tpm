@@ -10,10 +10,16 @@ packer {
 }
 
 # Variables
-variable "querypie_version" {
+variable "initial_version" {
   type        = string
-  default     = "10.3.0"
+  default     = "11.0.1"
   description = "Version of QueryPie to install"
+}
+
+variable "upgrade_version" {
+  type        = string
+  default     = "11.1.1"
+  description = "Version of QueryPie to upgrade"
 }
 
 variable "architecture" {
@@ -24,7 +30,7 @@ variable "architecture" {
 
 variable "resource_owner" {
   type        = string
-  default     = "Ubuntu22.04-Installer"
+  default     = "AL2023-Installer"
   description = "Owner of AWS Resources"
 }
 
@@ -34,59 +40,59 @@ locals {
   ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
 
   region = "ap-northeast-2"
-  ssh_username = "ubuntu" # SSH username for Ubuntu 22.04
+  ssh_username = "ec2-user" # SSH username for Amazon Linux 2023
 
   common_tags = {
     CreatedBy = "Packer"
     Owner     = var.resource_owner
     Purpose   = "Automated QueryPie Installer"
     BuildDate = local.timestamp
-    Version   = var.querypie_version
+    Version   = var.initial_version
   }
 
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "Ubuntu22.04-Installer-${var.querypie_version}"
+      Name = "AL2023-Installer-${var.initial_version}"
     }
   )
 }
 
-# Data source for latest Ubuntu 22.04 LTS AMI
+# Data source for latest Amazon Linux 2023 AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# ubuntu-22-04 : Name of the data source
+# amazon-linux-2023 : Name of the data source
 ###
-# aws ec2 describe-images --image-ids ami-08943a151bd468f4e
-# "Name": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20250516"
-# "Description": "Canonical, Ubuntu, 22.04, amd64 jammy image"
+# aws ec2 describe-images --image-ids ami-0811349cae530179a
+# "Name": "al2023-ami-2023.8.20250804.0-kernel-6.1-x86_64"
+# "Description": "Amazon Linux 2023 AMI 2023.8.20250804.0 x86_64 HVM kernel-6.1"
 # "Architecture": "x86_64"
-# "DeviceName": "/dev/sda1"
+# "DeviceName": "/dev/xvda"
 ###
-# aws ec2 describe-images --image-ids ami-081f3c5131ba55215
-# "Name": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-arm64-server-20250516"
-# "Description": "Canonical, Ubuntu, 22.04, arm64 jammy image"
+# aws ec2 describe-images --image-ids ami-0de81378d4317284d
+# "Name": "al2023-ami-2023.8.20250804.0-kernel-6.1-arm64"
+# "Description": "Amazon Linux 2023 AMI 2023.8.20250804.0 arm64 HVM kernel-6.1"
 # "Architecture": "arm64"
-# "DeviceName": "/dev/sda1"
-data "amazon-ami" "ubuntu-22-04" {
+# "DeviceName": "/dev/xvda"
+data "amazon-ami" "amazon-linux-2023" {
   filters = {
-    name                = "ubuntu/images/*/ubuntu-jammy-22.04-*-server-*"
+    name                = "al2023-ami-2023.8.*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
   }
   most_recent = true
-  owners = ["099720109477"] # # Canonical's AWS Account ID
+  owners = ["amazon"]
   region      = local.region
 }
 
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# ubuntu22-04-install : Name of the builder
-source "amazon-ebs" "ubuntu22-04-install" {
+# amazon-linux-2023 : Name of the builder
+source "amazon-ebs" "amazon-linux-2023" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.ubuntu-22-04.id
+  source_ami      = data.amazon-ami.amazon-linux-2023.id
   ami_name        = local.ami_name
 
   region       = local.region
@@ -105,7 +111,7 @@ source "amazon-ebs" "ubuntu22-04-install" {
 
   # Root volume configuration
   launch_block_device_mappings {
-    device_name           = "/dev/sda1"
+    device_name           = "/dev/xvda"
     volume_size           = 32
     volume_type           = "gp3"
     iops = 16000 # Max: 16000 IOPS for gp3
@@ -131,7 +137,7 @@ source "amazon-ebs" "ubuntu22-04-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.ubuntu22-04-install"
+    "source.amazon-ebs.amazon-linux-2023"
   ]
 
   provisioner "shell" {
@@ -143,7 +149,7 @@ build {
 
   provisioner "shell" {
     expect_disconnect = true # It will logout at the end of this provisioner.
-    script = "../scripts/install-docker-on-ubuntu.sh"
+    script = "../scripts/install-docker-on-amazon-linux-2023.sh"
   }
 
   # Install scripts such as setup.v2.sh
@@ -159,12 +165,31 @@ build {
     ]
   }
 
-  # Install QueryPie Deployment Package
+  # Install QueryPie
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --install ${var.querypie_version}",
+      "setup.v2.sh --yes --install ${var.initial_version}",
       "setup.v2.sh --verify-installation",
+    ]
+  }
+
+  # Upgrade QueryPie
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      "setup.v2.sh --yes --upgrade ${var.upgrade_version}",
+      "setup.v2.sh --verify-installation",
+    ]
+  }
+
+  # Uninstall QueryPie
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      "setup.v2.sh --uninstall",
+      "docker ps --all",
+      "setup.v2.sh --verify-not-installed",
     ]
   }
 
@@ -173,8 +198,7 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "echo '# Performing final cleanup...'",
-      "sudo apt clean",
-      "sudo apt autoremove -y",
+      "sudo dnf clean all",
       "sudo rm -rf /tmp/*",
       "sudo rm -rf /var/tmp/*",
       "history -c",
@@ -191,7 +215,8 @@ build {
     strip_path = true
     custom_data = {
       timestmap        = local.timestamp
-      querypie_version = var.querypie_version
+      initial_version = var.initial_version
+      upgrade_version = var.upgrade_version
     }
   }
 }
