@@ -8,7 +8,7 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.08.3" # YY.MM.PATCH
+SCRIPT_VERSION="25.08.4" # YY.MM.PATCH
 echo -n "#### QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
@@ -19,8 +19,8 @@ set -o nounset -o errexit -o pipefail
 
 RECOMMENDED_VERSION="11.1.1" # QueryPie version to install by default.
 ASSUME_YES=false
-DOCKER=docker          # The default docker command
-COMPOSE=docker-compose # The default compose command
+DOCKER=docker  # The default Container Engine
+COMPOSE=docker-compose # The default Compose tool
 
 function print_usage_and_exit() {
   set +x
@@ -110,8 +110,11 @@ function lsb::id() {
   fi
 }
 
-function command_exists() {
-  command -v "$@" >/dev/null 2>&1
+function command::whereis() {
+  # Use a subshell to avoid modifying the PATH in the current shell.
+  (
+    PATH=~/.docker/cli-plugins:/usr/libexec/docker/cli-plugins:$PATH command -v "$@" 2>/dev/null
+  )
 }
 
 function setup::sudo_privileges() {
@@ -124,7 +127,7 @@ function setup::sudo_privileges() {
   if [[ "${user}" == 'root' ]]; then
     echo >&2 "# The current user is 'root'. No need to use sudo."
     SUDO=() # No need to use sudo.
-  elif command_exists sudo; then
+  elif command::whereis sudo >/dev/null; then
     echo >&2 "# 'sudo' will be used for privileged commands."
     SUDO=(sudo)
   else
@@ -134,17 +137,15 @@ function setup::sudo_privileges() {
   fi
 }
 
-function verify::docker_installation() {
+function verify::container_engine_installation() {
   echo >&2 "#"
-  echo >&2 "## Verify Docker installation"
+  echo >&2 "## Verify Container Engine installation"
   echo >&2 "#"
 
   if docker --version 2>/dev/null | grep -q "^Docker version"; then
     DOCKER=docker
-    COMPOSE=docker-compose
   elif podman --version 2>/dev/null | grep -q "^podman version"; then
     DOCKER=podman
-    COMPOSE=podman-compose
   else
     echo >&2 "# Unknown version of Docker"
     log::do docker --version
@@ -177,7 +178,7 @@ function verify::docker_installation() {
   fi
 
   log::do $DOCKER ps || true
-  echo >&2 "# Docker installation verification failed. Please check above errors."
+  echo >&2 "# Container Engine installation verification failed. Please check above errors."
   echo >&2 "# Resolve the identified issues before proceeding."
   exit 1
 }
@@ -187,16 +188,16 @@ function install::docker() {
   echo >&2 "## Install Docker engine"
   echo >&2 "#"
 
-  if command_exists docker; then
-    echo >&2 "# Docker is already installed at $(command -v docker)"
+  if command::whereis docker >/dev/null; then
+    echo >&2 "# Docker is already installed at $(command::whereis docker)"
 
-    verify::docker_installation
+    verify::container_engine_installation
     log::do $DOCKER --version
     return
-  elif command_exists podman; then
-    echo >&2 "# Podman is already installed at $(command -v podman)"
+  elif command::whereis podman >/dev/null; then
+    echo >&2 "# Podman is already installed at $(command::whereis podman)"
 
-    verify::docker_installation
+    verify::container_engine_installation
     log::do $DOCKER --version
     return
   fi
@@ -239,42 +240,44 @@ function install::docker_compose() {
   echo >&2 "## Install Docker Compose tool"
   echo >&2 "#"
 
-  if [[ ${COMPOSE} == docker-compose ]]; then
-    if command_exists docker-compose; then
-      echo >&2 "# Docker Compose is already installed at $(command -v docker-compose)"
-      log::do docker-compose --version
-      return
+  if $DOCKER compose version &>/dev/null; then
+    if $DOCKER compose version 2>/dev/null | grep -q "Docker Compose"; then
+      COMPOSE=docker-compose
+    elif $DOCKER compose version 2>/dev/null | grep -q "podman-compose"; then
+      COMPOSE=podman-compose
     else
-      local kernel hardware
-      kernel=$(uname -s | tr '[:upper:]' '[:lower:]')
-      hardware=$(uname -m | tr '[:upper:]' '[:lower:]')
-      [[ $hardware == arm64 ]] && hardware=aarch64
-      if [[ $kernel == linux || $kernel == darwin ]] && [[ $hardware == x86_64 || $hardware == aarch64 ]]; then
-        echo >&2 "# Docker Compose is not installed. Installing now."
-        log::do curl -fsSL "https://dl.querypie.com/releases/bin/v2.39.1/docker-compose-${kernel}-${hardware}" -o docker-compose
-        log::sudo install -m 755 docker-compose /usr/local/bin
-        rm docker-compose
-        log::do docker-compose --version
-        return
-      fi
+      COMPOSE="(Unknown)"
     fi
-  elif [[ ${COMPOSE} == podman-compose ]]; then
-    if command_exists podman-compose; then
-      echo >&2 "# Podman Compose is already installed at $(command -v podman-compose)"
-      log::do podman-compose --version
-      return
-    else
-      echo >&2 "# Podman Compose is not installed. Please refer to the installation manual."
-      log::error "Please report this problem to the technical support team of QueryPie."
-      exit 1
-    fi
+    echo >&2 "# Compose Tool, $COMPOSE is already installed at $(command::whereis $COMPOSE || echo '(Unknown)')"
+    echo >&2 "# Compose Tool is enabled as a plugin for $DOCKER"
+    log::do $DOCKER compose version
+    return
   fi
 
-  echo >&2 "# Docker Compose is not installed. It seems to be an unsupported platform."
-  log::do uname -a
-  log::do ${DOCKER} --version
-  log::error "Please report this problem to the technical support team of QueryPie."
-  exit 1
+  local kernel hardware
+  kernel=$(uname -s | tr '[:upper:]' '[:lower:]')
+  hardware=$(uname -m | tr '[:upper:]' '[:lower:]')
+  [[ $hardware == arm64 ]] && hardware=aarch64
+  if [[ $kernel == linux || $kernel == darwin ]] && [[ $hardware == x86_64 || $hardware == aarch64 ]]; then
+    echo >&2 "# Docker Compose is not installed. Installing now."
+    log::do curl -fsSL "https://dl.querypie.com/releases/bin/v2.39.1/docker-compose-${kernel}-${hardware}" -o docker-compose
+    log::do install -m 755 -D docker-compose ~/.docker/cli-plugins/docker-compose
+    log::sudo install -m 755 docker-compose /usr/local/bin
+    rm docker-compose
+  fi
+
+  if $DOCKER compose version &>/dev/null; then
+    echo >&2 "# Now Docker Compose is installed at $(command::whereis docker-compose || echo '(Unknown)')"
+    echo >&2 "# Docker Compose is enabled as a plugin for $DOCKER"
+    log::do $DOCKER compose version
+    return
+  else
+    echo >&2 "# Failed to install Docker Compose properly."
+    log::error "Please report this problem to the technical support team of QueryPie."
+    log::do uname -a
+    log::do ${DOCKER} --version
+    exit 1
+  fi
 }
 
 function install::config_files() {
@@ -728,11 +731,11 @@ function cmd::install() {
 
   local pull_option=''
   [[ $COMPOSE == docker-compose && ! -t 0 ]] && pull_option='--quiet'
-  log::do $COMPOSE --profile database --profile querypie --profile tools pull $pull_option
+  log::do $DOCKER compose --profile database --profile querypie --profile tools pull $pull_option
   echo >&2 "## Start MySQL and Redis services for QueryPie"
-  log::do $COMPOSE --profile database up --detach
+  log::do $DOCKER compose --profile database up --detach
   log::do sleep 20 # TODO(JK): Utilize wait-for-mysqld later.
-  log::do $COMPOSE --profile tools up --detach
+  log::do $DOCKER compose --profile tools up --detach
   log::do tools::wait_and_print_banner
 
   echo >&2 "## Run migrate.sh to initialize MySQL database for QueryPie"
@@ -744,9 +747,9 @@ function cmd::install() {
   echo >&2 " Done."
   # Run migrate.sh again to ensure the migration is completed properly
   log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
-  log::do $COMPOSE --profile tools down
+  log::do $DOCKER compose --profile tools down
   echo >&2 "## Start the QueryPie container (initialization takes about 2 minutes)"
-  log::do $COMPOSE --profile querypie up --detach
+  log::do $DOCKER compose --profile querypie up --detach
   log::do $DOCKER exec querypie-app-1 readyz || {
     log::error "QueryPie container has failed to start up. Please check the logs."
     log::do $DOCKER logs --tail 100 querypie-app-1 || true
@@ -769,7 +772,7 @@ function cmd::upgrade() {
   PACKAGE_VERSION=$(install::get_package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
   echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
 
-  verify::docker_installation
+  verify::container_engine_installation
   verify::container_is_ready_for_service || {
     log::error "Upgrade is aborted."
     exit 1
@@ -809,18 +812,18 @@ function cmd::upgrade() {
   echo >&2 "## Download Docker images for the target version"
   local pull_option=''
   [[ $COMPOSE == docker-compose && ! -t 0 ]] && pull_option='--quiet'
-  log::do $COMPOSE --profile database --profile querypie --profile tools pull $pull_option
+  log::do $DOCKER compose --profile database --profile querypie --profile tools pull $pull_option
   log::do popd
 
   echo >&2 "## Stop containers from the previous version"
   log::do pushd "./querypie/${current_version}/"
-  log::do $COMPOSE --profile querypie down
-  log::do $COMPOSE --profile tools down || true
+  log::do $DOCKER compose --profile querypie down
+  log::do $DOCKER compose --profile tools down || true
   log::do popd
 
   echo >&2 "## Start the querypie-tools container for the target version"
   log::do pushd "./querypie/${QP_VERSION}/"
-  log::do $COMPOSE --profile tools up --detach
+  log::do $DOCKER compose --profile tools up --detach
   log::do tools::wait_and_print_banner
 
   echo >&2 "## Run migrate.sh to apply MySQL schema changes for QueryPie"
@@ -828,9 +831,9 @@ function cmd::upgrade() {
   log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall >>~/querypie-migrate.1.log
   # Run migrate.sh again to ensure the migration is completed properly
   log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall | tee -a ~/querypie-migrate.log
-  log::do $COMPOSE --profile tools down
+  log::do $DOCKER compose --profile tools down
   echo >&2 "## Start the QueryPie container (initialization takes about 2 minutes)"
-  log::do $COMPOSE --profile querypie up --detach
+  log::do $DOCKER compose --profile querypie up --detach
   log::do $DOCKER exec querypie-app-1 readyz || {
     log::error "QueryPie container has failed to start up. Please check the logs."
     log::do $DOCKER logs --tail 100 querypie-app-1 || true
@@ -903,7 +906,7 @@ function cmd::install_partially_for_ami() {
 
   local pull_option=''
   [[ $COMPOSE == docker-compose && ! -t 0 ]] && pull_option='--quiet'
-  log::do $COMPOSE --profile database --profile querypie --profile tools pull $pull_option
+  log::do $DOCKER compose --profile database --profile querypie --profile tools pull $pull_option
   log::do $DOCKER image ls
   cmd::reset_credential ".env"
   log::do popd
@@ -921,21 +924,21 @@ function cmd::resume() {
   QP_VERSION=$(verify::version_of_current)
   echo >&2 "# QP_VERSION: ${QP_VERSION}"
 
-  verify::docker_installation
+  verify::container_engine_installation
 
   log::do pushd "./querypie/${QP_VERSION}/"
   cmd::populate_env ".env"
-  log::do $COMPOSE --profile database up --detach
+  log::do $DOCKER compose --profile database up --detach
   log::do sleep 10
-  log::do $COMPOSE --profile tools up --detach
+  log::do $DOCKER compose --profile tools up --detach
   log::do tools::wait_and_print_banner
 
   # Save the long output of migrate.sh as querypie-migrate.1.log
   log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall >~/querypie-migrate.1.log
   # Run migrate.sh again to ensure the migration is completed properly
   log::do $DOCKER exec querypie-tools-1 /app/script/migrate.sh runall | tee ~/querypie-migrate.log
-  log::do $COMPOSE --profile tools down
-  log::do $COMPOSE --profile querypie up --detach
+  log::do $DOCKER compose --profile tools down
+  log::do $DOCKER compose --profile querypie up --detach
   log::do $DOCKER container ls --all
   log::do popd
 
@@ -1009,7 +1012,7 @@ function cmd::verify_installation() {
     }
   fi
 
-  verify::docker_installation
+  verify::container_engine_installation
 
   local container_version current_version
   current_version=$(verify::version_of_current)

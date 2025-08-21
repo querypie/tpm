@@ -16,5 +16,5 @@ for container in querypie-app-1 querypie-tools-1 querypie-mysql-1 querypie-redis
   $DOCKER rm $container || true
 done
 
-sudo rm -rf ~/querypie/mysql
+sudo rm -rf ~/querypie/mysql ~/querypie/log
 rm -rf ~/querypie/*
