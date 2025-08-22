@@ -9,7 +9,7 @@
 # Ensure script exits on error
 set -o nounset -o errexit -o errtrace -o pipefail
 
-readonly SCRIPT_VERSION="25.08.2" # YY.MM.PATCH
+readonly SCRIPT_VERSION="25.08.3" # YY.MM.PATCH
 
 # Color definitions
 readonly BOLD_CYAN="\e[1;36m"
@@ -66,7 +66,7 @@ function ec2::get_username_variations() {
 }
 
 # Write instance list rows (no header) into the specified tmp file.
-# Columns (tab-separated): Name, InstanceId, State, Type, PublicIP, PrivateIP
+# Columns (tab-separated): Name, InstanceId, State, Type, PublicIP, PrivateIP, Created
 function ec2::show_instance_list() {
   local out_file=${1:-}
   if [[ -z "${out_file}" ]]; then
@@ -81,7 +81,7 @@ function ec2::show_instance_list() {
   # Capture describe-instances output into the provided file; do not fail caller on errors
   log::do aws ec2 describe-instances \
     --filters "Name=tag:Owner,Values=${username_list}" \
-    --query 'Reservations[].Instances[][Tags[?Key==`Name`].Value|[0], InstanceId, State.Name, InstanceType, PublicIpAddress, PrivateIpAddress]' \
+    --query 'Reservations[].Instances[][Tags[?Key==`Name`].Value|[0], InstanceId, State.Name, InstanceType, PublicIpAddress, PrivateIpAddress, LaunchTime]' \
     --output text >"${out_file}" || true
 
   # Check tmpfile size/content instead of using an intermediate rows variable
@@ -91,7 +91,7 @@ function ec2::show_instance_list() {
   fi
 
   {
-    printf "Name\tInstanceId\tState\tType\tPublicIP\tPrivateIP\n"
+    printf "Name\tInstanceId\tState\tType\tPublicIP\tPrivateIP\tCreated\n"
     cat "${out_file}" || true
   } | sed -e 's/\bNone\b/-/g' | column -t -s $'\t'
 }
@@ -106,9 +106,9 @@ function ec2::start() {
   ec2::show_instance_list "${tmp_file}"
 
   # Collect eligible instance IDs (only stopped) and start them in a single call
-  local name instance_id state type public_ip private_ip
+  local name instance_id state type public_ip private_ip created
   local -a eligible_ids=()
-  while IFS=$'\t' read -r name instance_id state type public_ip private_ip; do
+  while IFS=$'\t' read -r name instance_id state type public_ip private_ip created; do
     # Validate instance_id format
     if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^i-[a-f0-9]+$ ]]; then
       continue
@@ -149,9 +149,9 @@ function ec2::stop() {
   ec2::show_instance_list "${tmp_file}"
 
   # Collect eligible instance IDs and stop them in a single call
-  local name instance_id state type public_ip private_ip
+  local name instance_id state type public_ip private_ip created
   local -a eligible_ids=()
-  while IFS=$'\t' read -r name instance_id state type public_ip private_ip; do
+  while IFS=$'\t' read -r name instance_id state type public_ip private_ip created; do
     # Validate instance_id format
     if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^i-[a-f0-9]+$ ]]; then
       continue
@@ -203,10 +203,10 @@ function ec2::terminate() {
   echo "For each instance below, type 'yes' to confirm termination. Any other input will skip."
 
   # Read rows directly from tmp_file and process per-instance without materializing all IDs
-  local name instance_id state type public_ip private_ip
+  local name instance_id state type public_ip private_ip created
   # Open tmp_file on FD 9 so stdin remains available for user prompts inside the loop
   exec 9< "${tmp_file}"
-  while IFS=$'\t' read -r name instance_id state type public_ip private_ip <&9; do
+  while IFS=$'\t' read -r name instance_id state type public_ip private_ip created <&9; do
     # Validate instance_id format
     if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^i-[a-f0-9]+$ ]]; then
       continue
