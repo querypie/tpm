@@ -213,27 +213,55 @@ function install::docker_or_podman() {
     case "$lsb_id_like" in
     fedora) # Amazon Linux 2023 - Docker is available, but Podman is not.
       log::sudo dnf install -y docker
+      DOCKER=docker
       ;;
     *)
       log::sudo amazon-linux-extras install -y docker
+      DOCKER=docker
+      ;;
+    esac
+    ;;
+  rhel)
+    case "$lsb_id_like" in
+    fedora) # Red Hat Enterprise Linux 8
+      log::sudo dnf -y -q --best install podman podman-plugins podman-manpages
+      DOCKER=podman
+      ;;
+    *)
+      log::sudo amazon-linux-extras install -y docker
+      DOCKER=docker
       ;;
     esac
     ;;
   rocky)
     log::sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
     log::sudo dnf install -y docker-ce
+    DOCKER=docker
     ;;
   *)
     log::do curl -fsSL https://get.docker.com -o docker-install.sh
     log::sudo sh docker-install.sh
+    DOCKER=docker
     ;;
   esac
 
-  log::sudo systemctl enable --now docker
-  log::sudo usermod -aG docker "$user"
-  echo >&2 "# User '$user' has been added to the Docker group. A logout and login is required to use Docker without sudo."
-  echo >&2 "# Please rerun this script after logging back in."
-  return 7 # It could not complete the installation. So, exit with error.
+  if [[ $DOCKER == "podman" ]]; then
+    # Enable the Podman socket for docker-compose to interact with Podman
+    log::do systemctl --user enable --now podman.socket
+    echo >&2 "# Podman is successfully installed at $(command::whereis podman)"
+    return
+  elif [[ $DOCKER == "docker" ]]; then
+    log::sudo systemctl enable --now docker
+    log::sudo usermod -aG docker "$user"
+    echo >&2 "# Docker is successfully installed at $(command::whereis docker)"
+    echo >&2 "# User '$user' has been added to the Docker group. A logout and login is required to use Docker without sudo."
+    echo >&2 "# Please rerun this script after logging back in."
+    return 7 # It could not complete the installation. So, exit with error.
+  else
+    log::error "Unknown Container Engine: $DOCKER"
+    log::error "Please report this problem to the technical support team of QueryPie."
+    exit 1
+  fi
 }
 
 function install::docker_compose() {
