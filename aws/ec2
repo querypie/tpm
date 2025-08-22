@@ -2,14 +2,14 @@
 # EC2 Instance Management Script
 # This script provides a simple interface to manage EC2 instances.
 # Usage:
-#   ./ec2 start   - Start all instances owned by current user
-#   ./ec2 stop    - Stop all instances owned by current user
-#   ./ec2 status  - List instances owned by current user
+#   ./ec2 start   - Start all instances owned by the current user
+#   ./ec2 stop    - Stop all instances owned by the current user
+#   ./ec2 status  - List instances owned by the current user
 
 # Ensure script exits on error
 set -o nounset -o errexit -o errtrace -o pipefail
 
-readonly SCRIPT_VERSION="25.08.1" # YY.MM.PATCH
+readonly SCRIPT_VERSION="25.08.2" # YY.MM.PATCH
 
 # Color definitions
 readonly BOLD_CYAN="\e[1;36m"
@@ -19,218 +19,275 @@ readonly RESET="\e[0m"
 
 # Logging functions
 function log::do() {
-    printf "%b+ %s%b\n" "$BOLD_CYAN" "$*" "$RESET" 1>&2
-    if "$@"; then
-        return 0
-    else
-        log::error "Failed to run: $*"
-        return 1
-    fi
+  printf "%b+ %s%b\n" "$BOLD_CYAN" "$*" "$RESET" 1>&2
+  if "$@"; then
+    return 0
+  else
+    log::error "Failed to run: $*"
+    return 1
+  fi
 }
 
 function log::warning() {
-    printf "%bWARNING: %s%b\n" "$BOLD_YELLOW" "$*" "$RESET" 1>&2
+  printf "%bWARNING: %s%b\n" "$BOLD_YELLOW" "$*" "$RESET" 1>&2
 }
 
 function log::error() {
-    printf "%bERROR: %s%b\n" "$BOLD_RED" "$*" "$RESET" 1>&2
+  printf "%bERROR: %s%b\n" "$BOLD_RED" "$*" "$RESET" 1>&2
 }
 
 # AWS CLI validation functions
 function aws::check_cli() {
-    if ! command -v aws > /dev/null 2>&1; then
-        log::error "AWS CLI is not installed."
-        echo >&2 "## Installation guide: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
-        exit 1
-    fi
+  if ! command -v aws >/dev/null 2>&1; then
+    log::error "AWS CLI is not installed."
+    echo >&2 "## Installation guide: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+    exit 1
+  fi
 }
 
 function aws::check_credentials() {
-    if ! aws sts get-caller-identity > /dev/null 2>&1; then
-        log::error "AWS credentials are not configured."
-        echo >&2 "## Configure credentials using: aws configure"
-        exit 1
-    fi
-}
-
-function aws::check_instance() {
-    local instance_id=$1
-    if ! aws ec2 describe-instances --instance-ids "${instance_id}" > /dev/null 2>&1; then
-        log::error "Instance ${instance_id} not found."
-        exit 1
-    fi
-}
-
-function ec2::get_status() {
-    local instance_id=$1
-    aws ec2 describe-instances --instance-ids "${instance_id}" \
-        --query 'Reservations[0].Instances[0].State.Name' --output text
+  if ! aws sts get-caller-identity >/dev/null 2>&1; then
+    log::error "AWS credentials are not configured."
+    echo >&2 "## Configure credentials using: aws configure"
+    exit 1
+  fi
 }
 
 function ec2::get_username_variations() {
-    local username username_lower username_upper username_capitalized
-    username=${USERNAME:-$(whoami)}
-    
-    # Create username variations
-    username_lower=$(echo "${username}" | tr '[:upper:]' '[:lower:]')
-    username_upper=$(echo "${username}" | tr '[:lower:]' '[:upper:]')
-    username_capitalized="${username^}"
-    
-    # Return comma-separated list
-    echo "${username_lower},${username_upper},${username_capitalized}"
+  local username=$1 username_lower username_upper username_capitalized
+
+  # Create username variations
+  username_lower=$(echo "${username}" | tr '[:upper:]' '[:lower:]')
+  username_upper=$(echo "${username}" | tr '[:lower:]' '[:upper:]')
+  username_capitalized="${username^}"
+
+  # Return comma-separated list
+  echo "${username_lower},${username_upper},${username_capitalized}"
 }
 
-function ec2::get_instance_ids() {
-    local username_list
-    username_list=$(ec2::get_username_variations)
-    
-    aws ec2 describe-instances \
-        --filters "Name=tag:Owner,Values=${username_list}" \
-        --query "Reservations[*].Instances[*].InstanceId" \
-        --output text
+# Write instance list rows (no header) into the specified tmp file.
+# Columns (tab-separated): Name, InstanceId, State, Type, PublicIP, PrivateIP
+function ec2::show_instance_list() {
+  local out_file=${1:-}
+  if [[ -z "${out_file}" ]]; then
+    log::error "ec2::show_instance_list requires an output file path argument"
+    return 1
+  fi
+  local username username_list
+  username=${USERNAME:-$(whoami)}
+  echo >&2 "## Listing EC2 instances owned by ${username}..."
+
+  username_list=$(ec2::get_username_variations "${username}")
+  # Capture describe-instances output into the provided file; do not fail caller on errors
+  log::do aws ec2 describe-instances \
+    --filters "Name=tag:Owner,Values=${username_list}" \
+    --query 'Reservations[].Instances[][Tags[?Key==`Name`].Value|[0], InstanceId, State.Name, InstanceType, PublicIpAddress, PrivateIpAddress]' \
+    --output text >"${out_file}" || true
+
+  # Check tmpfile size/content instead of using an intermediate rows variable
+  if [[ ! -s "${out_file}" ]] || grep -qx "None" "${out_file}"; then
+    log::warning "No instances found with Owner tag matching ${username} (variations: ${username_list})"
+    return
+  fi
+
+  {
+    printf "Name\tInstanceId\tState\tType\tPublicIP\tPrivateIP\n"
+    cat "${out_file}" || true
+  } | sed -e 's/\bNone\b/-/g' | column -t -s $'\t'
 }
 
 function ec2::start() {
-    local instance_id=$1
-    echo >&2 "## Starting instance ${instance_id}..."
-    local current_status
-    current_status=$(ec2::get_status "${instance_id}")
-    
-    case "${current_status}" in
-        "running")
-            log::warning "Instance ${instance_id} is already running."
-            ;;
-        "stopped")
-            if aws ec2 start-instances --instance-ids "${instance_id}" > /dev/null 2>&1; then
-                echo >&2 "## Instance ${instance_id} start request completed."
-                echo >&2 "## Current status: ${current_status}"
-            else
-                log::error "Failed to start instance ${instance_id}."
-                exit 1
-            fi
-            ;;
-        "stopping")
-            log::warning "Instance ${instance_id} is stopping. Please wait for it to complete."
-            ;;
-        "pending")
-            log::warning "Instance ${instance_id} is starting."
-            ;;
-        *)
-            log::error "Unknown instance status for ${instance_id}: ${current_status}"
-            exit 1
-            ;;
+  # Show the list first
+  local tmp_file
+  tmp_file=$(mktemp -t ec2_describe_XXXXXX)
+  # shellcheck disable=SC2064
+  trap "rm -f ${tmp_file}" RETURN
+  # Populate describe-instances output into a temp file via helper, then post-process
+  ec2::show_instance_list "${tmp_file}"
+
+  # Collect eligible instance IDs (only stopped) and start them in a single call
+  local name instance_id state type public_ip private_ip
+  local -a eligible_ids=()
+  while IFS=$'\t' read -r name instance_id state type public_ip private_ip; do
+    # Validate instance_id format
+    if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^i-[a-f0-9]+$ ]]; then
+      continue
+    fi
+
+    # Only start instances that are currently stopped; silently skip others
+    case "${state}" in
+    "stopped")
+      eligible_ids+=("${instance_id}")
+      ;;
+    *)
+      :
+      ;;
     esac
+  done < "${tmp_file}"
+
+  if [[ ${#eligible_ids[@]} -eq 0 ]]; then
+    log::warning "No eligible instances to start."
+    return
+  fi
+
+  echo >&2 "## Starting instances: ${eligible_ids[*]}..."
+  if log::do aws ec2 start-instances --instance-ids "${eligible_ids[@]}" >/dev/null; then
+    echo >&2 "## Start request submitted for: ${eligible_ids[*]}"
+  else
+    log::error "Failed to start one or more instances."
+    exit 1
+  fi
 }
 
 function ec2::stop() {
-    local instance_id=$1
-    echo >&2 "## Stopping instance ${instance_id}..."
-    local current_status
-    current_status=$(ec2::get_status "${instance_id}")
-    
-    case "${current_status}" in
-        "stopped")
-            log::warning "Instance ${instance_id} is already stopped."
-            ;;
-        "running")
-            if aws ec2 stop-instances --instance-ids "${instance_id}" > /dev/null 2>&1; then
-                echo >&2 "## Instance ${instance_id} stop request completed."
-                echo >&2 "## Current status: ${current_status}"
-            else
-                log::error "Failed to stop instance ${instance_id}."
-                exit 1
-            fi
-            ;;
-        "stopping")
-            log::warning "Instance ${instance_id} is already stopping."
-            ;;
-        "pending")
-            log::warning "Instance ${instance_id} is starting. Please wait for it to complete."
-            ;;
-        *)
-            log::error "Unknown instance status for ${instance_id}: ${current_status}"
-            exit 1
-            ;;
+  # Show the list first
+  local tmp_file
+  tmp_file=$(mktemp -t ec2_describe_XXXXXX)
+  # shellcheck disable=SC2064
+  trap "rm -f ${tmp_file}" RETURN
+  # Populate describe-instances output into a temp file via helper, then post-process
+  ec2::show_instance_list "${tmp_file}"
+
+  # Collect eligible instance IDs and stop them in a single call
+  local name instance_id state type public_ip private_ip
+  local -a eligible_ids=()
+  while IFS=$'\t' read -r name instance_id state type public_ip private_ip; do
+    # Validate instance_id format
+    if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^i-[a-f0-9]+$ ]]; then
+      continue
+    fi
+
+    case "${state}" in
+    "terminated"|"shutting-down"|"stopping"|"stopped")
+      continue
+      ;;
     esac
+
+    eligible_ids+=("${instance_id}")
+  done < "${tmp_file}"
+
+  if [[ ${#eligible_ids[@]} -eq 0 ]]; then
+    log::warning "No eligible instances to stop."
+    return
+  fi
+
+  echo >&2 "## Stopping instances: ${eligible_ids[*]}..."
+  if log::do aws ec2 stop-instances --instance-ids "${eligible_ids[@]}" >/dev/null; then
+    echo >&2 "## Stop request submitted for: ${eligible_ids[*]}"
+  else
+    log::error "Failed to stop one or more instances."
+    exit 1
+  fi
 }
 
 function ec2::status() {
-    local username username_list instances
-    username=${USERNAME:-$(whoami)}
-    echo >&2 "## Listing EC2 instances owned by ${username}..."
-    
-    username_list=$(ec2::get_username_variations)
-    
-    instances=$(log::do aws ec2 describe-instances \
-        --filters "Name=tag:Owner,Values=${username_list}" \
-        --query "Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType,PublicIpAddress,PrivateIpAddress,Tags[?Key==\`Name\`].Value|[0]]" \
-        --output table)
-    
-    if [ -z "${instances}" ] || [ "${instances}" = "None" ]; then
-        log::warning "No instances found with Owner tag matching ${username} (variations: ${username_list})"
-        return
+  local tmp_file
+  tmp_file=$(mktemp -t ec2_describe_XXXXXX)
+  # Ensure a temp file is removed on return from this function
+  # shellcheck disable=SC2064
+  trap "rm -f ${tmp_file}" RETURN
+
+  # Populate the tmp_file with an instance list via helper
+  ec2::show_instance_list "${tmp_file}"
+}
+
+function ec2::terminate() {
+  # Show the list first
+  local tmp_file
+  tmp_file=$(mktemp -t ec2_describe_XXXXXX)
+  # shellcheck disable=SC2064
+  trap "rm -f ${tmp_file}" RETURN
+  # Populate describe-instances output into a temp file via helper, then post-process
+  ec2::show_instance_list "${tmp_file}"
+
+  echo "For each instance below, type 'yes' to confirm termination. Any other input will skip."
+
+  # Read rows directly from tmp_file and process per-instance without materializing all IDs
+  local name instance_id state type public_ip private_ip
+  # Open tmp_file on FD 9 so stdin remains available for user prompts inside the loop
+  exec 9< "${tmp_file}"
+  while IFS=$'\t' read -r name instance_id state type public_ip private_ip <&9; do
+    # Validate instance_id format
+    if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^i-[a-f0-9]+$ ]]; then
+      continue
     fi
-    
-    echo ""
-    echo "=== EC2 Instances Owned by ${username} ==="
-    echo "${instances}"
-    echo ""
+
+    case "${state}" in
+    "terminated")
+      log::warning "Instance ${instance_id} (${name:-NoName}) is already terminated. Skipping."
+      continue
+      ;;
+    "shutting-down")
+      log::warning "Instance ${instance_id} (${name:-NoName}) is already shutting down. Skipping."
+      continue
+      ;;
+    esac
+
+    printf "Confirm terminate %s (%s) [type 'yes' to proceed]: " "${instance_id}" "${name:-NoName}" 1>&2
+    local confirm
+    read -r confirm || confirm=""
+    if [[ "${confirm}" == "yes" ]]; then
+      echo >&2 "## Terminating instance ${instance_id}..."
+      if log::do aws ec2 terminate-instances --instance-ids "${instance_id}" >/dev/null; then
+        echo >&2 "## Instance ${instance_id} termination request submitted."
+      else
+        log::error "Failed to terminate instance ${instance_id}."
+        exit 1
+      fi
+    else
+      echo >&2 "## Skipped ${instance_id}."
+    fi
+  done
+  # Close FD 9
+  exec 9<&-
 }
 
 function ec2::help() {
-    local username
-    username=${USERNAME:-$(whoami)}
-    echo "EC2 Instance Management Script v${SCRIPT_VERSION}"
-    echo ""
-    echo "Usage:"
-    echo "  $0 start   - Start all instances owned by ${username}"
-    echo "  $0 stop    - Stop all instances owned by ${username}"
-    echo "  $0 status  - List instances owned by ${username}"
-    echo "  $0 help    - Show this help message"
-    echo ""
-    echo "Note: This script automatically finds and manages all EC2 instances"
-    echo "      tagged with Owner=${username} (case-insensitive matching)"
-    echo ""
+  local username
+  username=${USERNAME:-$(whoami)}
+  echo "EC2 Instance Management Script v${SCRIPT_VERSION}"
+  echo ""
+  echo "Usage:"
+  echo "  $0 start     - Start all instances owned by ${username}"
+  echo "  $0 stop      - Stop all instances owned by ${username}"
+  echo "  $0 terminate - Terminate instances owned by ${username} (per-instance confirmation)"
+  echo "  $0 status    - List instances owned by ${username}"
+  echo "  $0 help      - Show this help message"
+  echo ""
+  echo "Note: This script automatically finds and manages all EC2 instances"
+  echo "      tagged with Owner=${username} (case-insensitive matching)"
+  echo ""
 }
 
 function main() {
-    # Check AWS CLI and credentials
-    aws::check_cli
-    aws::check_credentials
-    
-    # Process command
-    case "${1:-help}" in
-        "start"|"stop")
-            local instance_ids instance_id
-            instance_ids=$(ec2::get_instance_ids)
-            
-            if [ -z "${instance_ids}" ]; then
-                log::error "No instances found. Please run '$0 status' to see available instances."
-                exit 1
-            fi
-            
-            # Process each instance
-            for instance_id in ${instance_ids}; do
-                aws::check_instance "${instance_id}"
-                case "$1" in
-                    "start")  ec2::start "${instance_id}" ;;
-                    "stop")   ec2::stop "${instance_id}" ;;
-                esac
-            done
-            ;;
-        "status")
-            ec2::status
-            ;;
-        "help"|"-h"|"--help")
-            ec2::help
-            ;;
-        *)
-            log::error "Unknown command: $1"
-            echo ""
-            ec2::help
-            exit 1
-            ;;
-    esac
+  # Check AWS CLI and credentials
+  aws::check_cli
+  aws::check_credentials
+
+  # Process command
+  case "${1:-help}" in
+  "start")
+    ec2::start
+    ;;
+  "stop")
+    ec2::stop
+    ;;
+  "terminate")
+    ec2::terminate
+    ;;
+  "status")
+    ec2::status
+    ;;
+  "help" | "-h" | "--help")
+    ec2::help
+    ;;
+  *)
+    log::error "Unknown command: $1"
+    echo ""
+    ec2::help
+    exit 1
+    ;;
+  esac
 }
 
 main "$@"
