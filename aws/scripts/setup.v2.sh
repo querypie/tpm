@@ -234,9 +234,9 @@ function install::docker_or_podman() {
     esac
     ;;
   rocky)
-    log::sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-    log::sudo dnf install -y docker-ce
-    DOCKER=docker
+    # ID_LIKE="rhel centos fedora" - Rocky Linux 8
+    log::sudo dnf -y -q --best install podman podman-plugins podman-manpages
+    DOCKER=podman
     ;;
   *)
     log::do curl -fsSL https://get.docker.com -o docker-install.sh
