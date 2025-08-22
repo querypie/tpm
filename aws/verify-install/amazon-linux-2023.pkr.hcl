@@ -17,8 +17,8 @@ variable "querypie_version" {
 }
 
 variable "architecture" {
-  type = string
-  default = "x86_64"
+  type        = string
+  default     = "x86_64"
   description = "x86_64 | arm64"
 }
 
@@ -104,7 +104,7 @@ source "amazon-ebs" "amazon-linux-2023" {
 
   # spot_instance_types = ["t4g.xlarge"]
   spot_instance_types = var.architecture == "arm64" ? ["t4g.xlarge"] : ["t3.xlarge"]
-  spot_price = "0.09" # the maximum hourly price
+  spot_price          = "0.09" # the maximum hourly price
   # $0.0646 for t4g.xlarge instance in ap-northeast-2
   # $0.078 for t3.xlarge instance
 
@@ -159,9 +159,9 @@ build {
     expect_disconnect = true # It will logout at the end of this provisioner.
     inline_shebang = "/bin/bash -ex"
     inline = [
-      var.container_engine == "docker" ? "/tmp/install-docker-on-amazon-linux-2023.sh" : "true",
-      var.container_engine == "podman" ? "/tmp/podman_unavailable.sh" : "true",
-      var.container_engine == "none" ? "/tmp/setup.v2.sh --container-engine-only" : "true",
+        var.container_engine == "docker" ? "/tmp/install-docker-on-amazon-linux-2023.sh" : "true",
+        var.container_engine == "podman" ? "/tmp/podman_unavailable.sh" : "true",
+        var.container_engine == "none" ? "/tmp/setup.v2.sh --container-engine-only" : "true",
     ]
   }
 
@@ -182,7 +182,7 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --install ${var.querypie_version}",
+      "setup.v2.sh --yes --universal --install ${var.querypie_version}",
       "setup.v2.sh --verify-installation",
     ]
   }
