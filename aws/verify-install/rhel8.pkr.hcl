@@ -22,6 +22,12 @@ variable "architecture" {
   description = "x86_64 | arm64"
 }
 
+variable "container_engine" {
+  type        = string
+  default     = "docker"
+  description = "docker | podman"
+}
+
 variable "resource_owner" {
   type        = string
   default     = "RHEL8-Installer"
@@ -144,7 +150,7 @@ build {
 
   provisioner "shell" {
     expect_disconnect = true # It will logout at the end of this provisioner.
-    script = "../scripts/install-docker-on-rhel8.sh"
+    script = var.container_engine == "podman" ? "../scripts/install-podman-on-rhel8.sh" : "../scripts/install-docker-on-rhel8.sh"
   }
 
   # Install scripts such as setup.v2.sh
@@ -164,7 +170,7 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --install ${var.querypie_version}",
+      "setup.v2.sh --yes --universal --install ${var.querypie_version}",
       "setup.v2.sh --verify-installation",
     ]
   }

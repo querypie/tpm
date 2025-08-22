@@ -3,13 +3,17 @@
 set -o nounset -o errexit -o errtrace -o pipefail
 set -o xtrace
 
-function install_docker() {
-  sudo dnf install -y docker
+packages=(
+  podman
+  podman-plugins
+  podman-manpages
+)
 
-  sudo systemctl start docker
-  sudo systemctl enable docker
+function install_podman() {
+  sudo dnf -y -q --best install "${packages[@]}"
 
-  sudo usermod -aG docker "$USER"
+  # Enable the Podman socket for docker-compose to interact with Podman
+  systemctl --user enable --now podman.socket
 }
 
 function install_docker_compose() {
@@ -23,24 +27,19 @@ function install_docker_compose() {
   fi
 }
 
-function test_if_docker_installed_already {
+function test_if_podman_installed_already {
   # Show the current process list and group information
   ps ux
   id -Gn
-  docker ps
-}
-
-function shutdown_ssh_session {
-  killall sshd
+  podman ps
 }
 
 function main() {
-  if test_if_docker_installed_already; then
+  if test_if_podman_installed_already; then
     :
   else
-    install_docker
+    install_podman
     install_docker_compose
-    shutdown_ssh_session
   fi
 }
 

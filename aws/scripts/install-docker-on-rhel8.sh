@@ -14,9 +14,6 @@ packages=(
 )
 
 function install_docker_and_compose() {
-  local hardware
-  hardware=$(uname -m)
-
   sudo dnf -y -q --setopt=install_weak_deps=False install dnf-plugins-core
   sudo rm -f /etc/yum.repos.d/docker-ce.repo /etc/yum.repos.d/docker-ce-staging.repo
   sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo

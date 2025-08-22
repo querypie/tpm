@@ -22,7 +22,8 @@ function log::error() {
 }
 
 function packer::build() {
-  local version=$1 distro=$2 architecture=$3 packer_option="${PACKER_OPTION:-}" packer
+  local version=$1 distro=$2 architecture=$3 container_engine=$4
+  local packer_option="${PACKER_OPTION:-}" packer
   # NOTE(JK): Use `PACKER_OPTION=-on-error=abort` to allow debugging the AMI build process.
   echo >&2 "### Install QueryPie and Verify with Packer ###"
   echo >&2 "PACKER_OPTION: $packer_option"
@@ -38,6 +39,7 @@ function packer::build() {
   log::do packer build \
     -var "querypie_version=$version" \
     -var "architecture=${architecture}" \
+    -var "container_engine=${container_engine}" \
     -var "resource_owner=${USER:-Unknown}" \
     -timestamp-ui \
     ${packer_option} \
@@ -54,16 +56,17 @@ function validate_environment() {
 }
 
 function main() {
-  local querypie_version=${1:-} distro=${2:-amazon-linux-2023} architecture=${3:-x86_64}
+  local querypie_version=${1:-} distro=${2:-amazon-linux-2023} architecture=${3:-x86_64} container_engine=${4:-docker}
   if [[ -z "$querypie_version" ]]; then
     cat <<END_OF_USAGE
-Usage: $0 <querypie_version> [<distro>] [<architecture>]
+Usage: $0 <querypie_version> [<distro>] [<architecture>] [<container_engine>]
 
 EXAMPLE:
   $0 11.0.1 amazon-linux-2023
   $0 11.0.1 amazon-linux-2023 arm64
   $0 11.0.1 ubuntu-24.04
   $0 11.0.1 ubuntu-22.04
+  $0 11.0.1 rhel8 x86_64 podman
   PACKER_OPTION=-on-error=abort $0 11.0.1 amazon-linux-2023
 
 END_OF_USAGE
@@ -72,7 +75,7 @@ END_OF_USAGE
 
   validate_environment
 
-  packer::build "$querypie_version" "$distro" "$architecture"
+  packer::build "$querypie_version" "$distro" "$architecture" "$container_engine"
 }
 
 main "$@"

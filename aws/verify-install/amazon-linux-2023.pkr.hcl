@@ -22,6 +22,12 @@ variable "architecture" {
   description = "x86_64 | arm64"
 }
 
+variable "container_engine" {
+  type        = string
+  default     = "docker"
+  description = "docker | podman"
+}
+
 variable "resource_owner" {
   type        = string
   default     = "AL2023-Installer"
