@@ -24,8 +24,10 @@ variable "architecture" {
 
 variable "container_engine" {
   type        = string
-  default     = "docker"
-  description = "docker | podman"
+  default     = "none"
+  description = "docker | podman | none"
+  # If container_engine is set to none, Packer script will not install a container engine.
+  # setup.v2.sh will install Docker or Podman.
 }
 
 variable "resource_owner" {
@@ -147,9 +149,20 @@ build {
     ]
   }
 
+  # Install scripts such as setup.v2.sh
+  provisioner "file" {
+    source      = "../scripts/"
+    destination = "/tmp/"
+  }
+
   provisioner "shell" {
     expect_disconnect = true # It will logout at the end of this provisioner.
-    script = "../scripts/install-docker-on-amazon-linux-2023.sh"
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      var.container_engine == "docker" ? "/tmp/install-docker-on-amazon-linux-2023.sh" : "true",
+      var.container_engine == "podman" ? "/tmp/podman_unavailable.sh" : "true",
+      var.container_engine == "none" ? "/tmp/setup.v2.sh --container-engine-only" : "true",
+    ]
   }
 
   # Install scripts such as setup.v2.sh

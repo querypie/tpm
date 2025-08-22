@@ -19,7 +19,7 @@ set -o nounset -o errexit -o pipefail
 
 RECOMMENDED_VERSION="11.1.1" # QueryPie version to install by default.
 ASSUME_YES=false
-DOCKER=docker  # The default Container Engine
+DOCKER=docker          # The default Container Engine
 COMPOSE=docker-compose # The default Compose tool
 
 function print_usage_and_exit() {
@@ -183,7 +183,7 @@ function verify::container_engine_installation() {
   exit 1
 }
 
-function install::docker() {
+function install::docker_or_podman() {
   echo >&2 "#"
   echo >&2 "## Install Docker engine"
   echo >&2 "#"
@@ -205,12 +205,13 @@ function install::docker() {
   local lsb_id lsb_id_like user
   lsb_id="$(lsb::id)"
   lsb_id_like="$(lsb::id_like)"
+  echo >&2 "# Detected Linux distribution: ID=$lsb_id, ID_LIKE=$lsb_id_like"
   user="$(id -un 2>/dev/null || true)"
 
   case "$lsb_id" in
   amzn)
     case "$lsb_id_like" in
-    fedora)
+    fedora) # Amazon Linux 2023 - Docker is available, but Podman is not.
       log::sudo dnf install -y docker
       ;;
     *)
@@ -232,7 +233,7 @@ function install::docker() {
   log::sudo usermod -aG docker "$user"
   echo >&2 "# User '$user' has been added to the Docker group. A logout and login is required to use Docker without sudo."
   echo >&2 "# Please rerun this script after logging back in."
-  exit 1 # It could not complete the installation. So, exit with error.
+  return 7 # It could not complete the installation. So, exit with error.
 }
 
 function install::docker_compose() {
@@ -720,7 +721,7 @@ function cmd::install() {
   echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
 
   setup::sudo_privileges
-  install::docker
+  install::docker_or_podman
   install::docker_compose
   install::config_files
   install::verify_selinux
@@ -897,7 +898,7 @@ function cmd::install_partially_for_ami() {
   echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
 
   setup::sudo_privileges
-  install::docker
+  install::docker_or_podman
   install::docker_compose
   install::config_files
 
@@ -1100,6 +1101,24 @@ function cmd::verify_not_installed() {
   fi
 }
 
+function cmd::install_container_engine_only() {
+  echo >&2 "#"
+  echo >&2 "### Install Container Engine only"
+  echo >&2 "#"
+
+  setup::sudo_privileges
+  if install::docker_or_podman; then
+    echo >&2 "# The system has a container engine already."
+  elif [[ $? == 7 ]]; then
+    echo >&2 "# Now it will shutdown ssh session to apply the changes."
+    pkill -f sshd || true
+  else
+    log::error "Please report this problem to the technical support team of QueryPie."
+    log::do uname -a
+    exit 1
+  fi
+}
+
 function cmd::install_recommended() {
   echo >&2 "### Install QueryPie version $RECOMMENDED_VERSION ###"
   if [[ -d ./querypie ]]; then
@@ -1201,6 +1220,10 @@ function main() {
       cmd="${1#--}"
       shift
       ;;
+    --container-engine-only)
+      cmd="${1#--}"
+      shift
+      ;;
     --populate-env | --reset-credential)
       cmd="${1#--}"
       shift
@@ -1254,6 +1277,9 @@ function main() {
     ;;
   verify-not-installed)
     cmd::verify_not_installed
+    ;;
+  container-engine-only)
+    cmd::install_container_engine_only
     ;;
   populate-env)
     require::compose_env_file "$@"

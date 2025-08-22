@@ -56,7 +56,7 @@ function validate_environment() {
 }
 
 function main() {
-  local querypie_version=${1:-} distro=${2:-amazon-linux-2023} architecture=${3:-x86_64} container_engine=${4:-docker}
+  local querypie_version=${1:-} distro=${2:-amazon-linux-2023} architecture=${3:-x86_64} container_engine=${4:-none}
   if [[ -z "$querypie_version" ]]; then
     cat <<END_OF_USAGE
 Usage: $0 <querypie_version> [<distro>] [<architecture>] [<container_engine>]
