@@ -29,9 +29,8 @@ function install_docker_and_compose() {
 
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] $DOWNLOAD_URL/$lsb_dist $distro_version stable" |
     sudo tee /etc/apt/sources.list.d/docker.list
-  DEBIAN_FRONTEND=noninteractive sudo -E sudo apt -qq update
-
-  DEBIAN_FRONTEND=noninteractive sudo -E apt-get -y -qq install "${packages[@]}"
+  sudo DEBIAN_FRONTEND=noninteractive apt -qq update
+  sudo DEBIAN_FRONTEND=noninteractive apt-get -y -qq install "${packages[@]}"
 
   sudo systemctl start docker
   sudo systemctl enable docker
