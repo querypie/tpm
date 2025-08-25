@@ -8,7 +8,7 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.08.4" # YY.MM.PATCH
+SCRIPT_VERSION="25.08.5" # YY.MM.PATCH
 echo -n "#### QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
@@ -224,23 +224,23 @@ function install::docker_or_podman() {
   rhel)
     case "$lsb_id_like" in
     fedora) # Red Hat Enterprise Linux 8, Red Hat Enterprise Linux 9
-      log::sudo dnf -y -q --best install podman podman-plugins podman-manpages
+      log::sudo dnf -y -q --best install podman podman-plugins podman-manpages podman-docker
       DOCKER=podman
       ;;
     *)
-      log::sudo dnf -y -q --best install podman podman-plugins podman-manpages
+      log::sudo dnf -y -q --best install podman podman-plugins podman-manpages podman-docker
       DOCKER=podman
       ;;
     esac
     ;;
   rocky)
     # ID_LIKE="rhel centos fedora" - Rocky Linux 8
-    log::sudo dnf -y -q --best install podman podman-plugins podman-manpages
+    log::sudo dnf -y -q --best install podman podman-plugins podman-manpages podman-docker
     DOCKER=podman
     ;;
   centos)
     # ID_LIKE=rhel fedora - CentOS Stream 9
-    log::sudo dnf -y -q --best install podman podman-plugins podman-manpages
+    log::sudo dnf -y -q --best install podman podman-plugins podman-manpages podman-docker
     DOCKER=podman
     ;;
   *)
