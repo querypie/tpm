@@ -1,14 +1,30 @@
 #!/usr/bin/env bash
 
+set -o nounset -o errexit -o errtrace -o pipefail
+
+BOLD_CYAN="\e[1;36m"
+RESET="\e[0m"
+
+function log::do() {
+  # print ascii color code for bold cyan and reset
+  printf "%b+ %s%b\n" "$BOLD_CYAN" "$*" "$RESET" 1>&2
+  if "$@"; then
+    return 0
+  else
+    log::error "Failed to run: $*"
+    return 1
+  fi
+}
+
 function list_ami_images() {
   local owners=$1 name=${2:-}
 
   printf "Name\tImageId\tState\tCreationDate\tDescription\tArch\tVType\tDevice\n"
   # Run the AWS CLI command and capture output into tmp_file
-  aws ec2 describe-images \
+  log::do aws ec2 describe-images \
     --owners "${owners}" \
     --filters "Name=name,Values=${name}*" \
-    --query 'Images[][Name, ImageId, State, CreationDate, Description, Architecture, VirtualizationType, BlockDeviceMappings[0].DeviceName]' \
+    --query 'sort_by(Images,&CreationDate)[::-1].[Name, ImageId, State, CreationDate, Description, Architecture, VirtualizationType, BlockDeviceMappings[0].DeviceName]' \
     --output text |
     sed -e 's/\bNone\b/-/g' |
     column -t -s $'\t'
@@ -20,7 +36,7 @@ function main() {
   self)
     owners="self"
     ;;
-  marketplace)
+  aws-marketplace)
     owners="679593333241" # AWS Marketplace
     ;;
   redhat)
@@ -29,18 +45,24 @@ function main() {
   rocky)
     owners="792107900819" # Rocky Linux
     ;;
+  centos)
+    owners="125523088429" # CentOS Stream and Fedora
+    ;;
   canonical)
     owners="099720109477" # Canonical
     ;;
-  *)
+  --help | -h | help | -*)
     cat <<EOF
-Usage: $0 [self|marketplace|redhat|rocky|canonical] [name]
+Usage: $0 [self|aws-marketplace|redhat|rocky|centos|canonical] [name]
 
 EXAMPLES:
   $0 self querypie
   $0 rocky Rocky-8-
 EOF
     exit 1
+    ;;
+  *)
+    owners="$owner"
     ;;
   esac
 

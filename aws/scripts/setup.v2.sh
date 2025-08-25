@@ -228,13 +228,18 @@ function install::docker_or_podman() {
       DOCKER=podman
       ;;
     *)
-      log::sudo amazon-linux-extras install -y docker
-      DOCKER=docker
+      log::sudo dnf -y -q --best install podman podman-plugins podman-manpages
+      DOCKER=podman
       ;;
     esac
     ;;
   rocky)
     # ID_LIKE="rhel centos fedora" - Rocky Linux 8
+    log::sudo dnf -y -q --best install podman podman-plugins podman-manpages
+    DOCKER=podman
+    ;;
+  centos)
+    # ID_LIKE=rhel fedora - CentOS Stream 9
     log::sudo dnf -y -q --best install podman podman-plugins podman-manpages
     DOCKER=podman
     ;;
