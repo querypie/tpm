@@ -223,7 +223,7 @@ function install::docker_or_podman() {
     ;;
   rhel)
     case "$lsb_id_like" in
-    fedora) # Red Hat Enterprise Linux 8
+    fedora) # Red Hat Enterprise Linux 8, Red Hat Enterprise Linux 9
       log::sudo dnf -y -q --best install podman podman-plugins podman-manpages
       DOCKER=podman
       ;;
