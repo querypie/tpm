@@ -32,7 +32,7 @@ variable "container_engine" {
 
 variable "resource_owner" {
   type        = string
-  default     = "RHEL8-Installer"
+  default     = "RHEL9-Installer"
   description = "Owner of AWS Resources"
 }
 
@@ -42,7 +42,7 @@ locals {
   ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
 
   region = "ap-northeast-2"
-  ssh_username = "ec2-user" # SSH username for RHEL 8
+  ssh_username = "ec2-user" # SSH username for RHEL 9
 
   common_tags = {
     CreatedBy = "Packer"
@@ -55,30 +55,30 @@ locals {
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "RHEL8-Installer-${var.querypie_version}"
+      Name = "RHEL9-Installer-${var.querypie_version}"
     }
   )
 }
 
-# Data source for latest RHEL 8 AMI
+# Data source for latest RHEL 9 AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# rhel8 : Name of the data source
+# rhel9 : Name of the data source
 ###
-# aws ec2 describe-images --image-ids ami-044ae8b12299e7d5f
-# "Name": "RHEL-8.10.0_HVM-20250710-x86_64-1833-Hourly2-GP3"
+# aws ec2 describe-images --image-ids ami-0090b5923aa899b3e
+# "Name": "RHEL-9.6.0_HVM-20250730-x86_64-0-Hourly2-GP3"
 # "Description": "Provided by Red Hat, Inc."
 # "Architecture": "x86_64"
 # "DeviceName": "/dev/sda1"
 ###
-# aws ec2 describe-images --image-ids ami-0f77f9395e374527a
-# "Name": "RHEL-8.10.0_HVM-20250710-arm64-1829-Hourly2-GP3"
+# aws ec2 describe-images --image-ids ami-0937436cf8d57a039
+# "Name": "RHEL-9.6.0_HVM-20250730-arm64-0-Hourly2-GP3"
 # "Description": "Provided by Red Hat, Inc."
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
-data "amazon-ami" "rhel8" {
+data "amazon-ami" "rhel9" {
   filters = {
-    name                = "RHEL-8.*_HVM-*"
+    name                = "RHEL-9.*_HVM-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
@@ -91,10 +91,10 @@ data "amazon-ami" "rhel8" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# rhel8-install : Name of the builder
-source "amazon-ebs" "rhel8-install" {
+# rhel9-install : Name of the builder
+source "amazon-ebs" "rhel9-install" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.rhel8.id
+  source_ami      = data.amazon-ami.rhel9.id
   ami_name        = local.ami_name
 
   region               = local.region
@@ -140,7 +140,7 @@ source "amazon-ebs" "rhel8-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.rhel8-install"
+    "source.amazon-ebs.rhel9-install"
   ]
 
   provisioner "shell" {
