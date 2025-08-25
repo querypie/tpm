@@ -7,6 +7,8 @@ packages=(
   podman
   podman-plugins
   podman-manpages
+  # podman-docker will not be installed intentionally, to verify that setup.v2.sh works well without it.
+  # However, when setup.v2.sh installs Podman by itself, podman-docker will be installed for compatible user experience with Docker.
 )
 
 function install_podman() {
