@@ -160,7 +160,7 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
         var.container_engine == "docker" ? "/tmp/install-docker-on-amazon-linux-2023.sh" : "true",
-        var.container_engine == "podman" ? "/tmp/podman_unavailable.sh" : "true",
+        var.container_engine == "podman" ? "/tmp/podman-unavailable.sh" : "true",
         var.container_engine == "none" ? "/tmp/setup.v2.sh --container-engine-only" : "true",
     ]
   }

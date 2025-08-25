@@ -85,27 +85,18 @@ function log::sudo() {
 
 # /etc/os-release is provided by Linux Standard Base.
 # https://refspecs.linuxfoundation.org/lsb.shtml
-function lsb::id_like() {
-  if [[ -r /etc/os-release ]]; then
-    ( # Run in subshell, not to import variables into the current shell.
-      . /etc/os-release
-      echo "$ID_LIKE" | tr '[:upper:]' '[:lower:]'
-    )
-  else
-    echo ""
-  fi
-}
+function lsb::echo() {
+  local var=$1
 
-function lsb::id() {
   # Every system that we officially support has /etc/os-release
   if [[ -r /etc/os-release ]]; then
     ( # Run in subshell, not to import variables into the current shell.
       . /etc/os-release
-      echo "$ID" | tr '[:upper:]' '[:lower:]'
+      echo "${!var}" | tr '[:upper:]' '[:lower:]'
     )
   else
-    # Returning an empty string here should be alright since the
-    # case statements don't act unless you provide an actual value
+    # Returning an empty string here should be alright,
+    # since the case statements don't act unless you provide an actual value
     echo ""
   fi
 }
@@ -202,10 +193,11 @@ function install::docker_or_podman() {
     return
   fi
 
-  local lsb_id lsb_id_like user
-  lsb_id="$(lsb::id)"
-  lsb_id_like="$(lsb::id_like)"
-  echo >&2 "# Detected Linux distribution: ID=$lsb_id, ID_LIKE=$lsb_id_like"
+  local lsb_id lsb_id_like lsb_version_id user
+  lsb_id="$(lsb::echo ID)"
+  lsb_id_like="$(lsb::echo ID_LIKE)"
+  lsb_version_id="$(lsb::echo VERSION_ID)"
+  echo >&2 "# Detected Linux distribution: ID=$lsb_id, ID_LIKE=$lsb_id_like, VERSION_ID=$lsb_version_id"
   user="$(id -un 2>/dev/null || true)"
 
   case "$lsb_id" in
@@ -242,6 +234,27 @@ function install::docker_or_podman() {
     # ID_LIKE=rhel fedora - CentOS Stream 9
     log::sudo dnf -y -q --best install podman podman-plugins podman-manpages podman-docker
     DOCKER=podman
+    ;;
+  ubuntu)
+    case "$lsb_version_id" in
+    24.04)
+      log::sudo DEBIAN_FRONTEND=noninteractive apt -qq update
+      log::sudo DEBIAN_FRONTEND=noninteractive apt-get -y -qq install podman podman-docker
+      DOCKER=podman
+      ;;
+    22.04)
+      # Podman version is 3.4.4 that is too outdated in Ubuntu 22.04 LTS
+      # Install Docker instead of Podman on Ubuntu 22.04 LTS
+      log::do curl -fsSL https://get.docker.com -o docker-install.sh
+      log::sudo sh docker-install.sh
+      DOCKER=docker
+      ;;
+    *)
+      log::do curl -fsSL https://get.docker.com -o docker-install.sh
+      log::sudo sh docker-install.sh
+      DOCKER=docker
+      ;;
+    esac
     ;;
   *)
     log::do curl -fsSL https://get.docker.com -o docker-install.sh
@@ -306,7 +319,7 @@ function install::docker_compose() {
     log::do $DOCKER compose version
     return
   else
-    echo >&2 "# Failed to install Docker Compose properly."
+    echo >&2 "# Failed to install Docker Compose properly: $($DOCKER compose version 2>&1 || true)"
     log::error "Please report this problem to the technical support team of QueryPie."
     log::do uname -a
     log::do ${DOCKER} --version
