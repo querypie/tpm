@@ -38,7 +38,8 @@ function test_if_podman_installed_already {
 
 function main() {
   if test_if_podman_installed_already; then
-    :
+    # Enable the Podman socket for docker-compose to interact with Podman
+    systemctl --user enable --now podman.socket
   else
     install_podman
     install_docker_compose

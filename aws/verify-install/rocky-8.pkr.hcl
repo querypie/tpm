@@ -32,7 +32,7 @@ variable "container_engine" {
 
 variable "resource_owner" {
   type        = string
-  default     = "RHEL9-Installer"
+  default     = "Rocky8-Installer"
   description = "Owner of AWS Resources"
 }
 
@@ -42,7 +42,7 @@ locals {
   ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
 
   region = "ap-northeast-2"
-  ssh_username = "ec2-user" # SSH username for RHEL 9
+  ssh_username = "rocky" # SSH username for Rocky Linux 8
 
   common_tags = {
     CreatedBy = "Packer"
@@ -55,46 +55,46 @@ locals {
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "RHEL9-Installer-${var.querypie_version}"
+      Name = "Rocky8-Installer-${var.querypie_version}"
     }
   )
 }
 
-# Data source for latest RHEL 9 AMI
+# Data source for latest Rocky Linux 8 AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# rhel9 : Name of the data source
+# rocky8 : Name of the data source
 ###
-# aws ec2 describe-images --image-ids ami-0090b5923aa899b3e
-# "Name": "RHEL-9.6.0_HVM-20250730-x86_64-0-Hourly2-GP3"
-# "Description": "Provided by Red Hat, Inc."
+# aws ec2 describe-images --image-ids ami-09bb074a3d74b2e9f
+# "Name": "Rocky-8-EC2-LVM-8.10-20240528.0.x86_64"
+# "Description": "Rocky-8-EC2-LVM-8.10-20240528.0.x86_64"
 # "Architecture": "x86_64"
 # "DeviceName": "/dev/sda1"
 ###
-# aws ec2 describe-images --image-ids ami-0937436cf8d57a039
-# "Name": "RHEL-9.6.0_HVM-20250730-arm64-0-Hourly2-GP3"
-# "Description": "Provided by Red Hat, Inc."
+# aws ec2 describe-images --image-ids ami-04e90309361d6c5ad
+# "Name": "Rocky-8-EC2-LVM-8.10-20240528.0.aarch64"
+# "Description": "Rocky-8-EC2-LVM-8.10-20240528.0.aarch64"
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
-data "amazon-ami" "rhel9" {
+data "amazon-ami" "rocky8" {
   filters = {
-    name                = "RHEL-9.*_HVM-*"
+    name                = "Rocky-8-EC2-LVM-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
   }
   most_recent = true
-  owners = ["309956199498"] # Red Hat's AWS Account ID
+  owners      = ["792107900819"] # Rocky Enterprise Software Foundation AWS Account ID
   region      = local.region
 }
 
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# rhel9-install : Name of the builder
-source "amazon-ebs" "rhel9-install" {
+# rocky8-install : Name of the builder
+source "amazon-ebs" "rocky8-install" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.rhel9.id
+  source_ami      = data.amazon-ami.rocky8.id
   ami_name        = local.ami_name
 
   region               = local.region
@@ -140,13 +140,18 @@ source "amazon-ebs" "rhel9-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.rhel9-install"
+    "source.amazon-ebs.rocky8-install"
   ]
 
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "cloud-init status --wait", # Now this EC2 instance is ready for more software installation.
+
+      # Rocky Linux 8 LVM has a small root filesystem size of 9 GiB by default.
+      "sudo growpart /dev/nvme0n1 5", # Resize the partition
+      "sudo lvextend -l +100%FREE /dev/mapper/rocky-root", # Extend the logical volume
+      "sudo xfs_growfs /", # Resize the filesystem
     ]
   }
 
@@ -160,8 +165,8 @@ build {
     expect_disconnect = true # It will logout at the end of this provisioner.
     inline_shebang = "/bin/bash -ex"
     inline = [
-        var.container_engine == "docker" ? "/tmp/install-docker-on-rhel8.sh" : "true",
-        var.container_engine == "podman" ? "/tmp/install-podman-on-rhel8.sh" : "true",
+        var.container_engine == "docker" ? "/tmp/install-docker-on-rhel.sh" : "true",
+        var.container_engine == "podman" ? "/tmp/install-podman-on-rhel.sh" : "true",
         var.container_engine == "none" ? "/tmp/setup.v2.sh --container-engine-only" : "true",
     ]
   }

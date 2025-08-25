@@ -160,8 +160,8 @@ build {
     expect_disconnect = true # It will logout at the end of this provisioner.
     inline_shebang = "/bin/bash -ex"
     inline = [
-        var.container_engine == "docker" ? "/tmp/install-docker-on-rhel8.sh" : "true",
-        var.container_engine == "podman" ? "/tmp/install-podman-on-rhel8.sh" : "true",
+        var.container_engine == "docker" ? "/tmp/install-docker-on-rhel.sh" : "true",
+        var.container_engine == "podman" ? "/tmp/install-podman-on-rhel.sh" : "true",
         var.container_engine == "none" ? "/tmp/setup.v2.sh --container-engine-only" : "true",
     ]
   }
