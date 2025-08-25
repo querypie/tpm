@@ -8,7 +8,7 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.08.5" # YY.MM.PATCH
+SCRIPT_VERSION="25.08.6" # YY.MM.PATCH
 echo -n "#### QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
@@ -135,19 +135,37 @@ function verify::container_engine_installation() {
 
   if docker --version 2>/dev/null | grep -q "^Docker version"; then
     DOCKER=docker
+    if $DOCKER ps >/dev/null 2>&1; then
+      echo >&2 "# Docker is already running and functional."
+      return
+    fi
   elif podman --version 2>/dev/null | grep -q "^podman version"; then
     DOCKER=podman
+    if $DOCKER ps >/dev/null 2>&1; then
+      echo >&2 "# Podman is already running and functional."
+      if systemctl --user is-active podman.socket; then
+        echo >&2 "# Podman socket is active."
+        return
+      else
+        echo >&2 "# Podman socket is not active. Enabling and starting podman.socket."
+        log::do systemctl --user enable --now podman.socket
+        if systemctl --user is-active podman.socket; then
+          echo >&2 "# Podman socket is now active."
+          return
+        else
+          log::error "Failed to activate Podman socket. Please check the Podman installation."
+          exit 1
+        fi
+      fi
+    fi
   else
-    echo >&2 "# Unknown version of Docker"
-    log::do docker --version
+    echo >&2 "# Unknown version of Docker or Podman"
+    log::do docker --version || true
+    log::do podman --version || true
     log::error "Please report this problem to the technical support team of QueryPie."
     exit 1
   fi
 
-  if $DOCKER ps >/dev/null 2>&1; then
-    echo >&2 "# Docker is already running and functional."
-    return
-  fi
   if (${DOCKER} ps 2>&1 || true) | grep -q "permission denied"; then
     echo >&2 "# The current user does not have permission to run Docker commands."
     echo >&2 "# The current groups for the user are:"

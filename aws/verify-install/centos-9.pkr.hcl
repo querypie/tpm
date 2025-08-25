@@ -162,8 +162,8 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
         # CentOS 9 can use the same installation scripts as RHEL 8
-        var.container_engine == "docker" ? "/tmp/install-docker-on-rhel8.sh" : "true",
-        var.container_engine == "podman" ? "/tmp/install-podman-on-rhel8.sh" : "true",
+        var.container_engine == "docker" ? "/tmp/install-docker-on-rhel.sh" : "true",
+        var.container_engine == "podman" ? "/tmp/install-podman-on-rhel.sh" : "true",
         var.container_engine == "none" ? "/tmp/setup.v2.sh --container-engine-only" : "true",
     ]
   }
