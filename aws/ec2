@@ -81,7 +81,7 @@ function ec2::show_instance_list() {
   # Capture describe-instances output into the provided file; do not fail caller on errors
   log::do aws ec2 describe-instances \
     --filters "Name=tag:Owner,Values=${username_list}" \
-    --query 'Reservations[].Instances[][Tags[?Key==`Name`].Value|[0], InstanceId, State.Name, InstanceType, PublicIpAddress, PrivateIpAddress, LaunchTime]' \
+    --query 'sort_by(Reservations[].Instances[], &LaunchTime)[].[Tags[?Key==`Name`].Value|[0], InstanceId, State.Name, InstanceType, PublicIpAddress, PrivateIpAddress, LaunchTime]' \
     --output text >"${out_file}" || true
 
   # Check tmpfile size/content instead of using an intermediate rows variable
@@ -223,10 +223,10 @@ function ec2::terminate() {
       ;;
     esac
 
-    printf "Confirm terminate %s (%s) [type 'yes' to proceed]: " "${instance_id}" "${name:-NoName}" 1>&2
-    local confirm
-    read -r confirm || confirm=""
-    if [[ "${confirm}" == "yes" ]]; then
+    printf "Confirm terminate %s (%s) [%s] [%s] " \
+      "${instance_id}" "${name:-NoName}" "${public_ip:-}" "${private_ip:-}" 1>&2
+
+    if ask_yes "[type 'yes' to proceed]: "; then
       echo >&2 "## Terminating instance ${instance_id}..."
       if log::do aws ec2 terminate-instances --instance-ids "${instance_id}" >/dev/null; then
         echo >&2 "## Instance ${instance_id} termination request submitted."
@@ -240,6 +240,16 @@ function ec2::terminate() {
   done
   # Close FD 9
   exec 9<&-
+}
+
+function ask_yes() {
+  printf "%s" "$1" >&2
+  local answer
+  read -r answer # zsh compatibility: zsh does not support read -p prompt.
+  case "${answer}" in
+  y | Y | yes | YES | Yes) return ;;
+  *) return 1 ;;
+  esac
 }
 
 function ec2::help() {

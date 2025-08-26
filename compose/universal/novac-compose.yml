@@ -1,6 +1,6 @@
 # Optimized for QueryPie 11.0.x or later
 # Compatible with both Docker and Podman
-# Version of novac-compose.yml: 25.07.2
+# Version of novac-compose.yml: 25.08.2
 
 name: querypie-novac
 services:
