@@ -8,8 +8,8 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.08.6" # YY.MM.PATCH
-echo -n "#### QueryPie Installer ${SCRIPT_VERSION}, " >&2
+SCRIPT_VERSION="25.08.7" # YY.MM.PATCH
+echo -n "#### setup.v2.sh - QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
 
@@ -32,13 +32,20 @@ Usage: $program_name [options]
     or $program_name [options] --install <version>
     or $program_name [options] --upgrade <version>
     or $program_name [options] --uninstall
-    or $program_name [options] --universal
     or $program_name [options] --install-partially-for-ami <version>
     or $program_name [options] --resume
     or $program_name [options] --verify-installation
     or $program_name [options] --populate-env <env-file>
     or $program_name [options] --reset-credential <env-file>
     or $program_name [options] --help
+
+ENVIRONMENT VARIABLES:
+
+  DOCKER_REGISTRY                Default: 'docker.io/querypie/'
+    The Docker registry to pull images from.
+    You may specify a private registry such as 'myregistry.example.com/querypie/'.
+    Note that the trailing slash is required, if you set this variable.
+    Actual image names will be like 'myregistry.example.com/querypie/querypie:11.1.1'.
 
 OPTIONS:
   --yes               Assume "yes" to all prompts and run non-interactively.
@@ -353,18 +360,26 @@ function install::config_files() {
   echo >&2 "# Target directory is ./querypie/${QP_VERSION}/"
   mkdir -p ./querypie/"${QP_VERSION}"
 
-  if [[ ! -r package.tar.gz ]]; then # Testing purpose
+  local package_already_existed=false
+  if [[ -r package.tar.gz ]]; then
+    echo >&2 "# Detected an existing package.tar.gz file."
+    echo >&2 "# This file will be used instead of downloading a new one."
+    echo >&2 "# Such behavior is intended for closed or air-gapped environments."
+    package_already_existed=true
+  else
     log::do curl -fsSL https://dl.querypie.com/releases/compose/"$PACKAGE_VERSION"/package.tar.gz -o package.tar.gz
   fi
   log::do umask 0022 # Use 644 for files and 755 for directories by default
   log::do tar zxvf package.tar.gz -C ./querypie/"$QP_VERSION"
-  rm package.tar.gz
+  [[ $package_already_existed == true ]] ||
+    log::do rm package.tar.gz # Do not remove package.tar.gz if it already existed.
 
   local compose_yml=compose.yml
   [[ -f ./querypie/"$QP_VERSION"/${compose_yml} ]] || compose_yml=docker-compose.yml
   log::do sed -i.orig \
     -e "s#- \\./mysql:/var/lib/mysql#- ../mysql:/var/lib/mysql#" \
-    -e "s#harbor.chequer.io/querypie/#docker.io/querypie/#" \
+    -e "s#harbor.chequer.io/querypie/#${DOCKER_REGISTRY}#" \
+    -e "s#docker.io/querypie/#${DOCKER_REGISTRY}#" \
     -e "s#source: /var/log/querypie#source: ../log#" \
     ./querypie/"$QP_VERSION"/${compose_yml}
   rm ./querypie/"$QP_VERSION"/${compose_yml}.orig
@@ -1252,7 +1267,9 @@ function require::compose_env_file() {
 }
 
 function main() {
-
+  # PACKAGE_VERSION has a default value of 'universal' if not set as an environment variable.
+  PACKAGE_VERSION=${PACKAGE_VERSION:-universal}
+  DOCKER_REGISTRY=${DOCKER_REGISTRY:-docker.io/querypie/}
   local -a arguments=() # argv is reserved for zsh.
   local cmd="install_recommended"
   while [[ $# -gt 0 ]]; do
@@ -1273,6 +1290,7 @@ function main() {
       shift
       ;;
     --universal)
+      # Obsolete option, kept for backward compatibility.
       PACKAGE_VERSION=universal
       shift
       ;;
