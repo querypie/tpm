@@ -1,0 +1,41 @@
+# This is a systemd USER service for rootless Podman Compose
+# Purpose: Auto-start QueryPie app profile after reboot with minimal extra setup
+#
+# Quick start (as the target user):
+#   1) Enable lingering so user systemd runs after reboot:
+#        loginctl enable-linger "$USER"
+#   2) Copy/link this file to: ~/.config/systemd/user/podman-querypie-app.service
+#      Or run from this repo path using: systemctl --user link podman-querypie-app.service
+#   3) Enable and start:
+#        systemctl --user enable --now podman-querypie-app.service
+#
+# Notes:
+# - This unit runs: `podman compose --profile app up -d`
+# - It assumes the compose project directory is at the path below in WorkingDirectory.
+#   If your repo lives elsewhere, edit WorkingDirectory accordingly.
+
+[Unit]
+Description=QueryPie (Podman rootless) - app profile (compose up -d)
+Documentation=https://github.com/querypie/tpm/tree/main/compose/universal
+# Start app after database unit is active
+Wants=podman-querypie-database.service
+After=podman-querypie-database.service default.target
+
+[Service]
+Type=oneshot
+# Mark service active after ExecStart exits successfully
+RemainAfterExit=yes
+# IMPORTANT: Set to the directory that contains compose.yml and .env
+WorkingDirectory=%h/querypie/current/
+# Environment is inherited from the user session; podman compose will read .env in WorkingDirectory
+# Bring up app-related containers in detached mode
+ExecStart=/usr/bin/podman compose --profile app up -d
+# On stop, gracefully stop containers but do not remove them
+ExecStop=/usr/bin/podman compose --profile app stop
+# Optional: add some start/stop timeouts (tune if needed)
+# TimeoutStartSec needs to be longer than 10 seconds to start up querypie-app-1.
+TimeoutStartSec=30
+TimeoutStopSec=20
+
+[Install]
+WantedBy=default.target

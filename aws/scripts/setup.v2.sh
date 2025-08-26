@@ -8,7 +8,7 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.08.7" # YY.MM.PATCH
+SCRIPT_VERSION="25.08.8" # YY.MM.PATCH
 echo -n "#### setup.v2.sh - QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
@@ -770,6 +770,36 @@ function install::make_symlink_of_current() {
   log::do popd
 }
 
+function install::enable_systemd_service_for_rootless_podman() {
+  if [[ $DOCKER != "podman" ]]; then
+    echo >&2 "## Skip enabling systemd service for rootless Podman since Docker is used."
+    return
+  fi
+  local rootless
+  rootless=$(podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null)
+  if [[ $rootless != true ]]; then
+    echo >&2 "## Skip enabling systemd service for rootless Podman since Podman is not running in rootless mode."
+    return
+  fi
+
+  echo >&2 "## Enable systemd service for rootless Podman"
+  local linger
+  linger=$(loginctl show-user "$USER" | grep Linger= | cut -d'=' -f2)
+  if [[ $linger == yes ]]; then
+    echo >&2 "# Linger is already enabled for user $USER."
+  else
+    echo >&2 "# Enabling linger for user $USER."
+    log::sudo loginctl enable-linger "$USER"
+  fi
+
+  echo >&2 "# Enabling and starting podman-querypie-database.service and podman-querypie-app.service"
+  log::do systemctl --user link querypie/current/systemd/podman-querypie-database.service
+  log::do systemctl --user link querypie/current/systemd/podman-querypie-app.service
+
+  log::do systemctl --user enable --now podman-querypie-database.service
+  log::do systemctl --user enable --now podman-querypie-app.service
+}
+
 function install::ask_yes() {
   echo "$@" >&2
   if [[ $ASSUME_YES == true ]]; then
@@ -838,6 +868,7 @@ function cmd::install() {
   log::do popd
 
   install::make_symlink_of_current
+  install::enable_systemd_service_for_rootless_podman
 
   echo >&2 "### Installation completed successfully"
   echo >&2 "### Access QueryPie at $(install::base_url http) or $(install::base_url https) in your browser"
@@ -1270,6 +1301,7 @@ function main() {
   # PACKAGE_VERSION has a default value of 'universal' if not set as an environment variable.
   PACKAGE_VERSION=${PACKAGE_VERSION:-universal}
   DOCKER_REGISTRY=${DOCKER_REGISTRY:-docker.io/querypie/}
+  USER=${USER:-$(id -un)}
   local -a arguments=() # argv is reserved for zsh.
   local cmd="install_recommended"
   while [[ $# -gt 0 ]]; do

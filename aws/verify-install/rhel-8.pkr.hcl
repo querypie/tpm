@@ -183,7 +183,25 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
+      # Copy package.tar.gz if it exists in /tmp.
+      "[[ -f /tmp/package.tar.gz ]] && cp /tmp/package.tar.gz .",
       "setup.v2.sh --yes --universal --install ${var.querypie_version}",
+      "setup.v2.sh --verify-installation",
+    ]
+  }
+
+  # Verify Installation after Reboot
+  provisioner "shell" {
+    expect_disconnect = true # It will logout at the end of this provisioner.
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      "sudo reboot",
+    ]
+  }
+  provisioner "shell" {
+    pause_before = "30s" # Wait for 30 seconds before attempting to reconnect
+    inline_shebang = "/bin/bash -ex"
+    inline = [
       "setup.v2.sh --verify-installation",
     ]
   }

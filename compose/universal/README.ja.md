@@ -1,7 +1,7 @@
 # Podman と Docker をサポートするユニバーサル実行環境
 
-Version of compose.yml: 25.08.1
-最終更新日: 2025年8月23日
+Version of compose.yml: 25.08.2
+最終更新日: 2025年8月26日
 
 QueryPie はコンテナ方式で配布されるアプリケーションであり、コンテナエンジンとして Docker と Podman をサポートしています。
 このディレクトリのファイルは、Compose ツールを使用して QueryPie を実行および運用するための設定ファイルです。

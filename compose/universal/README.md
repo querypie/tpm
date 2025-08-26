@@ -1,7 +1,7 @@
 # Universal Execution Environment Supporting Podman and Docker
 
-Version of compose.yml: 25.08.1
-Last updated: August 23, 2025
+Version of compose.yml: 25.08.2
+Last updated: August 26, 2025
 
 QueryPie is an application deployed in Container format, supporting both Docker and Podman as Container Engines.
 The files in this directory are configuration files for running and operating QueryPie using Compose Tool.
