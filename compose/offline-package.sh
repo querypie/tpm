@@ -38,8 +38,8 @@ function archive_package() {
   echo >&2 "## Creating offline/package.tar.gz from $compose_yml"
   compose_dir=$(dirname "$compose_yml")
   pushd "$compose_dir"
-  [[ -f ../offline/package.tar.gz ]] && rm -f ../offline/package.tar.gz
-  log::do tar zcvf ../offline/package.tar.gz .
+  [[ -f $SCRIPT_DIR/offline/package.tar.gz ]] && rm -f "$SCRIPT_DIR"/offline/package.tar.gz
+  log::do tar zcvf "$SCRIPT_DIR"/offline/package.tar.gz .
   popd
 }
 
