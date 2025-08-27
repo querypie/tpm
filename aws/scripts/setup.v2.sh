@@ -63,10 +63,8 @@ BOLD_RED="\e[1;91m"
 RESET="\e[0m"
 
 function log::do() {
-  local line_no
-  line_no=$(caller | awk '{print $1}')
   # shellcheck disable=SC2064
-  trap "log::error 'Failed to run at line $line_no: $*'" ERR
+  trap "log::error 'Failed to run: $*'" ERR
   printf "%b+ %s%b\n" "$BOLD_CYAN" "$*" "$RESET" 1>&2
   "$@"
 }
