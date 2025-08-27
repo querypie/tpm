@@ -81,6 +81,8 @@ function save_container_images() {
     log::do cp .env.template .env
   elif [[ -f compose-env ]]; then
     log::do cp compose-env .env
+  elif [[ -f .env ]]; then
+    echo >&2 "# Using existing .env file."
   else
     log::error "No .env.template or compose-env file found."
     exit 1
