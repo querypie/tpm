@@ -332,10 +332,18 @@ function install::docker_compose() {
   [[ $hardware == arm64 ]] && hardware=aarch64
   if [[ $kernel == linux || $kernel == darwin ]] && [[ $hardware == x86_64 || $hardware == aarch64 ]]; then
     echo >&2 "# Docker Compose is not installed. Installing now."
-    log::do curl -fsSL "https://dl.querypie.com/releases/bin/v2.39.1/docker-compose-${kernel}-${hardware}" -o docker-compose
+
+    if [[ -r "offline/docker-compose-${kernel}-${hardware}" ]]; then
+      echo >&2 "# Detected an offline/docker-compose-${kernel}-${hardware} file."
+      echo >&2 "# This file will be used instead of downloading a new one."
+      echo >&2 "# Such behavior is intended for closed or air-gapped environments."
+      log::do cp "offline/docker-compose-${kernel}-${hardware}" docker-compose
+    else
+      log::do curl -fsSL "https://dl.querypie.com/releases/bin/v2.39.1/docker-compose-${kernel}-${hardware}" -o docker-compose
+    fi
     log::do install -m 755 -D docker-compose ~/.docker/cli-plugins/docker-compose
     log::sudo install -m 755 docker-compose /usr/local/bin
-    rm docker-compose
+    log::do rm docker-compose
   fi
 
   if $DOCKER compose version &>/dev/null; then
@@ -360,19 +368,17 @@ function install::config_files() {
   echo >&2 "# Target directory is ./querypie/${QP_VERSION}/"
   mkdir -p ./querypie/"${QP_VERSION}"
 
-  local package_already_existed=false
-  if [[ -r package.tar.gz ]]; then
-    echo >&2 "# Detected an existing package.tar.gz file."
+  if [[ -r offline/package.tar.gz ]]; then
+    echo >&2 "# Detected an offline/package.tar.gz file."
     echo >&2 "# This file will be used instead of downloading a new one."
     echo >&2 "# Such behavior is intended for closed or air-gapped environments."
-    package_already_existed=true
+    log::do cp offline/package.tar.gz package.tar.gz
   else
     log::do curl -fsSL https://dl.querypie.com/releases/compose/"$PACKAGE_VERSION"/package.tar.gz -o package.tar.gz
   fi
   log::do umask 0022 # Use 644 for files and 755 for directories by default
   log::do tar zxvf package.tar.gz -C ./querypie/"$QP_VERSION"
-  [[ $package_already_existed == true ]] ||
-    log::do rm package.tar.gz # Do not remove package.tar.gz if it already existed.
+  log::do rm package.tar.gz
 
   local compose_yml=compose.yml
   [[ -f ./querypie/"$QP_VERSION"/${compose_yml} ]] || compose_yml=docker-compose.yml
