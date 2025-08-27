@@ -92,15 +92,17 @@ function save_container_images() {
     set -o xtrace
     VERSION="$version" setup.v2.sh --populate-env .env
     $DOCKER compose --profile database --profile app --profile tools config | grep 'image:' | awk '{print $2}' >"$SCRIPT_DIR"/offline/images.txt
+    $DOCKER compose --file novac-compose.yml --profile novac config | grep 'image:' | awk '{print $2}' >>"$SCRIPT_DIR"/offline/images.txt
   )
   popd
 
   pushd offline
-  local image image_filename
+  local image tarball hardware
+  hardware=$(basename "$platform")
   while read -r image; do
     log::do $DOCKER pull --platform "$platform" "$image"
-    image_filename=$(echo "$image" | tr '/:' '__')
-    log::do $DOCKER save "$image" -o "${image_filename}".tar
+    tarball=$(echo "$image" | tr '/:' '__')-${hardware}.tar
+    log::do $DOCKER save "$image" -o "${tarball}"
   done <images.txt
 }
 

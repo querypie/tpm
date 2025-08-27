@@ -329,11 +329,11 @@ function install::docker_compose() {
   if [[ $kernel == linux || $kernel == darwin ]] && [[ $hardware == x86_64 || $hardware == aarch64 ]]; then
     echo >&2 "# Docker Compose is not installed. Installing now."
 
-    if [[ -r "offline/docker-compose-${kernel}-${hardware}" ]]; then
-      echo >&2 "# Detected an offline/docker-compose-${kernel}-${hardware} file."
+    if [[ -r "${OFFLINE_DIR}/docker-compose-${kernel}-${hardware}" ]]; then
+      echo >&2 "# Detected an ${OFFLINE_DIR}/docker-compose-${kernel}-${hardware} file."
       echo >&2 "# This file will be used instead of downloading a new one."
       echo >&2 "# Such behavior is intended for closed or air-gapped environments."
-      log::do cp "offline/docker-compose-${kernel}-${hardware}" docker-compose
+      log::do cp "${OFFLINE_DIR}/docker-compose-${kernel}-${hardware}" docker-compose
     else
       log::do curl -fsSL "https://dl.querypie.com/releases/bin/v2.39.1/docker-compose-${kernel}-${hardware}" -o docker-compose
     fi
@@ -364,11 +364,11 @@ function install::config_files() {
   echo >&2 "# Target directory is ./querypie/${QP_VERSION}/"
   mkdir -p ./querypie/"${QP_VERSION}"
 
-  if [[ -r offline/package.tar.gz ]]; then
-    echo >&2 "# Detected an offline/package.tar.gz file."
+  if [[ -r ${OFFLINE_DIR}/package.tar.gz ]]; then
+    echo >&2 "# Detected an ${OFFLINE_DIR}/package.tar.gz file."
     echo >&2 "# This file will be used instead of downloading a new one."
     echo >&2 "# Such behavior is intended for closed or air-gapped environments."
-    log::do cp offline/package.tar.gz package.tar.gz
+    log::do cp "${OFFLINE_DIR}"/package.tar.gz package.tar.gz
   else
     log::do curl -fsSL https://dl.querypie.com/releases/compose/"$PACKAGE_VERSION"/package.tar.gz -o package.tar.gz
   fi
@@ -823,8 +823,40 @@ function install::ask_yes() {
   esac
 }
 
+function install::load_image_from_tarball_in_offline() {
+  if [[ ! -f ${OFFLINE_DIR}/images.txt ]]; then
+    echo >&2 "#"
+    echo >&2 "## No ${OFFLINE_DIR}/images.txt file found. Skipping loading Docker images from tarball files."
+    echo >&2 "#"
+    return 1
+  fi
+
+  echo >&2 "#"
+  echo >&2 "## Load Docker images from tarball files listed in ${OFFLINE_DIR}/images.txt"
+  echo >&2 "# Such behavior is intended for closed or air-gapped environments."
+  echo >&2 "#"
+  pushd "${OFFLINE_DIR}"
+
+  local image tarball hardware
+  hardware=$(uname -m | tr '[:upper:]' '[:lower:]')  # amd64, arm64
+  while IFS= read -r image; do
+    # Skip empty lines and comments.
+    [[ -z "$image" || "$image" =~ ^\s*# ]] && continue
+
+    tarball=$(echo "$image" | tr '/:' '__')-${hardware}.tar
+    if [[ -r "$tarball" ]]; then
+      echo >&2 "# Loading image $image from $tarball"
+      log::do $DOCKER load -i "$tarball"
+    else
+      log::error "The specified tarball file, $tarball, does not exist or is not readable."
+      exit 1
+    fi
+  done <images.txt
+  popd
+}
+
 function cmd::install() {
-  local QP_VERSION=${1:-}
+  local QP_VERSION=${1:-} loaded_from_tarball=true
 
   echo >&2 "### Install QueryPie ###"
   echo >&2 "# QP_VERSION: ${QP_VERSION}"
@@ -836,14 +868,17 @@ function cmd::install() {
   install::docker_compose
   install::config_files
   install::verify_selinux
+  install::load_image_from_tarball_in_offline || loaded_from_tarball=false
 
-  log::do pushd "./querypie/${QP_VERSION}/"
   echo >&2 "## Configure the .env file in ./querypie/${QP_VERSION}/"
+  log::do pushd "./querypie/${QP_VERSION}/"
   cmd::populate_env ".env"
 
   local pull_option=''
   [[ $COMPOSE == docker-compose && ! -t 0 ]] && pull_option='--quiet'
-  log::do $DOCKER compose --profile database --profile querypie --profile tools pull $pull_option
+  [[ $loaded_from_tarball == true ]] ||
+    log::do $DOCKER compose --profile database --profile querypie --profile tools pull $pull_option
+
   echo >&2 "## Start MySQL and Redis services for QueryPie"
   log::do $DOCKER compose --profile database up --detach
   log::do sleep 20 # TODO(JK): Utilize wait-for-mysqld later.
@@ -878,7 +913,7 @@ function cmd::install() {
 }
 
 function cmd::upgrade() {
-  local QP_VERSION=${1:-} current_version container_version
+  local QP_VERSION=${1:-} current_version container_version loaded_from_tarball=true
 
   echo >&2 "### Upgrade QueryPie to ${QP_VERSION} ###"
   echo >&2 "# QP_VERSION: ${QP_VERSION}"
@@ -904,8 +939,9 @@ function cmd::upgrade() {
   fi
 
   install::config_files
+  install::load_image_from_tarball_in_offline || loaded_from_tarball=false
 
-  echo >&2 "## Configure the .env file for target version at ./querypie/${QP_VERSION}/"
+  echo >&2 "## Configure the .env file in ./querypie/${QP_VERSION}/"
   log::do pushd "./querypie/${QP_VERSION}/"
   (
     if [[ -e ../current/.env ]]; then
@@ -925,7 +961,8 @@ function cmd::upgrade() {
   echo >&2 "## Download Docker images for the target version"
   local pull_option=''
   [[ $COMPOSE == docker-compose && ! -t 0 ]] && pull_option='--quiet'
-  log::do $DOCKER compose --profile database --profile querypie --profile tools pull $pull_option
+  [[ $loaded_from_tarball == true ]] ||
+    log::do $DOCKER compose --profile database --profile querypie --profile tools pull $pull_option
   log::do popd
 
   echo >&2 "## Stop containers from the previous version"
@@ -1304,6 +1341,7 @@ function main() {
   PACKAGE_VERSION=${PACKAGE_VERSION:-universal}
   DOCKER_REGISTRY=${DOCKER_REGISTRY:-docker.io/querypie/}
   USER=${USER:-$(id -un)}
+  OFFLINE_DIR=${OFFLINE_DIR:-./offline}
   local -a arguments=() # argv is reserved for zsh.
   local cmd="install_recommended"
   while [[ $# -gt 0 ]]; do
