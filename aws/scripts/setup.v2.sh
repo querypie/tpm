@@ -837,13 +837,26 @@ function install::load_image_from_tarball_in_offline() {
   echo >&2 "#"
   pushd "${OFFLINE_DIR}"
 
-  local image tarball hardware
-  hardware=$(uname -m | tr '[:upper:]' '[:lower:]')  # amd64, arm64
+  local image tarball hardware normalized
+  hardware=$(uname -m | tr '[:upper:]' '[:lower:]')
+  # Linux: x86_64, aarch64
+  # macOS: x86_64, arm64
+  # Container platform: linux/amd64, linux/arm64
+  case "$hardware" in
+  aarch64) normalized=arm64 ;;
+  arm64) normalized=arm64 ;;
+  x86_64) normalized=amd64 ;;
+  amd64) normalized=amd64 ;;
+  *)
+    log::error "Unsupported hardware architecture: $hardware"
+    exit 1
+    ;;
+  esac
   while IFS= read -r image; do
     # Skip empty lines and comments.
     [[ -z "$image" || "$image" =~ ^\s*# ]] && continue
 
-    tarball=$(echo "$image" | tr '/:' '__')-${hardware}.tar
+    tarball=$(echo "$image" | tr '/:' '__')-${normalized}.tar
     if [[ -r "$tarball" ]]; then
       echo >&2 "# Loading image $image from $tarball"
       log::do $DOCKER load -i "$tarball"
@@ -852,6 +865,7 @@ function install::load_image_from_tarball_in_offline() {
       exit 1
     fi
   done <images.txt
+  log::do $DOCKER image ls
   popd
 }
 

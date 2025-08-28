@@ -150,7 +150,7 @@ build {
     ]
   }
 
-  # Install scripts such as setup.v2.sh
+  # Copy files in scripts, such as setup.v2.sh
   provisioner "file" {
     source      = "../scripts/"
     destination = "/tmp/"
@@ -164,12 +164,6 @@ build {
         var.container_engine == "podman" ? "/tmp/install-podman-on-rhel.sh" : "true",
         var.container_engine == "none" ? "/tmp/setup.v2.sh --container-engine-only" : "true",
     ]
-  }
-
-  # Install scripts such as setup.v2.sh
-  provisioner "file" {
-    source      = "../scripts/"
-    destination = "/tmp/"
   }
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
