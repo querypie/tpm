@@ -32,7 +32,7 @@ variable "container_engine" {
 
 variable "resource_owner" {
   type        = string
-  default     = "RHEL8-Installer"
+  default     = "RHEL8-Offline-Installer"
   description = "Owner of AWS Resources"
 }
 
@@ -40,6 +40,7 @@ variable "resource_owner" {
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
   ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
+  container_platform = var.architecture == "arm64" ? "linux/arm64" : "linux/amd64"
 
   region = "ap-northeast-2"
   ssh_username = "ec2-user" # SSH username for RHEL 8
@@ -169,6 +170,20 @@ build {
     inline = [
       "ps ux", "id -Gn", # Show the current process list and group information
       "sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh",
+    ]
+  }
+
+  # Copy compose scripts, and prepare offline installation files
+  provisioner "file" {
+    source      = "../../compose"
+    destination = "/tmp/"
+  }
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      "/tmp/compose/offline-package.sh universal/compose.yml ${var.querypie_version} ${local.container_platform}",
+      "cp -rv /tmp/compose/offline/ ~/offline/",
+      "/tmp/compose/local-image-prune.sh",
     ]
   }
 
