@@ -161,7 +161,7 @@ build {
     inline = [
         var.container_engine == "docker" ? "/tmp/install-docker-on-amazon-linux-2023.sh" : "true",
         var.container_engine == "podman" ? "/tmp/podman-unavailable.sh" : "true",
-        var.container_engine == "none" ? "/tmp/setup.v2.sh --container-engine-only" : "true",
+        var.container_engine == "none" ? "/tmp/setup.v2.sh --install-container-engine" : "true",
     ]
   }
 

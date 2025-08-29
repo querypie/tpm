@@ -162,7 +162,7 @@ build {
         var.container_engine == "docker" ? "/tmp/install-docker-on-ubuntu.sh" : "true",
         # Podman on Ubuntu 22.04 is not officially supported, because the version is too old (Podman 3.4.4).
         var.container_engine == "podman" ? "/tmp/podman-unavailable.sh" : "true",
-        var.container_engine == "none" ? "/tmp/setup.v2.sh --container-engine-only" : "true",
+        var.container_engine == "none" ? "/tmp/setup.v2.sh --install-container-engine" : "true",
     ]
   }
 

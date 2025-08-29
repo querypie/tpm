@@ -30,14 +30,19 @@ function print_usage_and_exit() {
 $program_name ${SCRIPT_VERSION}, the QueryPie installation script.
 Usage: $program_name [options]
     or $program_name [options] --install <version>
+    or $program_name [options] --install-container-engine
+    or $program_name [options] --install-compose-package <version>
     or $program_name [options] --upgrade <version>
     or $program_name [options] --uninstall
+    or $program_name [options] --help
+
+FOR AWS AMI BUILD MAINTAINER:
     or $program_name [options] --install-partially-for-ami <version>
     or $program_name [options] --resume
     or $program_name [options] --verify-installation
+    or $program_name [options] --verify-not-installed
     or $program_name [options] --populate-env <env-file>
     or $program_name [options] --reset-credential <env-file>
-    or $program_name [options] --help
 
 ENVIRONMENT VARIABLES:
 
@@ -386,13 +391,19 @@ function install::config_files() {
     ./querypie/"$QP_VERSION"/${compose_yml}
   rm ./querypie/"$QP_VERSION"/${compose_yml}.orig
 
-  # Universal package.tar.gz has .env.template.
-  if [[ -f ./querypie/"$QP_VERSION"/.env.template ]]; then
+  if [[ -L ./querypie/"$QP_VERSION"/.env ]]; then
+    sudo rm -f ./querypie/"$QP_VERSION"/.env
+  fi
+  if [[ -f ./querypie/"$QP_VERSION"/.env ]]; then
+    echo >&2 "# ./querypie/${QP_VERSION}/.env already exists."
+    echo >&2 "# No need to create a new .env file."
+  elif [[ -f ./querypie/"$QP_VERSION"/.env.template ]]; then
+    # Universal package.tar.gz has .env.template.
     log::do cp ./querypie/"$QP_VERSION"/.env.template ./querypie/"$QP_VERSION"/.env
   elif [[ -f ./querypie/"$QP_VERSION"/compose-env ]]; then
     log::do cp ./querypie/"$QP_VERSION"/compose-env ./querypie/"$QP_VERSION"/.env
     # Use .env instead of compose-env,
-    # so that user can skip --env-file option when running docker-compose commands.
+    # so that user can skip the --env-file option when running docker-compose commands.
   fi
   log::do sed -i.orig \
     -e "s#^VERSION=.*#VERSION=$QP_VERSION#" \
@@ -595,7 +606,7 @@ function env_file::populate_env() {
     existing_value=${line#*=}
     value=$(env_file::determine_value "${name}" "${existing_value}")
     echo "${name}=${value}"
-  done 9<"${source_env}" # 9 is unused file descriptor to read ${source_env}.
+  done 9<"${source_env}" # 9 is an unused file descriptor to read ${source_env}.
 }
 
 function env_file::reset_credential() {
@@ -924,6 +935,42 @@ function cmd::install() {
   echo >&2 "### Installation completed successfully"
   echo >&2 "### Access QueryPie at $(install::base_url http) or $(install::base_url https) in your browser"
   echo >&2 "### Determine the public IP address of your host machine if needed"
+}
+
+function cmd::install_container_engine_only() {
+  echo >&2 "### Install Container Engine only"
+  echo >&2 "#"
+
+  setup::sudo_privileges
+  if install::docker_or_podman; then
+    echo >&2 "# The system has a container engine already."
+  elif [[ $? == 7 ]]; then
+    echo >&2 "# Now it will shutdown ssh session to apply the changes."
+    pkill -f sshd || true
+  else
+    log::error "Please report this problem to the technical support team of QueryPie."
+    log::do uname -a
+    exit 1
+  fi
+}
+
+function cmd::install_compose_package() {
+  local QP_VERSION=${1:-}
+
+  echo >&2 "### Install Compose package only"
+  echo >&2 "## This command is compatible with setup.sh (v1), which installs docker-compose package only."
+  echo >&2 "# QP_VERSION: ${QP_VERSION}"
+  PACKAGE_VERSION=$(install::get_package_version "${PACKAGE_VERSION:-}" "${QP_VERSION}")
+  echo >&2 "# PACKAGE_VERSION: ${PACKAGE_VERSION}"
+
+  setup::sudo_privileges
+  install::docker_or_podman
+  install::docker_compose
+  install::config_files
+  install::verify_selinux
+  install::load_image_from_tarball_in_offline || true
+  # Skip running of containers and services.
+  echo >&2 "### Installation completed successfully"
 }
 
 function cmd::upgrade() {
@@ -1264,24 +1311,6 @@ function cmd::verify_not_installed() {
   fi
 }
 
-function cmd::install_container_engine_only() {
-  echo >&2 "#"
-  echo >&2 "### Install Container Engine only"
-  echo >&2 "#"
-
-  setup::sudo_privileges
-  if install::docker_or_podman; then
-    echo >&2 "# The system has a container engine already."
-  elif [[ $? == 7 ]]; then
-    echo >&2 "# Now it will shutdown ssh session to apply the changes."
-    pkill -f sshd || true
-  else
-    log::error "Please report this problem to the technical support team of QueryPie."
-    log::do uname -a
-    exit 1
-  fi
-}
-
 function cmd::install_recommended() {
   echo >&2 "### Install QueryPie version $RECOMMENDED_VERSION ###"
   if [[ -d ./querypie ]]; then
@@ -1371,7 +1400,11 @@ function main() {
     -h | --help)
       print_usage_and_exit 0
       ;;
-    --install | --upgrade | --uninstall)
+    --install | --install-container-engine | --install-compose-package)
+      cmd="${1#--}"
+      shift
+      ;;
+    --upgrade | --uninstall)
       cmd="${1#--}"
       shift
       ;;
@@ -1385,10 +1418,6 @@ function main() {
       shift
       ;;
     --verify-installation | --verify-not-installed)
-      cmd="${1#--}"
-      shift
-      ;;
-    --container-engine-only)
       cmd="${1#--}"
       shift
       ;;
@@ -1426,6 +1455,13 @@ function main() {
     require::version "$@"
     cmd::install "$@"
     ;;
+  install-container-engine)
+    cmd::install_container_engine_only
+    ;;
+  install-compose-package)
+    require::version "$@"
+    cmd::install_compose_package "$@"
+    ;;
   upgrade)
     require::version "$@"
     cmd::upgrade "$@"
@@ -1433,6 +1469,7 @@ function main() {
   uninstall)
     cmd::uninstall "$@"
     ;;
+  # FOR AWS AMI BUILD MAINTAINER
   install-partially-for-ami)
     require::version "$@"
     cmd::install_partially_for_ami "$@"
@@ -1445,9 +1482,6 @@ function main() {
     ;;
   verify-not-installed)
     cmd::verify_not_installed
-    ;;
-  container-engine-only)
-    cmd::install_container_engine_only
     ;;
   populate-env)
     require::compose_env_file "$@"

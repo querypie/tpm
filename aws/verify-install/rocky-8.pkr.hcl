@@ -167,7 +167,7 @@ build {
     inline = [
         var.container_engine == "docker" ? "/tmp/install-docker-on-rhel.sh" : "true",
         var.container_engine == "podman" ? "/tmp/install-podman-on-rhel.sh" : "true",
-        var.container_engine == "none" ? "/tmp/setup.v2.sh --container-engine-only" : "true",
+        var.container_engine == "none" ? "/tmp/setup.v2.sh --install-container-engine" : "true",
     ]
   }
 
