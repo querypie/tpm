@@ -64,6 +64,7 @@ function pull_and_push_container_images() {
     VERSION="$version" setup.v2.sh --populate-env .env
     docker compose --profile database --profile app --profile tools config | grep 'image:' | awk '{print $2}' >"$tmp_image_list"
     docker compose --file novac-compose.yml --profile novac config | grep 'image:' | awk '{print $2}' >>"$tmp_image_list"
+    rm -f .env
   )
   popd
 

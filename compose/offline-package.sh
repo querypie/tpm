@@ -6,7 +6,6 @@ set -o nounset -o errexit -o errtrace -o pipefail
 # and downloads docker-compose binaries for both x86_64 and aarch64 architectures.
 
 SCRIPT_DIR=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
-DOCKER=docker
 
 # Color definitions
 readonly BOLD_CYAN="\e[1;36m"
@@ -37,9 +36,15 @@ function archive_package() {
   echo >&2 "## Creating offline/package.tar.gz from $compose_yml"
   compose_dir=$(dirname "$compose_yml")
   pushd "$compose_dir"
-  [[ -f $SCRIPT_DIR/offline/package.tar.gz ]] && rm -f "$SCRIPT_DIR"/offline/package.tar.gz
+  [[ -f $SCRIPT_DIR/offline/package.tar.gz ]] && log::do rm -f "$SCRIPT_DIR"/offline/package.tar.gz
+  [[ -e .env ]] && log::do rm -f .env
   log::do tar zcvf "$SCRIPT_DIR"/offline/package.tar.gz .
   popd
+}
+
+function save_setup_script() {
+  echo >&2 "## Saving setup.v2.sh script to offline/setup.v2.sh"
+  log::do cp "$SCRIPT_DIR"/../aws/scripts/setup.v2.sh "$SCRIPT_DIR"/offline/setup.v2.sh
 }
 
 function save_docker_compose() {
@@ -50,87 +55,27 @@ function save_docker_compose() {
   done
 }
 
-function detect_container_engine() {
-  echo >&2 "## Detecting Docker or Podman"
-  if log::do docker --version | grep "^Docker version"; then
-    DOCKER=docker
-    if $DOCKER ps >/dev/null 2>&1; then
-      echo >&2 "# Docker is already running and functional."
-      return
-    fi
-  elif log::do podman --version | grep "^podman version"; then
-    DOCKER=podman
-    if $DOCKER ps >/dev/null 2>&1; then
-      echo >&2 "# Podman is already running and functional."
-      return
-    fi
-  fi
-  log::error "Neither Docker nor Podman is installed or functional. Please install one of them to proceed."
-  exit 1
-}
-
-function save_container_images() {
-  echo >&2 "## Saving container images to offline/images.txt and downloading them as .tar files"
-
-  local compose_yml=$1 version=$2 platform=$3 compose_dir
-  compose_dir=$(dirname "$compose_yml")
-
-  pushd "$compose_dir"
-  if [[ -f .env.template ]]; then
-    log::do cp .env.template .env
-  elif [[ -f compose-env ]]; then
-    log::do cp compose-env .env
-  elif [[ -f .env ]]; then
-    echo >&2 "# Using existing .env file."
-  else
-    log::error "No .env.template or compose-env file found."
-    exit 1
-  fi
-  (
-    PATH=../../aws/scripts:$SCRIPT_DIR:$PATH
-
-    set -o xtrace
-    VERSION="$version" setup.v2.sh --populate-env .env
-    $DOCKER compose --profile database --profile app --profile tools config | grep 'image:' | awk '{print $2}' >"$SCRIPT_DIR"/offline/images.txt
-    $DOCKER compose --file novac-compose.yml --profile novac config | grep 'image:' | awk '{print $2}' >>"$SCRIPT_DIR"/offline/images.txt
-  )
-  popd
-
-  pushd offline
-  local image tarball hardware
-  hardware=$(basename "$platform")
-  while read -r image; do
-    log::do $DOCKER pull --platform "$platform" "$image"
-    tarball=$(echo "$image" | tr '/:' '__')-${hardware}.tar
-    log::do $DOCKER save "$image" -o "${tarball}"
-  done <images.txt
-}
-
 function main() {
-  local compose_yml=${1:-} version=${2:-} platform=${3:-linux/amd64}
-  if [[ -z ${compose_yml} || -z ${version} ]]; then
+  local compose_yml=${1:-}
+  if [[ -z ${compose_yml} ]]; then
     cat <<END_OF_USAGE
-Usage: $0 <compose.yml> <version> [platform]
+Usage: $0 <compose.yml>
   compose.yml: Path to the docker-compose YAML file
-  version: QueryPie version to save as .tar (e.g., 11.1.2)
-  platform: Target platform for the container images (e.g., linux/amd64 or linux/arm64)
 
 EXAMPLES:
-  $0 universal/compose.yml 11.1.2 linux/amd64
-  $0 universal/compose.yml 11.1.2 linux/arm64
+  $0 universal/compose.yml
+  $0 universal/compose.yml
 
 END_OF_USAGE
     exit 1
   fi
 
   echo >&2 "### Offline Package Archiver ###"
-  echo >&2 "# QueryPie version specified: $version"
 
   log::do cd "$SCRIPT_DIR"
-  log::do archive_package "$compose_yml"
-  log::do save_docker_compose
-  log::do detect_container_engine
-  log::do save_container_images "$compose_yml" "$version" "$platform"
+  archive_package "$compose_yml"
+  save_setup_script
+  save_docker_compose
 }
 
 main "$@"
