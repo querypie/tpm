@@ -37,9 +37,15 @@ function archive_package() {
   echo >&2 "## Creating offline/package.tar.gz from $compose_yml"
   compose_dir=$(dirname "$compose_yml")
   pushd "$compose_dir"
-  [[ -f $SCRIPT_DIR/offline/package.tar.gz ]] && rm -f "$SCRIPT_DIR"/offline/package.tar.gz
+  [[ -f $SCRIPT_DIR/offline/package.tar.gz ]] && log::do rm -f "$SCRIPT_DIR"/offline/package.tar.gz
+  [[ -e .env ]] && log::do rm -f .env
   log::do tar zcvf "$SCRIPT_DIR"/offline/package.tar.gz .
   popd
+}
+
+function save_setup_script() {
+  echo >&2 "## Saving setup.v2.sh script to offline/setup.v2.sh"
+  log::do cp "$SCRIPT_DIR"/../aws/scripts/setup.v2.sh "$SCRIPT_DIR"/offline/setup.v2.sh
 }
 
 function save_docker_compose() {
@@ -127,10 +133,11 @@ END_OF_USAGE
   echo >&2 "# QueryPie version specified: $version"
 
   log::do cd "$SCRIPT_DIR"
-  log::do archive_package "$compose_yml"
-  log::do save_docker_compose
-  log::do detect_container_engine
-  log::do save_container_images "$compose_yml" "$version" "$platform"
+  archive_package "$compose_yml"
+  save_setup_script
+  save_docker_compose
+  detect_container_engine
+  save_container_images "$compose_yml" "$version" "$platform"
 }
 
 main "$@"
