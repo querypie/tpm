@@ -163,7 +163,7 @@ build {
     inline = [
         var.container_engine == "docker" ? "/tmp/aws/scripts/install-docker-on-rhel.sh" : "true",
         var.container_engine == "podman" ? "/tmp/aws/scripts/install-podman-on-rhel.sh" : "true",
-        var.container_engine == "none" ? "/tmp/aws/scripts/setup.v2.sh --install-container-engine" : "true",
+        var.container_engine == "none" ? "echo 'docker-compose is required.'; false" : "true",
     ]
   }
   provisioner "shell" {
