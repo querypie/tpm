@@ -148,28 +148,28 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "cloud-init status --wait", # Now this EC2 instance is ready for more software installation.
+      "mkdir -p /tmp/aws"
     ]
   }
 
   # Copy files in scripts, such as setup.v2.sh
   provisioner "file" {
-    source      = "../scripts/"
-    destination = "/tmp/"
+    source      = "../scripts"
+    destination = "/tmp/aws/"
   }
   provisioner "shell" {
     expect_disconnect = true # It will logout at the end of this provisioner.
     inline_shebang = "/bin/bash -ex"
     inline = [
-        var.container_engine == "docker" ? "/tmp/install-docker-on-rhel.sh" : "true",
-        var.container_engine == "podman" ? "/tmp/install-podman-on-rhel.sh" : "true",
-        var.container_engine == "none" ? "/tmp/setup.v2.sh --install-container-engine" : "true",
+        var.container_engine == "docker" ? "/tmp/aws/scripts/install-docker-on-rhel.sh" : "true",
+        var.container_engine == "podman" ? "/tmp/aws/scripts/install-podman-on-rhel.sh" : "true",
+        var.container_engine == "none" ? "echo 'docker-compose is required.'; false" : "true",
     ]
   }
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "ps ux", "id -Gn", # Show the current process list and group information
-      "sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh",
     ]
   }
 
@@ -181,7 +181,8 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "/tmp/compose/offline-package.sh universal/compose.yml ${var.querypie_version} ${local.container_platform}",
+      "/tmp/compose/offline-package.sh universal/compose.yml",
+      "/tmp/compose/offline-tarball-image.sh universal/compose.yml ${var.querypie_version} ${local.container_platform}",
       "cp -rv /tmp/compose/offline/ ~/offline/",
       "/tmp/compose/local-image-prune.sh",
     ]
@@ -191,8 +192,9 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --universal --install ${var.querypie_version}",
-      "setup.v2.sh --verify-installation",
+      "/tmp/aws/scripts/simulate-offline.sh", # Simulate offline environment
+      "./offline/setup.v2.sh --yes --universal --install ${var.querypie_version}",
+      "./offline/setup.v2.sh --verify-installation",
     ]
   }
 
@@ -208,7 +210,7 @@ build {
     pause_before = "30s" # Wait for 30 seconds before attempting to reconnect
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --verify-installation",
+      "./offline/setup.v2.sh --verify-installation",
     ]
   }
 

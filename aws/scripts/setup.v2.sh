@@ -1379,12 +1379,29 @@ function require::compose_env_file() {
   fi
 }
 
+function determine_offline_dir() {
+  # Skip if OFFLINE_DIR is already set.
+  [[ -z "${OFFLINE_DIR}" ]] || return
+
+  local script_dir pwd_dir
+  script_dir="$(cd "$(dirname "$0")" && pwd -P)"
+  pwd_dir=$(pwd -P)
+
+  if [[ $script_dir == */offline ]]; then
+    OFFLINE_DIR=$script_dir
+  elif [[ $pwd_dir == */offline ]]; then
+    OFFLINE_DIR=$pwd_dir
+  else
+    OFFLINE_DIR=./offline
+  fi
+}
+
 function main() {
   # PACKAGE_VERSION has a default value of 'universal' if not set as an environment variable.
   PACKAGE_VERSION=${PACKAGE_VERSION:-universal}
   DOCKER_REGISTRY=${DOCKER_REGISTRY:-docker.io/querypie/}
   USER=${USER:-$(id -un)}
-  OFFLINE_DIR=${OFFLINE_DIR:-./offline}
+  OFFLINE_DIR=${OFFLINE_DIR:-}
   local -a arguments=() # argv is reserved for zsh.
   local cmd="install_recommended"
   while [[ $# -gt 0 ]]; do
@@ -1446,6 +1463,8 @@ function main() {
   else
     set --
   fi
+
+  determine_offline_dir
 
   case "$cmd" in
   install_recommended)
