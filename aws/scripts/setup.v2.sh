@@ -8,7 +8,7 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="25.08.8" # YY.MM.PATCH
+SCRIPT_VERSION="25.09.1" # YY.MM.PATCH
 echo -n "#### setup.v2.sh - QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
@@ -17,7 +17,7 @@ echo >&2 " on $(uname -s) $(uname -m) ####"
 [[ -n "${ZSH_VERSION:-}" ]] && emulate bash
 set -o nounset -o errexit -o pipefail
 
-RECOMMENDED_VERSION="11.1.1" # QueryPie version to install by default.
+RECOMMENDED_VERSION="11.1.2" # QueryPie version to install by default.
 ASSUME_YES=false
 DOCKER=docker          # The default Container Engine
 COMPOSE=docker-compose # The default Compose tool
@@ -46,11 +46,11 @@ FOR AWS AMI BUILD MAINTAINER:
 
 ENVIRONMENT VARIABLES:
 
-  DOCKER_REGISTRY                Default: 'docker.io/querypie/'
-    The Docker registry to pull images from.
-    You may specify a private registry such as 'myregistry.example.com/querypie/'.
+  CONTAINER_REGISTRY                Default: 'docker.io/querypie/'
+    The Container Registry to pull images from.
+    You may specify a private registry such as 'registry.ex.com/querypie/'.
     Note that the trailing slash is required, if you set this variable.
-    Actual image names will be like 'myregistry.example.com/querypie/querypie:11.1.1'.
+    Actual images will be like 'registry.ex.com/querypie/querypie:11.1.1'.
 
 OPTIONS:
   --yes               Assume "yes" to all prompts and run non-interactively.
@@ -385,8 +385,8 @@ function install::config_files() {
   [[ -f ./querypie/"$QP_VERSION"/${compose_yml} ]] || compose_yml=docker-compose.yml
   log::do sed -i.orig \
     -e "s#- \\./mysql:/var/lib/mysql#- ../mysql:/var/lib/mysql#" \
-    -e "s#harbor.chequer.io/querypie/#${DOCKER_REGISTRY}#" \
-    -e "s#docker.io/querypie/#${DOCKER_REGISTRY}#" \
+    -e "s#harbor.chequer.io/querypie/#${CONTAINER_REGISTRY}#" \
+    -e "s#docker.io/querypie/#${CONTAINER_REGISTRY}#" \
     -e "s#source: /var/log/querypie#source: ../log#" \
     ./querypie/"$QP_VERSION"/${compose_yml}
   rm ./querypie/"$QP_VERSION"/${compose_yml}.orig
@@ -1399,7 +1399,7 @@ function determine_offline_dir() {
 function main() {
   # PACKAGE_VERSION has a default value of 'universal' if not set as an environment variable.
   PACKAGE_VERSION=${PACKAGE_VERSION:-universal}
-  DOCKER_REGISTRY=${DOCKER_REGISTRY:-docker.io/querypie/}
+  CONTAINER_REGISTRY=${CONTAINER_REGISTRY:-docker.io/querypie/}
   USER=${USER:-$(id -un)}
   OFFLINE_DIR=${OFFLINE_DIR:-}
   local -a arguments=() # argv is reserved for zsh.
