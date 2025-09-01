@@ -1,0 +1,587 @@
+[1;32mamazon-ebs.amazon-linux-2023: output will be in this color.[0m
+
+[1;32m==> amazon-ebs.amazon-linux-2023: skip_create_ami was set; not prevalidating AMI name[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Found Image ID: ami-0ae2c887094315bed[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Creating temporary keypair: packer_68b681a1-1c12-fd08-f98f-cfb81ca2d51e[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Creating temporary security group for this instance: packer_68b681a2-64d4-b0e1-c2d6-e0ac026c5d05[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Authorizing access to port 22 from [0.0.0.0/0] in the temporary security groups...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Launching a spot AWS instance...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Interpolating tags for spot instance...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Adding tag: "Name": "AL2023-Installer-11.0.1"[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Adding tag: "Owner": "jk"[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Adding tag: "Purpose": "Automated QueryPie Installer"[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Adding tag: "Version": "11.0.1"[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Adding tag: "BuildDate": "20250902053321"[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Adding tag: "CreatedBy": "Packer"[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Loading User Data File...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Creating Spot Fleet launch template...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Created Spot Fleet launch template: lt-07500a8ec1cdbc1ac[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Instance ID: i-0152e33e1a8515fce[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Waiting for instance (i-0152e33e1a8515fce) to become ready...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Using SSH communicator to connect: 3.34.90.70[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Waiting for SSH to become available...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Connected to SSH![0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell1000067608[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + cloud-init status --wait[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: status: done[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Uploading ../scripts/ => /tmp/[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell1594442254[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + true[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + true[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + /tmp/setup.v2.sh --install-container-engine[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #### setup.v2.sh - QueryPie Installer 25.09.1, /usr/bin/bash 5.2.15(1)-release on Linux x86_64 ####[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Install Container Engine only[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Configure sudo privileges[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # 'sudo' will be used for privileged commands.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Install Docker engine[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Detected Linux distribution: ID=amzn, ID_LIKE=fedora, VERSION_ID=2023[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sudo dnf install -y docker[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Waiting for process with pid 2026 to finish.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Amazon Linux 2023 Kernel Livepatch repository   176 kB/s |  19 kB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Dependencies resolved.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ================================================================================[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  Package                  Arch     Version                  Repository     Size[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ================================================================================[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Installing:[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  docker                   x86_64   25.0.8-1.amzn2023.0.5    amazonlinux    46 M[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Installing dependencies:[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  container-selinux        noarch   3:2.233.0-1.amzn2023     amazonlinux    55 k[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  containerd               x86_64   2.0.5-1.amzn2023.0.2     amazonlinux    26 M[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  iptables-libs            x86_64   1.8.8-3.amzn2023.0.2     amazonlinux   401 k[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  iptables-nft             x86_64   1.8.8-3.amzn2023.0.2     amazonlinux   183 k[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  libcgroup                x86_64   3.0-1.amzn2023.0.1       amazonlinux    75 k[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  libnetfilter_conntrack   x86_64   1.0.8-2.amzn2023.0.2     amazonlinux    58 k[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  libnfnetlink             x86_64   1.0.1-19.amzn2023.0.2    amazonlinux    30 k[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  libnftnl                 x86_64   1.2.2-2.amzn2023.0.2     amazonlinux    84 k[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  pigz                     x86_64   2.5-1.amzn2023.0.3       amazonlinux    83 k[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:  runc                     x86_64   1.2.6-1.amzn2023.0.1     amazonlinux   3.7 M[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Transaction Summary[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ================================================================================[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Install  11 Packages[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Total download size: 77 M[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Installed size: 292 M[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Downloading Packages:[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: (1/11): container-selinux-2.233.0-1.amzn2023.no 1.6 MB/s |  55 kB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: (2/11): iptables-libs-1.8.8-3.amzn2023.0.2.x86_  14 MB/s | 401 kB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: (3/11): iptables-nft-1.8.8-3.amzn2023.0.2.x86_6 7.3 MB/s | 183 kB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: (4/11): libcgroup-3.0-1.amzn2023.0.1.x86_64.rpm 3.0 MB/s |  75 kB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: (5/11): libnetfilter_conntrack-1.0.8-2.amzn2023 2.4 MB/s |  58 kB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: (6/11): libnfnetlink-1.0.1-19.amzn2023.0.2.x86_ 1.4 MB/s |  30 kB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: (7/11): libnftnl-1.2.2-2.amzn2023.0.2.x86_64.rp 3.3 MB/s |  84 kB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: (8/11): pigz-2.5-1.amzn2023.0.3.x86_64.rpm      3.0 MB/s |  83 kB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: (9/11): runc-1.2.6-1.amzn2023.0.1.x86_64.rpm     66 MB/s | 3.7 MB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: (10/11): containerd-2.0.5-1.amzn2023.0.2.x86_64  67 MB/s |  26 MB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: (11/11): docker-25.0.8-1.amzn2023.0.5.x86_64.rp  68 MB/s |  46 MB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Total                                           110 MB/s |  77 MB     00:00[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Running transaction check[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Waiting for process with pid 2305 to finish.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Transaction check succeeded.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Running transaction test[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Transaction test succeeded.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Running transaction[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Preparing        :                                                        1/1[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Installing       : runc-1.2.6-1.amzn2023.0.1.x86_64                      1/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Installing       : containerd-2.0.5-1.amzn2023.0.2.x86_64                2/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Running scriptlet: containerd-2.0.5-1.amzn2023.0.2.x86_64                2/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Installing       : pigz-2.5-1.amzn2023.0.3.x86_64                        3/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Installing       : libnftnl-1.2.2-2.amzn2023.0.2.x86_64                  4/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Installing       : libnfnetlink-1.0.1-19.amzn2023.0.2.x86_64             5/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Installing       : libnetfilter_conntrack-1.0.8-2.amzn2023.0.2.x86_64    6/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Installing       : iptables-libs-1.8.8-3.amzn2023.0.2.x86_64             7/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Installing       : iptables-nft-1.8.8-3.amzn2023.0.2.x86_64              8/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Running scriptlet: iptables-nft-1.8.8-3.amzn2023.0.2.x86_64              8/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Installing       : libcgroup-3.0-1.amzn2023.0.1.x86_64                   9/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Running scriptlet: container-selinux-3:2.233.0-1.amzn2023.noarch        10/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Installing       : container-selinux-3:2.233.0-1.amzn2023.noarch        10/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Running scriptlet: container-selinux-3:2.233.0-1.amzn2023.noarch        10/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Running scriptlet: docker-25.0.8-1.amzn2023.0.5.x86_64                  11/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Installing       : docker-25.0.8-1.amzn2023.0.5.x86_64                  11/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Running scriptlet: docker-25.0.8-1.amzn2023.0.5.x86_64                  11/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Created symlink /etc/systemd/system/sockets.target.wants/docker.socket → /usr/lib/systemd/system/docker.socket.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Running scriptlet: container-selinux-3:2.233.0-1.amzn2023.noarch        11/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Running scriptlet: docker-25.0.8-1.amzn2023.0.5.x86_64                  11/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Verifying        : container-selinux-3:2.233.0-1.amzn2023.noarch         1/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Verifying        : containerd-2.0.5-1.amzn2023.0.2.x86_64                2/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Verifying        : docker-25.0.8-1.amzn2023.0.5.x86_64                   3/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Verifying        : iptables-libs-1.8.8-3.amzn2023.0.2.x86_64             4/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Verifying        : iptables-nft-1.8.8-3.amzn2023.0.2.x86_64              5/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Verifying        : libcgroup-3.0-1.amzn2023.0.1.x86_64                   6/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Verifying        : libnetfilter_conntrack-1.0.8-2.amzn2023.0.2.x86_64    7/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Verifying        : libnfnetlink-1.0.1-19.amzn2023.0.2.x86_64             8/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Verifying        : libnftnl-1.2.2-2.amzn2023.0.2.x86_64                  9/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Verifying        : pigz-2.5-1.amzn2023.0.3.x86_64                       10/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   Verifying        : runc-1.2.6-1.amzn2023.0.1.x86_64                     11/11[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Installed:[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   container-selinux-3:2.233.0-1.amzn2023.noarch[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   containerd-2.0.5-1.amzn2023.0.2.x86_64[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   docker-25.0.8-1.amzn2023.0.5.x86_64[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   iptables-libs-1.8.8-3.amzn2023.0.2.x86_64[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   iptables-nft-1.8.8-3.amzn2023.0.2.x86_64[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   libcgroup-3.0-1.amzn2023.0.1.x86_64[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   libnetfilter_conntrack-1.0.8-2.amzn2023.0.2.x86_64[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   libnfnetlink-1.0.1-19.amzn2023.0.2.x86_64[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   libnftnl-1.2.2-2.amzn2023.0.2.x86_64[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   pigz-2.5-1.amzn2023.0.3.x86_64[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:   runc-1.2.6-1.amzn2023.0.1.x86_64[0m
+[1;32m==> amazon-ebs.amazon-linux-2023:[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Complete![0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sudo systemctl enable --now docker[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: Created symlink /etc/systemd/system/multi-user.target.wants/docker.service → /usr/lib/systemd/system/docker.service.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sudo usermod -aG docker ec2-user[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Docker is successfully installed at /usr/bin/docker[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # User 'ec2-user' has been added to the Docker group. A logout and login is required to use Docker without sudo.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Please rerun this script after logging back in.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Now it will shutdown ssh session to apply the changes.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell185749408[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + ps ux[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + id -Gn[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ec2-user    2057  0.0  0.0  21484 13492 ?        Ss   05:33   0:00 /usr/lib/systemd/systemd --user[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ec2-user    2059  0.0  0.0  26244  6628 ?        S    05:33   0:00 (sd-pam)[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ec2-user    7588  0.0  0.0  15788  6356 ?        S    05:35   0:00 sshd: ec2-user@notty[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ec2-user    8087  0.0  0.0 222952  3284 ?        Ss   05:35   0:00 /bin/bash -ex /tmp/script_5721.sh[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ec2-user    8139  0.0  0.0 223584  2872 ?        R    05:35   0:00 ps ux[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ec2-user adm wheel systemd-journal docker[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell1583314769[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + setup.v2.sh --yes --install 11.0.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #### setup.v2.sh - QueryPie Installer 25.09.1, /usr/bin/bash 5.2.15(1)-release on Linux x86_64 ####[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Install QueryPie ###[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # QP_VERSION: 11.0.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # PACKAGE_VERSION: universal[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Configure sudo privileges[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # 'sudo' will be used for privileged commands.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Install Docker engine[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Docker is already installed at /usr/bin/docker[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Verify Container Engine installation[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Docker is already running and functional.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker --version[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Docker version 25.0.8, build 0bab007[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Install Docker Compose tool[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Docker Compose is not installed. Installing now.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ curl -fsSL https://dl.querypie.com/releases/bin/v2.39.1/docker-compose-linux-x86_64 -o docker-compose[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ install -m 755 -D docker-compose /home/ec2-user/.docker/cli-plugins/docker-compose[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sudo install -m 755 docker-compose /usr/local/bin[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ rm docker-compose[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Now Docker Compose is installed at /home/ec2-user/.docker/cli-plugins/docker-compose[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Docker Compose is enabled as a plugin for docker[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose version[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Docker Compose version v2.39.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Install configuration files: docker-compose.yml, .env, and others[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Target directory is ./querypie/11.0.1/[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ curl -fsSL https://dl.querypie.com/releases/compose/universal/package.tar.gz -o package.tar.gz[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ umask 0022[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ tar zxvf package.tar.gz -C ./querypie/11.0.1[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./nginx.d/[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./nginx.d/ssl.conf[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./nginx.d/.gitkeep[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./README.md[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./systemd/[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./systemd/podman-querypie-database.service[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./systemd/podman-querypie-app.service[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./README.ja.md[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./certs/[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./certs/.gitkeep[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./skip_command_config.json.example[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./logrotate[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ rm package.tar.gz[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./compose.yml[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./mysql_init/[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./mysql_init/init.sql[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./.env.template[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./skip_command_config.json[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./.gitignore[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./README.ko.md[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./novac-compose.yml[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sed -i.orig -e s#- \./mysql:/var/lib/mysql#- ../mysql:/var/lib/mysql# -e s#harbor.chequer.io/querypie/#docker.io/querypie/# -e s#docker.io/querypie/#docker.io/querypie/# -e s#source: /var/log/querypie#source: ../log# ./querypie/11.0.1/compose.yml[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ cp ./querypie/11.0.1/.env.template ./querypie/11.0.1/.env[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sed -i.orig -e s#^VERSION=.*#VERSION=11.0.1# -e s#CABINET_DATA_DIR=/data#CABINET_DATA_DIR=../data# ./querypie/11.0.1/.env[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ mkdir -p ./querypie/mysql[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ mkdir -p ./querypie/log[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sudo cp ./querypie/11.0.1/logrotate /etc/logrotate.d/docker-querypie[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Current mode:                   permissive[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Verify SELinux settings[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~/querypie/11.0.1 ~[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # SELinux is installed on this system.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # SELinux is enabled on this system.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # The current mode of SELinux is not enforcing. Verification complete.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## No ./offline/images.txt file found. Skipping loading Docker images from tarball files.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Configure the .env file in ./querypie/11.0.1/[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ pushd ./querypie/11.0.1/[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Generating Docker environment file from .env to /tmp/env_file.qmjdXQ[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Replacing original file .env with generated file /tmp/env_file.qmjdXQ[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose --profile database --profile querypie --profile tools pull --quiet[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  redis Pulling[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  app Pulling[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  mysql Pulling[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  tools Pulling[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  redis Pulled[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  tools Pulled[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  mysql Pulled[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  app Pulled[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Start MySQL and Redis services for QueryPie[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose --profile database up --detach[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_database  Creating[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_database  Created[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-redis-1  Creating[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-mysql-1  Creating[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-mysql-1  Created[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-redis-1  Created[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-redis-1  Starting[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-mysql-1  Starting[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-mysql-1  Started[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-redis-1  Started[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sleep 20[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose --profile tools up --detach[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_tools  Creating[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_tools  Created[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Creating[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Created[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Starting[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Started[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ tools::wait_and_print_banner[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: .--------------------------------------------------------.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  🚀 QueryPie Tools has been successfully started! 🚀   |[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Run migrate.sh to initialize MySQL database for QueryPie[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # This process may take more than a minute if this is the first installation.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  Timestamp in UTC: Tue Sep  2 05:36:23 UTC 2025        |[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker exec querypie-tools-1 /app/script/migrate.sh runall[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  Timestamp in KST: Tue Sep  2 14:36:23 KST 2025        |[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: '--------------------------------------------------------'[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................... Done.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker exec querypie-tools-1 /app/script/migrate.sh runall[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:37:50] QueryPie migration is started.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:37:50] QueryPie migration is finished.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:37:50] QueryPie Log migration is started.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:37:50] QueryPie Log migration is finished.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose --profile tools down[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:37:50] QueryPie Snapshot migration is started.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:37:50] QueryPie Snapshot migration is finished.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Stopping[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Stopped[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Removing[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Removed[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_tools  Removing[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_tools  Removed[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Start the QueryPie container (initialization takes about 2 minutes)[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose --profile querypie up --detach[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_app  Creating[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_app  Created[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Creating[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Created[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Starting[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Started[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker exec querypie-app-1 readyz[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ########################################################################[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #                                                                      #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██████╗ ██╗███████╗    #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #    ██╔═══██╗██║   ██║██╔════╝██╔══██╗╚██╗ ██╔╝██╔══██╗██║██╔════╝    #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #    ██║   ██║██║   ██║█████╗  ██████╔╝ ╚████╔╝ ██████╔╝██║█████╗      #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #    ██║▄▄ ██║██║   ██║██╔══╝  ██╔══██╗  ╚██╔╝  ██╔═══╝ ██║██╔══╝      #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #    ╚██████╔╝╚██████╔╝███████╗██║  ██║   ██║   ██║     ██║███████╗    #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #     ╚══▀▀═╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝╚══════╝    #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #                                                                      #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ########################################################################[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: .--------------------------------------------------------.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  🚀 QueryPie Server has been successfully started! 🚀  |[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  Timestamp in UTC: Tue Sep  2 05:39:35 UTC 2025        |[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  Timestamp in KST: Tue Sep  2 14:39:35 KST 2025        |[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: '--------------------------------------------------------'[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ popd[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Create a symbolic link 'current' pointing to 11.0.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ pushd ./querypie/[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~/querypie ~[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ rm -f current[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ ln -s 11.0.1 current[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ popd[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Skip enabling systemd service for rootless Podman since Docker is used.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Installation completed successfully[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Access QueryPie at http://172.31.41.17:8000 or https://172.31.41.17:8443 in your browser[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Determine the public IP address of your host machine if needed[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + setup.v2.sh --verify-installation[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #### setup.v2.sh - QueryPie Installer 25.09.1, /usr/bin/bash 5.2.15(1)-release on Linux x86_64 ####[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Verify the installation[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Verify Container Engine installation[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Docker is already running and functional.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Container version: 11.0.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Current of ./querypie/current: 11.0.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # The container version is the same as the current version.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # The installation looks good so far.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Verify the QueryPie app container is running properly[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # QueryPie app container, querypie-app-1 is running.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # QueryPie version: 11.0.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker exec querypie-app-1 readyz wait[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # QueryPie app container, querypie-app-1 is ready for service.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Installation verification completed successfully.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell761940941[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + setup.v2.sh --yes --upgrade 11.1.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #### setup.v2.sh - QueryPie Installer 25.09.1, /usr/bin/bash 5.2.15(1)-release on Linux x86_64 ####[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Upgrade QueryPie to 11.1.1 ###[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # QP_VERSION: 11.1.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # PACKAGE_VERSION: universal[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Verify Container Engine installation[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Docker is already running and functional.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Verify the QueryPie app container is running properly[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # QueryPie app container, querypie-app-1 is running.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # QueryPie version: 11.0.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker exec querypie-app-1 readyz wait[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # QueryPie app container, querypie-app-1 is ready for service.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Install configuration files: docker-compose.yml, .env, and others[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Target directory is ./querypie/11.1.1/[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ curl -fsSL https://dl.querypie.com/releases/compose/universal/package.tar.gz -o package.tar.gz[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ umask 0022[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ tar zxvf package.tar.gz -C ./querypie/11.1.1[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./nginx.d/[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./nginx.d/ssl.conf[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./nginx.d/.gitkeep[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./README.md[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./systemd/[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./systemd/podman-querypie-database.service[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./systemd/podman-querypie-app.service[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./README.ja.md[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./certs/[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./certs/.gitkeep[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./skip_command_config.json.example[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ rm package.tar.gz[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./logrotate[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./compose.yml[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sed -i.orig -e s#- \./mysql:/var/lib/mysql#- ../mysql:/var/lib/mysql# -e s#harbor.chequer.io/querypie/#docker.io/querypie/# -e s#docker.io/querypie/#docker.io/querypie/# -e s#source: /var/log/querypie#source: ../log# ./querypie/11.1.1/compose.yml[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ cp ./querypie/11.1.1/.env.template ./querypie/11.1.1/.env[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sed -i.orig -e s#^VERSION=.*#VERSION=11.1.1# -e s#CABINET_DATA_DIR=/data#CABINET_DATA_DIR=../data# ./querypie/11.1.1/.env[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./mysql_init/[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sudo cp ./querypie/11.1.1/logrotate /etc/logrotate.d/docker-querypie[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./mysql_init/init.sql[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./.env.template[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./skip_command_config.json[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./.gitignore[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./README.ko.md[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ./novac-compose.yml[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~/querypie/11.1.1 ~[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## No ./offline/images.txt file found. Skipping loading Docker images from tarball files.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Configure the .env file in ./querypie/11.1.1/[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ pushd ./querypie/11.1.1/[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Generating Docker environment file from .env to /tmp/env_file.AKls9s[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Replacing original file .env with generated file /tmp/env_file.AKls9s[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Download Docker images for the target version[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose --profile database --profile querypie --profile tools pull --quiet[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  redis Pulling[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  tools Pulling[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  app Pulling[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  mysql Pulling[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  redis Pulled[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  mysql Pulled[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  tools Pulled[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  app Pulled[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~/querypie/11.0.1 ~[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ popd[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Stop containers from the previous version[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ pushd ./querypie/11.0.1/[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose --profile querypie down[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Stopping[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Stopped[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Removing[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Removed[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_app  Removing[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_app  Removed[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose --profile tools down[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~/querypie/11.1.1 ~[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ popd[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Start the querypie-tools container for the target version[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ pushd ./querypie/11.1.1/[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose --profile tools up --detach[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_tools  Creating[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_tools  Created[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Creating[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Created[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Starting[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Started[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ tools::wait_and_print_banner[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Run migrate.sh to apply MySQL schema changes for QueryPie[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker exec querypie-tools-1 /app/script/migrate.sh runall[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: .--------------------------------------------------------.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  🚀 QueryPie Tools has been successfully started! 🚀   |[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  Timestamp in UTC: Tue Sep  2 05:40:48 UTC 2025        |[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  Timestamp in KST: Tue Sep  2 14:40:48 KST 2025        |[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: '--------------------------------------------------------'[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker exec querypie-tools-1 /app/script/migrate.sh runall[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:40:57] Tools server is ready.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:40:57] QueryPie migration is started.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:40:57] QueryPie migration is finished.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:40:57] QueryPie Log migration is started.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:40:57] QueryPie Log migration is finished.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:40:58] QueryPie Snapshot migration is started.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose --profile tools down[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: [2025-09-02 05:40:58] QueryPie Snapshot migration is finished.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: --------------------------------------------------------------------------------[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Stopping[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Stopped[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Removing[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-tools-1  Removed[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_tools  Removing[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_tools  Removed[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Start the QueryPie container (initialization takes about 2 minutes)[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker compose --profile querypie up --detach[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_app  Creating[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Network querypie_app  Created[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Creating[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Created[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Starting[0m
+[1;31m==> amazon-ebs.amazon-linux-2023:  Container querypie-app-1  Started[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker exec querypie-app-1 readyz[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ########################################################################[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #                                                                      #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██████╗ ██╗███████╗    #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #    ██╔═══██╗██║   ██║██╔════╝██╔══██╗╚██╗ ██╔╝██╔══██╗██║██╔════╝    #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #    ██║   ██║██║   ██║█████╗  ██████╔╝ ╚████╔╝ ██████╔╝██║█████╗      #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #    ██║▄▄ ██║██║   ██║██╔══╝  ██╔══██╗  ╚██╔╝  ██╔═══╝ ██║██╔══╝      #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #    ╚██████╔╝╚██████╔╝███████╗██║  ██║   ██║   ██║     ██║███████╗    #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #     ╚══▀▀═╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝╚══════╝    #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: #                                                                      #[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ########################################################################[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: .--------------------------------------------------------.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  🚀 QueryPie Server has been successfully started! 🚀  |[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  Timestamp in UTC: Tue Sep  2 05:42:43 UTC 2025        |[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ popd[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: |  Timestamp in KST: Tue Sep  2 14:42:43 KST 2025        |[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: '--------------------------------------------------------'[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Create a symbolic link 'current' pointing to 11.1.1[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~/querypie ~[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ pushd ./querypie/[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ rm -f current[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: ~[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ ln -s 11.1.1 current[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ popd[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Upgrade completed successfully[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Access QueryPie at http://172.31.41.17:8000 or https://172.31.41.17:8443 in your browser[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Determine the public IP address of your host machine if needed[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + setup.v2.sh --verify-installation[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #### setup.v2.sh - QueryPie Installer 25.09.1, /usr/bin/bash 5.2.15(1)-release on Linux x86_64 ####[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Verify the installation[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Verify Container Engine installation[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Docker is already running and functional.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Container version: 11.1.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Current of ./querypie/current: 11.1.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # The container version is the same as the current version.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # The installation looks good so far.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Verify the QueryPie app container is running properly[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # QueryPie app container, querypie-app-1 is running.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # QueryPie version: 11.1.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker exec querypie-app-1 readyz wait[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # QueryPie app container, querypie-app-1 is ready for service.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Installation verification completed successfully.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell3598456613[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + setup.v2.sh --uninstall[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #### setup.v2.sh - QueryPie Installer 25.09.1, /usr/bin/bash 5.2.15(1)-release on Linux x86_64 ####[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Uninstall QueryPie ###[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Container version: 11.1.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker stop querypie-app-1[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: querypie-app-1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker rm querypie-app-1[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: querypie-app-1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Container 'querypie-tools-1' does not exist.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker stop querypie-redis-1[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: querypie-redis-1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker rm querypie-redis-1[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: querypie-redis-1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker stop querypie-mysql-1[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: querypie-mysql-1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ docker rm querypie-mysql-1[0m[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: querypie-mysql-1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # MySQL data: ./querypie/mysql[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ sudo rm -rf ./querypie/mysql[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Current version: 11.1.1[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Current directory: ./querypie/11.1.1/[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ rm -rf ./querypie/11.1.1[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: [1;36m+ rm -f ./querypie/current[0m[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Uninstall completed successfully[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + docker ps --all[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: + setup.v2.sh --verify-not-installed[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #### setup.v2.sh - QueryPie Installer 25.09.1, /usr/bin/bash 5.2.15(1)-release on Linux x86_64 ####[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ### Verify QueryPie is not installed on this machine[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: #[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # ./querypie directory exists.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # ./querypie/current symbolic link does not exist.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # ./querypie/mysql/ directory does not exist.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Container 'querypie-app-1' does not exist.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Container 'querypie-tools-1' does not exist.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Container 'querypie-redis-1' does not exist.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: # Container 'querypie-mysql-1' does not exist.[0m
+[1;31m==> amazon-ebs.amazon-linux-2023: ## Not-installed verification completed successfully.[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Skipping AMI creation...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Skipping AMI region copy...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Skipping fast-launch template setup...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Skipping Enable AMI deprecation...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Skipping Enable AMI deregistration protection...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Skipping AMI modify attributes...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Skipping AMI create tags...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Terminating the source AWS instance...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Cleaning up any extra volumes...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: No volumes to clean up, skipping[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Deleting temporary security group...[0m
+[1;32m==> amazon-ebs.amazon-linux-2023: Deleting temporary keypair...[0m
+[1;32mBuild 'amazon-ebs.amazon-linux-2023' finished after 10 minutes 30 seconds.[0m
+
+==> Wait completed after 10 minutes 30 seconds
+
+==> Builds finished but no artifacts were created.

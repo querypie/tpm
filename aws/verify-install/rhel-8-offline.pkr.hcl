@@ -193,7 +193,7 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "/tmp/aws/scripts/simulate-offline.sh", # Simulate offline environment
-      "./offline/setup.v2.sh --yes --universal --install ${var.querypie_version}",
+      "./offline/setup.v2.sh --yes --install ${var.querypie_version}",
       "./offline/setup.v2.sh --verify-installation",
     ]
   }

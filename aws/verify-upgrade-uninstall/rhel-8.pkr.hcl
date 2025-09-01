@@ -23,8 +23,8 @@ variable "upgrade_version" {
 }
 
 variable "architecture" {
-  type = string
-  default = "x86_64"
+  type        = string
+  default     = "x86_64"
   description = "x86_64 | arm64"
 }
 
@@ -38,7 +38,7 @@ variable "container_engine" {
 
 variable "resource_owner" {
   type        = string
-  default     = "AL2023-Installer"
+  default     = "RHEL8-Installer"
   description = "Owner of AWS Resources"
 }
 
@@ -48,7 +48,7 @@ locals {
   ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
 
   region = "ap-northeast-2"
-  ssh_username = "ec2-user" # SSH username for Amazon Linux 2023
+  ssh_username = "ec2-user" # SSH username for RHEL 8
 
   common_tags = {
     CreatedBy = "Packer"
@@ -61,56 +61,57 @@ locals {
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "AL2023-Installer-${var.initial_version}"
+      Name = "RHEL8-Installer-${var.initial_version}"
     }
   )
 }
 
-# Data source for latest Amazon Linux 2023 AMI
+# Data source for latest RHEL 8 AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# amazon-linux-2023 : Name of the data source
+# rhel8 : Name of the data source
 ###
-# aws ec2 describe-images --image-ids ami-0811349cae530179a
-# "Name": "al2023-ami-2023.8.20250804.0-kernel-6.1-x86_64"
-# "Description": "Amazon Linux 2023 AMI 2023.8.20250804.0 x86_64 HVM kernel-6.1"
+# aws ec2 describe-images --image-ids ami-044ae8b12299e7d5f
+# "Name": "RHEL-8.10.0_HVM-20250710-x86_64-1833-Hourly2-GP3"
+# "Description": "Provided by Red Hat, Inc."
 # "Architecture": "x86_64"
-# "DeviceName": "/dev/xvda"
+# "DeviceName": "/dev/sda1"
 ###
-# aws ec2 describe-images --image-ids ami-0de81378d4317284d
-# "Name": "al2023-ami-2023.8.20250804.0-kernel-6.1-arm64"
-# "Description": "Amazon Linux 2023 AMI 2023.8.20250804.0 arm64 HVM kernel-6.1"
+# aws ec2 describe-images --image-ids ami-0f77f9395e374527a
+# "Name": "RHEL-8.10.0_HVM-20250710-arm64-1829-Hourly2-GP3"
+# "Description": "Provided by Red Hat, Inc."
 # "Architecture": "arm64"
-# "DeviceName": "/dev/xvda"
-data "amazon-ami" "amazon-linux-2023" {
+# "DeviceName": "/dev/sda1"
+data "amazon-ami" "rhel-8" {
   filters = {
-    name                = "al2023-ami-2023.8.*"
+    name                = "RHEL-8.*_HVM-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
   }
   most_recent = true
-  owners = ["amazon"]
+  owners = ["309956199498"] # Red Hat's AWS Account ID
   region      = local.region
 }
 
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# amazon-linux-2023 : Name of the builder
-source "amazon-ebs" "amazon-linux-2023" {
+# rhel-8 : Name of the builder
+source "amazon-ebs" "rhel-8" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.amazon-linux-2023.id
+  source_ami      = data.amazon-ami.rhel-8.id
   ami_name        = local.ami_name
 
-  region       = local.region
-  ssh_username = local.ssh_username
+  region               = local.region
+  ssh_username         = local.ssh_username
   # ssh_private_key_file = "demo-targets.pem"
   # ssh_keypair_name = "demo-targets"
 
   # spot_instance_types = ["t4g.xlarge"]
   spot_instance_types = var.architecture == "arm64" ? ["t4g.xlarge"] : ["t3.xlarge"]
-  spot_price = "0.09" # the maximum hourly price
+  spot_price          = "0.16" # the maximum hourly price
+  # + $0.08 for software cost
   # $0.0646 for t4g.xlarge instance in ap-northeast-2
   # $0.078 for t3.xlarge instance
 
@@ -119,7 +120,7 @@ source "amazon-ebs" "amazon-linux-2023" {
 
   # Root volume configuration
   launch_block_device_mappings {
-    device_name           = "/dev/xvda"
+    device_name           = "/dev/sda1"
     volume_size           = 32
     volume_type           = "gp3"
     iops = 16000 # Max: 16000 IOPS for gp3
@@ -145,7 +146,7 @@ source "amazon-ebs" "amazon-linux-2023" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.amazon-linux-2023"
+    "source.amazon-ebs.rhel-8"
   ]
 
   provisioner "shell" {
@@ -160,17 +161,15 @@ build {
     source      = "../scripts/"
     destination = "/tmp/"
   }
-
   provisioner "shell" {
     expect_disconnect = true # It will logout at the end of this provisioner.
     inline_shebang = "/bin/bash -ex"
     inline = [
-        var.container_engine == "docker" ? "/tmp/install-docker-on-amazon-linux-2023.sh" : "true",
-        var.container_engine == "podman" ? "/tmp/podman-unavailable.sh" : "true",
+        var.container_engine == "docker" ? "/tmp/install-docker-on-rhel.sh" : "true",
+        var.container_engine == "podman" ? "/tmp/install-podman-on-rhel.sh" : "true",
         var.container_engine == "none" ? "/tmp/setup.v2.sh --install-container-engine" : "true",
     ]
   }
-
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [

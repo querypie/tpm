@@ -2,6 +2,41 @@
 
 set -o nounset -o errexit -o errtrace -o pipefail
 
+function print_usage_and_exit() {
+  set +x
+  local code=${1:-0} out=2
+  [[ code -eq 0 ]] && out=1
+  cat <<END_OF_USAGE
+Usage: $0 <querypie_version> [<distro>] [<architecture>] [<container_engine>]
+
+  querypie_version: Version of QueryPie to install (e.g., 11.0.1)
+  distro:           amazon-linux-2023, ubuntu-24.04, ubuntu-22.04, rhel-8, rhel-9, rhel-10, rocky-8
+  architecture:     Target CPU architecture (default: x86_64)
+                    Supported architectures: x86_64, arm64
+  container_engine: Container engine to use (default: none)
+                    Supported engines: none, docker, podman
+
+EXAMPLE:
+  $0 11.0.1 amazon-linux-2023
+  $0 11.0.1 amazon-linux-2023 arm64
+  $0 11.0.1 ubuntu-24.04
+  $0 11.0.1 ubuntu-22.04
+  $0 11.0.1 rhel8 x86_64 podman
+
+OPTIONS:
+  $0 -h | --help
+      Show this help message and exit.
+  $0 -x | --xtrace
+      Enable bash xtrace mode for debugging.
+  $0 -on-error=abort | --abort
+      Packer option to abort on error.
+  $0 -timestamp-ui | --timestamp-ui | --timestamp | -timestamp
+      Packer option to show timestamps in the UI.
+
+END_OF_USAGE
+  exit "$code"
+}
+
 BOLD_CYAN="\e[1;36m"
 BOLD_RED="\e[1;91m"
 RESET="\e[0m"
@@ -19,12 +54,13 @@ function log::error() {
   printf "%bERROR: %s%b\n" "$BOLD_RED" "$*" "$RESET" 1>&2
 }
 
+PACKER_OPTIONS=()
 function packer::build() {
-  local version=$1 distro=$2 architecture=$3 container_engine=$4
-  local packer_option="${PACKER_OPTION:-}" packer
-  # NOTE(JK): Use `PACKER_OPTION=-on-error=abort` to allow debugging the AMI build process.
+  local version=$1
+  shift 1
+  local distro=$1 architecture=$2 container_engine=$3 packer
   echo >&2 "### Install QueryPie and Verify with Packer ###"
-  echo >&2 "PACKER_OPTION: $packer_option"
+  echo >&2 "PACKER_OPTIONS: ${PACKER_OPTIONS[*]}"
 
   packer=./${distro}.pkr.hcl
   if [[ ! -f ${packer} ]]; then
@@ -39,11 +75,9 @@ function packer::build() {
     -var "architecture=${architecture}" \
     -var "container_engine=${container_engine}" \
     -var "resource_owner=${USER:-Unknown}" \
-    -timestamp-ui \
-    ${packer_option} \
+    "${PACKER_OPTIONS[@]}" \
     ${packer} |
-    sed 's/ ==> amazon-ebs\.[a-zA-Z0-9_.-]*://'
-  # Remove the builder name of '==> amazon-ebs.ubuntu24-04-install:'
+    tee log/packer-"${version}"-"${distro}"-"${architecture}"-"${container_engine}".log
 }
 
 function validate_environment() {
@@ -54,26 +88,58 @@ function validate_environment() {
 }
 
 function main() {
-  local querypie_version=${1:-} distro=${2:-amazon-linux-2023} architecture=${3:-x86_64} container_engine=${4:-none}
-  if [[ -z "$querypie_version" ]]; then
-    cat <<END_OF_USAGE
-Usage: $0 <querypie_version> [<distro>] [<architecture>] [<container_engine>]
+  local -a arguments=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -x | --xtrace)
+      set -o xtrace
+      shift
+      ;;
+    -h | --help)
+      print_usage_and_exit 0
+      ;;
+    -on-error=*)
+      PACKER_OPTIONS+=("$1")
+      shift
+      ;;
+    --abort)
+      PACKER_OPTIONS+=("-on-error=abort")
+      shift
+      ;;
+    -timestamp-ui | --timestamp-ui | --timestamp | -timestamp)
+      PACKER_OPTIONS+=(-timestamp-ui)
+      shift
+      ;;
+    --) # End of all options
+      shift
+      break
+      ;;
+    -*)
+      # Got unexpected arguments
+      log::error "Unexpected option received: $1"
+      print_usage_and_exit 1
+      ;;
+    *)
+      arguments+=("$1")
+      shift
+      ;;
+    esac
+  done
 
-EXAMPLE:
-  $0 11.0.1 amazon-linux-2023
-  $0 11.0.1 amazon-linux-2023 arm64
-  $0 11.0.1 ubuntu-24.04
-  $0 11.0.1 ubuntu-22.04
-  $0 11.0.1 rhel8 x86_64 podman
-  PACKER_OPTION=-on-error=abort $0 11.0.1 amazon-linux-2023
-
-END_OF_USAGE
-    exit 1
+  if [[ ${#arguments[@]} -gt 0 ]]; then
+    set -- "${arguments[@]}"
+  else
+    set --
   fi
 
-  validate_environment
+  local querypie_version=${1:-}
+  [[ -n "$querypie_version" ]] || print_usage_and_exit 1
 
-  packer::build "$querypie_version" "$distro" "$architecture" "$container_engine"
+  shift 1
+  local distro=${1:-amazon-linux-2023} architecture=${2:-x86_64} container_engine=${3:-none}
+  validate_environment
+  packer::build "$querypie_version" \
+    "$distro" "$architecture" "$container_engine"
 }
 
 main "$@"
