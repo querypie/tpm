@@ -76,7 +76,7 @@ locals {
 # "Description": "Provided by Red Hat, Inc."
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
-data "amazon-ami" "rhel8" {
+data "amazon-ami" "rhel-8" {
   filters = {
     name                = "RHEL-8.*_HVM-*"
     root-device-type    = "ebs"
@@ -91,10 +91,10 @@ data "amazon-ami" "rhel8" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# rhel8-install : Name of the builder
-source "amazon-ebs" "rhel8-install" {
+# rhel-8 : Name of the builder
+source "amazon-ebs" "rhel-8" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.rhel8.id
+  source_ami      = data.amazon-ami.rhel-8.id
   ami_name        = local.ami_name
 
   region               = local.region
@@ -140,7 +140,7 @@ source "amazon-ebs" "rhel8-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.rhel8-install"
+    "source.amazon-ebs.rhel-8"
   ]
 
   provisioner "shell" {
@@ -172,11 +172,11 @@ build {
     ]
   }
 
-  # Install QueryPie Deployment Package
+  # Install QueryPie
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --universal --install ${var.querypie_version}",
+      "setup.v2.sh --yes --install ${var.querypie_version}",
       "setup.v2.sh --verify-installation",
     ]
   }

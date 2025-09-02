@@ -28,6 +28,14 @@ variable "architecture" {
   description = "x86_64 | arm64"
 }
 
+variable "container_engine" {
+  type        = string
+  default     = "none"
+  description = "docker | podman | none"
+  # If container_engine is set to none, Packer script will not install a container engine.
+  # setup.v2.sh will install Docker or Podman.
+}
+
 variable "resource_owner" {
   type        = string
   default     = "Ubuntu24.04-Installer"
@@ -89,8 +97,8 @@ data "amazon-ami" "ubuntu-24-04" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# ubuntu24-04-install : Name of the builder
-source "amazon-ebs" "ubuntu24-04-install" {
+# ubuntu-24-04 : Name of the builder
+source "amazon-ebs" "ubuntu-24-04" {
   skip_create_ami = true
   source_ami      = data.amazon-ami.ubuntu-24-04.id
   ami_name        = local.ami_name
@@ -137,7 +145,7 @@ source "amazon-ebs" "ubuntu24-04-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.ubuntu24-04-install"
+    "source.amazon-ebs.ubuntu-24-04"
   ]
 
   provisioner "shell" {
@@ -147,15 +155,20 @@ build {
     ]
   }
 
-  provisioner "shell" {
-    expect_disconnect = true # It will logout at the end of this provisioner.
-    script = "../scripts/install-docker-on-ubuntu.sh"
-  }
-
-  # Install scripts such as setup.v2.sh
+  # Copy files in scripts, such as setup.v2.sh
   provisioner "file" {
     source      = "../scripts/"
     destination = "/tmp/"
+  }
+
+  provisioner "shell" {
+    expect_disconnect = true # It will logout at the end of this provisioner.
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+        var.container_engine == "docker" ? "/tmp/install-docker-on-ubuntu.sh" : "true",
+        var.container_engine == "podman" ? "/tmp/install-podman-on-ubuntu.sh" : "true",
+        var.container_engine == "none" ? "/tmp/setup.v2.sh --install-container-engine" : "true",
+    ]
   }
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
@@ -190,23 +203,6 @@ build {
       "setup.v2.sh --uninstall",
       "docker ps --all",
       "setup.v2.sh --verify-not-installed",
-    ]
-  }
-
-  # Final cleanup
-  provisioner "shell" {
-    inline_shebang = "/bin/bash -ex"
-    inline = [
-      "echo '# Performing final cleanup...'",
-      "sudo apt clean",
-      "sudo apt autoremove -y",
-      "sudo rm -rf /tmp/*",
-      "sudo rm -rf /var/tmp/*",
-      "history -c",
-      "cat /dev/null > ~/.bash_history",
-      "sudo rm -f /root/.bash_history",
-      "sudo find /var/log -type f -exec truncate -s 0 {} \\;",
-      "echo 'Cleanup completed'"
     ]
   }
 

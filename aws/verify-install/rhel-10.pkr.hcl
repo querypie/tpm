@@ -76,7 +76,7 @@ locals {
 # "Description": "Provided by Red Hat, Inc."
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
-data "amazon-ami" "rhel10" {
+data "amazon-ami" "rhel-10" {
   filters = {
     name                = "RHEL-10.*_HVM-*"
     root-device-type    = "ebs"
@@ -91,10 +91,10 @@ data "amazon-ami" "rhel10" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# rhel10-install : Name of the builder
-source "amazon-ebs" "rhel10-install" {
+# rhel-10 : Name of the builder
+source "amazon-ebs" "rhel-10" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.rhel10.id
+  source_ami      = data.amazon-ami.rhel-10.id
   ami_name        = local.ami_name
 
   region               = local.region
@@ -140,7 +140,7 @@ source "amazon-ebs" "rhel10-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.rhel10-install"
+    "source.amazon-ebs.rhel-10"
   ]
 
   provisioner "shell" {
@@ -150,7 +150,7 @@ build {
     ]
   }
 
-  # Install scripts such as setup.v2.sh
+  # Copy files in scripts, such as setup.v2.sh
   provisioner "file" {
     source      = "../scripts/"
     destination = "/tmp/"
@@ -165,12 +165,6 @@ build {
         var.container_engine == "none" ? "/tmp/setup.v2.sh --install-container-engine" : "true",
     ]
   }
-
-  # Install scripts such as setup.v2.sh
-  provisioner "file" {
-    source      = "../scripts/"
-    destination = "/tmp/"
-  }
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
@@ -179,28 +173,12 @@ build {
     ]
   }
 
-  # Install QueryPie Deployment Package
+  # Install QueryPie
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --universal --install ${var.querypie_version}",
+      "setup.v2.sh --yes --install ${var.querypie_version}",
       "setup.v2.sh --verify-installation",
-    ]
-  }
-
-  # Final cleanup
-  provisioner "shell" {
-    inline_shebang = "/bin/bash -ex"
-    inline = [
-      "echo '# Performing final cleanup...'",
-      "sudo dnf clean all",
-      "sudo rm -rf /tmp/*",
-      "sudo rm -rf /var/tmp/*",
-      "history -c",
-      "cat /dev/null > ~/.bash_history",
-      "sudo rm -f /root/.bash_history",
-      "sudo find /var/log -type f -exec truncate -s 0 {} \\;",
-      "echo 'Cleanup completed'"
     ]
   }
 

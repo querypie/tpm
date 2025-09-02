@@ -1,0 +1,376 @@
+[1;32mamazon-ebs.rocky-8: output will be in this color.[0m
+
+[1;32m==> amazon-ebs.rocky-8: skip_create_ami was set; not prevalidating AMI name[0m
+[1;32m==> amazon-ebs.rocky-8: Found Image ID: ami-09bb074a3d74b2e9f[0m
+[1;32m==> amazon-ebs.rocky-8: Creating temporary keypair: packer_68b68287-3d8e-ac16-a79b-ad1b860fb5e6[0m
+[1;32m==> amazon-ebs.rocky-8: Creating temporary security group for this instance: packer_68b68288-4920-1539-73ea-aa7df0bf74a3[0m
+[1;32m==> amazon-ebs.rocky-8: Authorizing access to port 22 from [0.0.0.0/0] in the temporary security groups...[0m
+[1;32m==> amazon-ebs.rocky-8: Launching a spot AWS instance...[0m
+[1;32m==> amazon-ebs.rocky-8: Interpolating tags for spot instance...[0m
+[1;32m==> amazon-ebs.rocky-8: Adding tag: "Owner": "jk"[0m
+[1;32m==> amazon-ebs.rocky-8: Adding tag: "Purpose": "Automated QueryPie Installer"[0m
+[1;32m==> amazon-ebs.rocky-8: Adding tag: "Version": "11.1.2"[0m
+[1;32m==> amazon-ebs.rocky-8: Adding tag: "BuildDate": "20250902053711"[0m
+[1;32m==> amazon-ebs.rocky-8: Adding tag: "CreatedBy": "Packer"[0m
+[1;32m==> amazon-ebs.rocky-8: Adding tag: "Name": "Rocky8-Installer-11.1.2"[0m
+[1;32m==> amazon-ebs.rocky-8: Loading User Data File...[0m
+[1;32m==> amazon-ebs.rocky-8: Creating Spot Fleet launch template...[0m
+[1;32m==> amazon-ebs.rocky-8: Created Spot Fleet launch template: lt-0cc551e7194d93340[0m
+[1;32m==> amazon-ebs.rocky-8: Instance ID: i-05e3e3447645335f2[0m
+[1;32m==> amazon-ebs.rocky-8: Waiting for instance (i-05e3e3447645335f2) to become ready...[0m
+[1;32m==> amazon-ebs.rocky-8: Using SSH communicator to connect: 43.200.3.53[0m
+[1;32m==> amazon-ebs.rocky-8: Waiting for SSH to become available...[0m
+[1;32m==> amazon-ebs.rocky-8: Connected to SSH![0m
+[1;32m==> amazon-ebs.rocky-8: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell1190719536[0m
+[1;31m==> amazon-ebs.rocky-8: + cloud-init status --wait[0m
+[1;32m==> amazon-ebs.rocky-8:[0m
+[1;32m==> amazon-ebs.rocky-8: status: done[0m
+[1;31m==> amazon-ebs.rocky-8: + sudo growpart /dev/nvme0n1 5[0m
+[1;32m==> amazon-ebs.rocky-8: CHANGED: partition=5 start=2265088 old: size=18704384 end=20969471 new: size=64843743 end=67108830[0m
+[1;31m==> amazon-ebs.rocky-8: + sudo lvextend -l +100%FREE /dev/mapper/rocky-root[0m
+[1;32m==> amazon-ebs.rocky-8:   Size of logical volume rocky/root changed from <8.92 GiB (2283 extents) to <30.92 GiB (7915 extents).[0m
+[1;32m==> amazon-ebs.rocky-8:   Logical volume rocky/root successfully resized.[0m
+[1;31m==> amazon-ebs.rocky-8: + sudo xfs_growfs /[0m
+[1;32m==> amazon-ebs.rocky-8: meta-data=/dev/mapper/rocky-root isize=512    agcount=4, agsize=584448 blks[0m
+[1;32m==> amazon-ebs.rocky-8:          =                       sectsz=512   attr=2, projid32bit=1[0m
+[1;32m==> amazon-ebs.rocky-8:          =                       crc=1        finobt=1, sparse=1, rmapbt=0[0m
+[1;32m==> amazon-ebs.rocky-8:          =                       reflink=1    bigtime=0 inobtcount=0[0m
+[1;32m==> amazon-ebs.rocky-8: data     =                       bsize=4096   blocks=2337792, imaxpct=25[0m
+[1;32m==> amazon-ebs.rocky-8:          =                       sunit=0      swidth=0 blks[0m
+[1;32m==> amazon-ebs.rocky-8: naming   =version 2              bsize=4096   ascii-ci=0, ftype=1[0m
+[1;32m==> amazon-ebs.rocky-8: log      =internal log           bsize=4096   blocks=2560, version=2[0m
+[1;32m==> amazon-ebs.rocky-8:          =                       sectsz=512   sunit=0 blks, lazy-count=1[0m
+[1;32m==> amazon-ebs.rocky-8: realtime =none                   extsz=4096   blocks=0, rtextents=0[0m
+[1;32m==> amazon-ebs.rocky-8: data blocks changed from 2337792 to 8104960[0m
+[1;32m==> amazon-ebs.rocky-8: Uploading ../scripts/ => /tmp/[0m
+[1;32m==> amazon-ebs.rocky-8: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell3034334398[0m
+[1;31m==> amazon-ebs.rocky-8: + true[0m
+[1;31m==> amazon-ebs.rocky-8: + /tmp/install-podman-on-rhel.sh[0m
+[1;31m==> amazon-ebs.rocky-8: + packages=(podman podman-plugins podman-manpages)[0m
+[1;31m==> amazon-ebs.rocky-8: + main[0m
+[1;31m==> amazon-ebs.rocky-8: + test_if_podman_installed_already[0m
+[1;31m==> amazon-ebs.rocky-8: + ps ux[0m
+[1;31m==> amazon-ebs.rocky-8: + id -Gn[0m
+[1;32m==> amazon-ebs.rocky-8: USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND[0m
+[1;32m==> amazon-ebs.rocky-8: rocky       4624  1.6  0.0  89648  9648 ?        Ss   05:38   0:00 /usr/lib/systemd/systemd --user[0m
+[1;32m==> amazon-ebs.rocky-8: rocky       4632  0.0  0.0 153064  4964 ?        S    05:38   0:00 (sd-pam)[0m
+[1;32m==> amazon-ebs.rocky-8: rocky       4683  0.2  0.0 137052  6088 ?        S    05:38   0:00 sshd: rocky@notty[0m
+[1;32m==> amazon-ebs.rocky-8: rocky       5405  0.0  0.0 222600  3276 ?        Ss   05:38   0:00 bash -c chmod +x /tmp/script_2248.sh; PACKER_BUILDER_TYPE='amazon-ebs' PACKER_BUILD_NAME='rocky-8'  /tmp/script_2248.sh[0m
+[1;32m==> amazon-ebs.rocky-8: rocky       5427  0.0  0.0 222600  3356 ?        S    05:38   0:00 /bin/bash -ex /tmp/script_2248.sh[0m
+[1;32m==> amazon-ebs.rocky-8: rocky       5428  0.0  0.0 222600  3204 ?        S    05:38   0:00 bash /tmp/install-podman-on-rhel.sh[0m
+[1;32m==> amazon-ebs.rocky-8: rocky       5429  0.0  0.0 257504  3952 ?        R    05:38   0:00 ps ux[0m
+[1;31m==> amazon-ebs.rocky-8: + podman ps[0m
+[1;32m==> amazon-ebs.rocky-8: rocky adm systemd-journal[0m
+[1;31m==> amazon-ebs.rocky-8: /tmp/install-podman-on-rhel.sh: line 36: podman: command not found[0m
+[1;31m==> amazon-ebs.rocky-8: + install_podman[0m
+[1;31m==> amazon-ebs.rocky-8: + sudo dnf -y -q --best install podman podman-plugins podman-manpages[0m
+[1;31m==> amazon-ebs.rocky-8: Importing GPG key 0x6D745A60:[0m
+[1;31m==> amazon-ebs.rocky-8:  Userid     : "Release Engineering <infrastructure@rockylinux.org>"[0m
+[1;31m==> amazon-ebs.rocky-8:  Fingerprint: 7051 C470 A929 F454 CEBE 37B7 15AF 5DAC 6D74 5A60[0m
+[1;31m==> amazon-ebs.rocky-8:  From       : /etc/pki/rpm-gpg/RPM-GPG-KEY-rockyofficial[0m
+[1;32m==> amazon-ebs.rocky-8:[0m
+[1;32m==> amazon-ebs.rocky-8: Installed:[0m
+[1;32m==> amazon-ebs.rocky-8:   conmon-3:2.1.10-1.module+el8.10.0+2001+6a33db9f.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   container-selinux-2:2.229.0-2.module+el8.10.0+2001+6a33db9f.noarch[0m
+[1;32m==> amazon-ebs.rocky-8:   containernetworking-plugins-1:1.4.0-6.module+el8.10.0+2001+6a33db9f.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   containers-common-2:1-82.module+el8.10.0+2001+6a33db9f.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   criu-3.18-5.module+el8.10.0+2001+6a33db9f.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   dnsmasq-2.79-33.el8_10.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   fuse-common-3.3.0-19.el8.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   fuse-overlayfs-1.13-1.module+el8.10.0+2001+6a33db9f.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   fuse3-3.3.0-19.el8.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   fuse3-libs-3.3.0-19.el8.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   iptables-1.8.5-11.el8.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   iptables-libs-1.8.5-11.el8.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   libibverbs-48.0-1.el8.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   libnet-1.1.6-15.el8.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   libnetfilter_conntrack-1.0.6-5.el8.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   libnfnetlink-1.0.1-13.el8.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   libnftnl-1.2.2-3.el8.x86_64[0m
+[1;31m==> amazon-ebs.rocky-8: + systemctl --user enable --now podman.socket[0m
+[1;32m==> amazon-ebs.rocky-8:   libpcap-14:1.9.1-5.el8.x86_64[0m
+[1;31m==> amazon-ebs.rocky-8: Created symlink /home/rocky/.config/systemd/user/sockets.target.wants/podman.socket → /usr/lib/systemd/user/podman.socket.[0m
+[1;32m==> amazon-ebs.rocky-8:   libslirp-4.4.0-2.module+el8.10.0+2001+6a33db9f.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   nftables-1:1.0.4-7.el8_10.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   podman-4:4.9.4-22.module+el8.10.0+2006+320bb1e5.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   podman-catatonit-4:4.9.4-22.module+el8.10.0+2006+320bb1e5.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   podman-gvproxy-4:4.9.4-22.module+el8.10.0+2006+320bb1e5.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   podman-plugins-4:4.9.4-22.module+el8.10.0+2006+320bb1e5.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   protobuf-c-1.3.0-8.el8.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   runc-1:1.1.12-6.module+el8.10.0+2001+6a33db9f.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   shadow-utils-subid-2:4.6-22.el8.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:   slirp4netns-1.2.3-1.module+el8.10.0+2001+6a33db9f.x86_64[0m
+[1;32m==> amazon-ebs.rocky-8:[0m
+[1;31m==> amazon-ebs.rocky-8: + install_docker_compose[0m
+[1;31m==> amazon-ebs.rocky-8: + local hardware[0m
+[1;31m==> amazon-ebs.rocky-8: ++ uname -m[0m
+[1;31m==> amazon-ebs.rocky-8: + hardware=x86_64[0m
+[1;31m==> amazon-ebs.rocky-8: + curl -SL https://github.com/docker/compose/releases/download/v2.39.1/docker-compose-linux-x86_64 -o /tmp/docker-compose[0m
+[1;31m==> amazon-ebs.rocky-8:   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current[0m
+[1;31m==> amazon-ebs.rocky-8:                                  Dload  Upload   Total   Spent    Left  Speed[0m
+[1;31m==> amazon-ebs.rocky-8:   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0[0m
+[1;31m==> amazon-ebs.rocky-8: 100 72.0M  100 72.0M    0     0   134M      0 --:--:-- --:--:-- --:--:--  335M[0m
+[1;31m==> amazon-ebs.rocky-8: + file /tmp/docker-compose[0m
+[1;31m==> amazon-ebs.rocky-8: + grep -q 'ELF 64-bit LSB executable'[0m
+[1;31m==> amazon-ebs.rocky-8: + install -m 755 -D /tmp/docker-compose /home/rocky/.docker/cli-plugins/docker-compose[0m
+[1;31m==> amazon-ebs.rocky-8: + sudo install -m 755 /tmp/docker-compose /usr/local/bin/docker-compose[0m
+[1;31m==> amazon-ebs.rocky-8: + true[0m
+[1;32m==> amazon-ebs.rocky-8: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell908463477[0m
+[1;31m==> amazon-ebs.rocky-8: + ps ux[0m
+[1;31m==> amazon-ebs.rocky-8: + id -Gn[0m
+[1;32m==> amazon-ebs.rocky-8: USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND[0m
+[1;31m==> amazon-ebs.rocky-8: + sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh[0m
+[1;32m==> amazon-ebs.rocky-8: rocky       4624  0.1  0.0  89772  9800 ?        Ss   05:38   0:00 /usr/lib/systemd/systemd --user[0m
+[1;32m==> amazon-ebs.rocky-8: rocky       4632  0.0  0.0 153064  4964 ?        S    05:38   0:00 (sd-pam)[0m
+[1;32m==> amazon-ebs.rocky-8: rocky       4683  0.0  0.0 137052  6088 ?        S    05:38   0:00 sshd: rocky@notty[0m
+[1;32m==> amazon-ebs.rocky-8: rocky      10314  0.0  0.0 222600  3420 ?        Ss   05:39   0:00 bash -c chmod +x /tmp/script_8155.sh; PACKER_BUILDER_TYPE='amazon-ebs' PACKER_BUILD_NAME='rocky-8'  /tmp/script_8155.sh[0m
+[1;32m==> amazon-ebs.rocky-8: rocky      10375  0.0  0.0 222600  3232 ?        S    05:39   0:00 /bin/bash -ex /tmp/script_8155.sh[0m
+[1;32m==> amazon-ebs.rocky-8: rocky      10379  0.0  0.0 257504  3812 ?        R    05:39   0:00 ps ux[0m
+[1;32m==> amazon-ebs.rocky-8: rocky adm systemd-journal[0m
+[1;32m==> amazon-ebs.rocky-8: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell715856093[0m
+[1;31m==> amazon-ebs.rocky-8: + setup.v2.sh --yes --install 11.1.2[0m
+[1;31m==> amazon-ebs.rocky-8: #### setup.v2.sh - QueryPie Installer 25.09.1, /usr/bin/bash 4.4.20(1)-release on Linux x86_64 ####[0m
+[1;31m==> amazon-ebs.rocky-8: ### Install QueryPie ###[0m
+[1;31m==> amazon-ebs.rocky-8: # QP_VERSION: 11.1.2[0m
+[1;31m==> amazon-ebs.rocky-8: # PACKAGE_VERSION: universal[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: ## Configure sudo privileges[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: # 'sudo' will be used for privileged commands.[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: ## Install Docker engine[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: # Podman is already installed at /usr/bin/podman[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: ## Verify Container Engine installation[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: # Podman is already running and functional.[0m
+[1;31m==> amazon-ebs.rocky-8: # Podman socket is active.[0m
+[1;32m==> amazon-ebs.rocky-8: active[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ podman --version[0m[0m
+[1;32m==> amazon-ebs.rocky-8: podman version 4.9.4-rhel[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: ## Install Docker Compose tool[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: # Compose Tool, docker-compose is already installed at /home/rocky/.docker/cli-plugins/docker-compose[0m
+[1;31m==> amazon-ebs.rocky-8: # Compose Tool is enabled as a plugin for podman[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ podman compose version[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.rocky-8:[0m
+[1;32m==> amazon-ebs.rocky-8: Docker Compose version v2.39.1[0m
+[1;31m==> amazon-ebs.rocky-8: [0m#[0m
+[1;31m==> amazon-ebs.rocky-8: ## Install configuration files: docker-compose.yml, .env, and others[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: # Target directory is ./querypie/11.1.2/[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ curl -fsSL https://dl.querypie.com/releases/compose/universal/package.tar.gz -o package.tar.gz[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ umask 0022[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ tar zxvf package.tar.gz -C ./querypie/11.1.2[0m[0m
+[1;32m==> amazon-ebs.rocky-8: ./[0m
+[1;32m==> amazon-ebs.rocky-8: ./nginx.d/[0m
+[1;32m==> amazon-ebs.rocky-8: ./nginx.d/ssl.conf[0m
+[1;32m==> amazon-ebs.rocky-8: ./nginx.d/.gitkeep[0m
+[1;32m==> amazon-ebs.rocky-8: ./README.md[0m
+[1;32m==> amazon-ebs.rocky-8: ./systemd/[0m
+[1;32m==> amazon-ebs.rocky-8: ./systemd/podman-querypie-database.service[0m
+[1;32m==> amazon-ebs.rocky-8: ./systemd/podman-querypie-app.service[0m
+[1;32m==> amazon-ebs.rocky-8: ./README.ja.md[0m
+[1;32m==> amazon-ebs.rocky-8: ./certs/[0m
+[1;32m==> amazon-ebs.rocky-8: ./certs/.gitkeep[0m
+[1;32m==> amazon-ebs.rocky-8: ./skip_command_config.json.example[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ rm package.tar.gz[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ sed -i.orig -e s#- \./mysql:/var/lib/mysql#- ../mysql:/var/lib/mysql# -e s#harbor.chequer.io/querypie/#docker.io/querypie/# -e s#docker.io/querypie/#docker.io/querypie/# -e s#source: /var/log/querypie#source: ../log# ./querypie/11.1.2/compose.yml[0m[0m
+[1;32m==> amazon-ebs.rocky-8: ./logrotate[0m
+[1;32m==> amazon-ebs.rocky-8: ./compose.yml[0m
+[1;32m==> amazon-ebs.rocky-8: ./mysql_init/[0m
+[1;32m==> amazon-ebs.rocky-8: ./mysql_init/init.sql[0m
+[1;32m==> amazon-ebs.rocky-8: ./.env.template[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ cp ./querypie/11.1.2/.env.template ./querypie/11.1.2/.env[0m[0m
+[1;32m==> amazon-ebs.rocky-8: ./skip_command_config.json[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ sed -i.orig -e s#^VERSION=.*#VERSION=11.1.2# -e s#CABINET_DATA_DIR=/data#CABINET_DATA_DIR=../data# ./querypie/11.1.2/.env[0m[0m
+[1;32m==> amazon-ebs.rocky-8: ./.gitignore[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ mkdir -p ./querypie/mysql[0m[0m
+[1;32m==> amazon-ebs.rocky-8: ./README.ko.md[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ mkdir -p ./querypie/log[0m[0m
+[1;32m==> amazon-ebs.rocky-8: ./novac-compose.yml[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: ## Verify SELinux settings[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: # SELinux is installed on this system.[0m
+[1;31m==> amazon-ebs.rocky-8: # SELinux is enabled on this system.[0m
+[1;32m==> amazon-ebs.rocky-8: unconfined_u:object_r:user_home_t:s0 ./querypie[0m
+[1;32m==> amazon-ebs.rocky-8: Do you agree? [y/N] : yes[0m
+[1;31m==> amazon-ebs.rocky-8: # The current mode of SELinux is enforcing.[0m
+[1;31m==> amazon-ebs.rocky-8: ## You may need to change the SELinux context of the ./querypie directory.[0m
+[1;31m==> amazon-ebs.rocky-8: # A more permissive SELinux context (container_file_t) is required for ./querypie.[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ ls -dZ ./querypie[0m[0m
+[1;31m==> amazon-ebs.rocky-8: # The following sudo command is recommended:[0m
+[1;31m==> amazon-ebs.rocky-8: #   sudo chcon -Rt container_file_t ./querypie[0m
+[1;31m==> amazon-ebs.rocky-8: # Without this change, you may encounter container errors.[0m
+[1;31m==> amazon-ebs.rocky-8: Do you want to run the above sudo chcon -Rt container_file_t ./querypie command?[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ sudo chcon -Rt container_file_t ./querypie[0m[0m
+[1;32m==> amazon-ebs.rocky-8: ~/querypie/11.1.2 ~[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: ## No ./offline/images.txt file found. Skipping loading Docker images from tarball files.[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: ## Configure the .env file in ./querypie/11.1.2/[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ pushd ./querypie/11.1.2/[0m[0m
+[1;31m==> amazon-ebs.rocky-8: # Generating Docker environment file from .env to /tmp/env_file.YLUh82[0m
+[1;31m==> amazon-ebs.rocky-8: # Replacing original file .env with generated file /tmp/env_file.YLUh82[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ podman compose --profile database --profile querypie --profile tools pull --quiet[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.rocky-8:[0m
+[1;31m==> amazon-ebs.rocky-8: [0m mysql Pulling[0m
+[1;31m==> amazon-ebs.rocky-8:  app Pulling[0m
+[1;31m==> amazon-ebs.rocky-8:  tools Pulling[0m
+[1;31m==> amazon-ebs.rocky-8:  redis Pulling[0m
+[1;31m==> amazon-ebs.rocky-8:  redis Pulled[0m
+[1;31m==> amazon-ebs.rocky-8:  tools Pulled[0m
+[1;31m==> amazon-ebs.rocky-8:  mysql Pulled[0m
+[1;31m==> amazon-ebs.rocky-8:  app Pulled[0m
+[1;31m==> amazon-ebs.rocky-8: ## Start MySQL and Redis services for QueryPie[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ podman compose --profile database up --detach[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.rocky-8:[0m
+[1;31m==> amazon-ebs.rocky-8: [0m Network querypie_database  Creating[0m
+[1;31m==> amazon-ebs.rocky-8:  Network querypie_database  Created[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-redis-1  Creating[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-mysql-1  Creating[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-redis-1  Created[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-mysql-1  Created[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-mysql-1  Starting[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-redis-1  Starting[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-mysql-1  Started[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-redis-1  Started[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ sleep 20[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ podman compose --profile tools up --detach[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.rocky-8:[0m
+[1;31m==> amazon-ebs.rocky-8: [0m Network querypie_tools  Creating[0m
+[1;31m==> amazon-ebs.rocky-8:  Network querypie_tools  Created[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-tools-1  Creating[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-tools-1  Created[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-tools-1  Starting[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-tools-1  Started[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ tools::wait_and_print_banner[0m[0m
+[1;31m==> amazon-ebs.rocky-8: ## Run migrate.sh to initialize MySQL database for QueryPie[0m
+[1;32m==> amazon-ebs.rocky-8: .--------------------------------------------------------.[0m
+[1;31m==> amazon-ebs.rocky-8: # This process may take more than a minute if this is the first installation.[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ podman exec querypie-tools-1 /app/script/migrate.sh runall[0m[0m
+[1;32m==> amazon-ebs.rocky-8: |  🚀 QueryPie Tools has been successfully started! 🚀   |[0m
+[1;32m==> amazon-ebs.rocky-8: |  Timestamp in UTC: Tue Sep  2 05:40:50 UTC 2025        |[0m
+[1;32m==> amazon-ebs.rocky-8: |  Timestamp in KST: Tue Sep  2 14:40:50 KST 2025        |[0m
+[1;32m==> amazon-ebs.rocky-8: '--------------------------------------------------------'[0m
+[1;31m==> amazon-ebs.rocky-8: .......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................... Done.[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ podman exec querypie-tools-1 /app/script/migrate.sh runall[0m[0m
+[1;32m==> amazon-ebs.rocky-8: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.rocky-8: [2025-09-02 05:42:34] Tools server is ready.[0m
+[1;32m==> amazon-ebs.rocky-8: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.rocky-8: [2025-09-02 05:42:34] QueryPie migration is started.[0m
+[1;32m==> amazon-ebs.rocky-8: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.rocky-8: [2025-09-02 05:42:34] QueryPie migration is finished.[0m
+[1;32m==> amazon-ebs.rocky-8: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.rocky-8: [2025-09-02 05:42:34] QueryPie Log migration is started.[0m
+[1;32m==> amazon-ebs.rocky-8: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.rocky-8: [2025-09-02 05:42:34] QueryPie Log migration is finished.[0m
+[1;32m==> amazon-ebs.rocky-8: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.rocky-8: [2025-09-02 05:42:34] QueryPie Snapshot migration is started.[0m
+[1;32m==> amazon-ebs.rocky-8: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.rocky-8: [2025-09-02 05:42:34] QueryPie Snapshot migration is finished.[0m
+[1;32m==> amazon-ebs.rocky-8: --------------------------------------------------------------------------------[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ podman compose --profile tools down[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.rocky-8:[0m
+[1;31m==> amazon-ebs.rocky-8: [0m Container querypie-tools-1  Stopping[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-tools-1  Stopped[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-tools-1  Removing[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-tools-1  Removed[0m
+[1;31m==> amazon-ebs.rocky-8:  Network querypie_tools  Removing[0m
+[1;31m==> amazon-ebs.rocky-8:  Network querypie_tools  Removed[0m
+[1;31m==> amazon-ebs.rocky-8: ## Start the QueryPie container (initialization takes about 2 minutes)[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ podman compose --profile querypie up --detach[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.rocky-8:[0m
+[1;31m==> amazon-ebs.rocky-8: [0m Network querypie_app  Creating[0m
+[1;31m==> amazon-ebs.rocky-8:  Network querypie_app  Created[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-app-1  Creating[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-app-1  Created[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-app-1  Starting[0m
+[1;31m==> amazon-ebs.rocky-8:  Container querypie-app-1  Started[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ podman exec querypie-app-1 readyz[0m[0m
+[1;32m==> amazon-ebs.rocky-8: ########################################################################[0m
+[1;32m==> amazon-ebs.rocky-8: #                                                                      #[0m
+[1;32m==> amazon-ebs.rocky-8: #     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██████╗ ██╗███████╗    #[0m
+[1;32m==> amazon-ebs.rocky-8: #    ██╔═══██╗██║   ██║██╔════╝██╔══██╗╚██╗ ██╔╝██╔══██╗██║██╔════╝    #[0m
+[1;32m==> amazon-ebs.rocky-8: #    ██║   ██║██║   ██║█████╗  ██████╔╝ ╚████╔╝ ██████╔╝██║█████╗      #[0m
+[1;32m==> amazon-ebs.rocky-8: #    ██║▄▄ ██║██║   ██║██╔══╝  ██╔══██╗  ╚██╔╝  ██╔═══╝ ██║██╔══╝      #[0m
+[1;32m==> amazon-ebs.rocky-8: #    ╚██████╔╝╚██████╔╝███████╗██║  ██║   ██║   ██║     ██║███████╗    #[0m
+[1;32m==> amazon-ebs.rocky-8: #     ╚══▀▀═╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝╚══════╝    #[0m
+[1;32m==> amazon-ebs.rocky-8: #                                                                      #[0m
+[1;32m==> amazon-ebs.rocky-8: ########################################################################[0m
+[1;32m==> amazon-ebs.rocky-8: .--------------------------------------------------------.[0m
+[1;32m==> amazon-ebs.rocky-8: |  🚀 QueryPie Server has been successfully started! 🚀  |[0m
+[1;32m==> amazon-ebs.rocky-8: |  Timestamp in UTC: Tue Sep  2 05:44:17 UTC 2025        |[0m
+[1;32m==> amazon-ebs.rocky-8: |  Timestamp in KST: Tue Sep  2 14:44:17 KST 2025        |[0m
+[1;32m==> amazon-ebs.rocky-8: '--------------------------------------------------------'[0m
+[1;32m==> amazon-ebs.rocky-8: ~[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ popd[0m[0m
+[1;31m==> amazon-ebs.rocky-8: ## Create a symbolic link 'current' pointing to 11.1.2[0m
+[1;32m==> amazon-ebs.rocky-8: ~/querypie ~[0m
+[1;32m==> amazon-ebs.rocky-8: ~[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ pushd ./querypie/[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ rm -f current[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ ln -s 11.1.2 current[0m[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ popd[0m[0m
+[1;31m==> amazon-ebs.rocky-8: ## Enable systemd service for rootless Podman[0m
+[1;31m==> amazon-ebs.rocky-8: # Enabling linger for user rocky.[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ sudo loginctl enable-linger rocky[0m[0m
+[1;31m==> amazon-ebs.rocky-8: # Enabling and starting podman-querypie-database.service and podman-querypie-app.service[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ systemctl --user link querypie/current/systemd/podman-querypie-database.service[0m[0m
+[1;31m==> amazon-ebs.rocky-8: Created symlink /home/rocky/.config/systemd/user/podman-querypie-database.service → /home/rocky/querypie/current/systemd/podman-querypie-database.service.[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ systemctl --user link querypie/current/systemd/podman-querypie-app.service[0m[0m
+[1;31m==> amazon-ebs.rocky-8: Created symlink /home/rocky/.config/systemd/user/podman-querypie-app.service → /home/rocky/querypie/current/systemd/podman-querypie-app.service.[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ systemctl --user enable --now podman-querypie-database.service[0m[0m
+[1;31m==> amazon-ebs.rocky-8: Created symlink /home/rocky/.config/systemd/user/default.target.wants/podman-querypie-database.service → /home/rocky/querypie/current/systemd/podman-querypie-database.service.[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ systemctl --user enable --now podman-querypie-app.service[0m[0m
+[1;31m==> amazon-ebs.rocky-8: Created symlink /home/rocky/.config/systemd/user/default.target.wants/podman-querypie-app.service → /home/rocky/querypie/current/systemd/podman-querypie-app.service.[0m
+[1;31m==> amazon-ebs.rocky-8: ### Installation completed successfully[0m
+[1;31m==> amazon-ebs.rocky-8: ### Access QueryPie at http://172.31.44.119:8000 or https://172.31.44.119:8443 in your browser[0m
+[1;31m==> amazon-ebs.rocky-8: ### Determine the public IP address of your host machine if needed[0m
+[1;31m==> amazon-ebs.rocky-8: + setup.v2.sh --verify-installation[0m
+[1;31m==> amazon-ebs.rocky-8: #### setup.v2.sh - QueryPie Installer 25.09.1, /usr/bin/bash 4.4.20(1)-release on Linux x86_64 ####[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: ### Verify the installation[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: ## Verify Container Engine installation[0m
+[1;31m==> amazon-ebs.rocky-8: #[0m
+[1;31m==> amazon-ebs.rocky-8: # Podman is already running and functional.[0m
+[1;31m==> amazon-ebs.rocky-8: # Podman socket is active.[0m
+[1;32m==> amazon-ebs.rocky-8: active[0m
+[1;31m==> amazon-ebs.rocky-8: # Container version: 11.1.2[0m
+[1;31m==> amazon-ebs.rocky-8: # Current of ./querypie/current: 11.1.2[0m
+[1;31m==> amazon-ebs.rocky-8: # The container version is the same as the current version.[0m
+[1;31m==> amazon-ebs.rocky-8: # The installation looks good so far.[0m
+[1;31m==> amazon-ebs.rocky-8: ## Verify the QueryPie app container is running properly[0m
+[1;31m==> amazon-ebs.rocky-8: # QueryPie app container, querypie-app-1 is running.[0m
+[1;31m==> amazon-ebs.rocky-8: # QueryPie version: 11.1.2[0m
+[1;31m==> amazon-ebs.rocky-8: [1;36m+ podman exec querypie-app-1 readyz wait[0m[0m
+[1;31m==> amazon-ebs.rocky-8: # QueryPie app container, querypie-app-1 is ready for service.[0m
+[1;31m==> amazon-ebs.rocky-8: ## Installation verification completed successfully.[0m
+[1;32m==> amazon-ebs.rocky-8: Skipping AMI creation...[0m
+[1;32m==> amazon-ebs.rocky-8: Skipping AMI region copy...[0m
+[1;32m==> amazon-ebs.rocky-8: Skipping fast-launch template setup...[0m
+[1;32m==> amazon-ebs.rocky-8: Skipping Enable AMI deprecation...[0m
+[1;32m==> amazon-ebs.rocky-8: Skipping Enable AMI deregistration protection...[0m
+[1;32m==> amazon-ebs.rocky-8: Skipping AMI modify attributes...[0m
+[1;32m==> amazon-ebs.rocky-8: Skipping AMI create tags...[0m
+[1;32m==> amazon-ebs.rocky-8: Terminating the source AWS instance...[0m
+[1;32m==> amazon-ebs.rocky-8: Cleaning up any extra volumes...[0m
+[1;32m==> amazon-ebs.rocky-8: No volumes to clean up, skipping[0m
+[1;32m==> amazon-ebs.rocky-8: Deleting temporary security group...[0m
+[1;32m==> amazon-ebs.rocky-8: Deleting temporary keypair...[0m
+[1;32mBuild 'amazon-ebs.rocky-8' finished after 10 minutes 15 seconds.[0m
+
+==> Wait completed after 10 minutes 15 seconds
+
+==> Builds finished but no artifacts were created.

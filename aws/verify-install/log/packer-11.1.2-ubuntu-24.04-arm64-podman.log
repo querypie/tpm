@@ -1,0 +1,401 @@
+[1;32mamazon-ebs.ubuntu-24-04: output will be in this color.[0m
+
+[1;32m==> amazon-ebs.ubuntu-24-04: skip_create_ami was set; not prevalidating AMI name[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Found Image ID: ami-0607797cadde98e9b[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Creating temporary keypair: packer_68b6830e-2875-5d21-9e52-23c936900633[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Creating temporary security group for this instance: packer_68b6830e-bcca-fbc5-1562-7e5b2ad5b6e0[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Authorizing access to port 22 from [0.0.0.0/0] in the temporary security groups...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Launching a spot AWS instance...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Interpolating tags for spot instance...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Adding tag: "Purpose": "Automated QueryPie Installer"[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Adding tag: "Version": "11.1.2"[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Adding tag: "BuildDate": "20250902053925"[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Adding tag: "CreatedBy": "Packer"[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Adding tag: "Name": "Ubuntu24.04-Installer-11.1.2"[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Adding tag: "Owner": "jk"[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Loading User Data File...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Creating Spot Fleet launch template...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Created Spot Fleet launch template: lt-01a4463b0ab385836[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Instance ID: i-017ffe103c68ef1fe[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Waiting for instance (i-017ffe103c68ef1fe) to become ready...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Using SSH communicator to connect: 13.125.92.243[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Waiting for SSH to become available...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Connected to SSH![0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell1841223301[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + cloud-init status --wait[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ..status: done[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Uploading ../scripts/ => /tmp/[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell3419293103[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + true[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + /tmp/install-podman-on-ubuntu.sh[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + packages=(podman)[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + main[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + test_if_podman_installed_already[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + ps ux[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + id -Gn[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu      1146  4.1  0.0  20200 10792 ?        Ss   05:39   0:00 /usr/lib/systemd/systemd --user[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu      1147  0.0  0.0  22196  3368 ?        S    05:39   0:00 (sd-pam)[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu      1269  0.0  0.0  16708  6584 ?        S    05:39   0:00 sshd: ubuntu@notty[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu      1361  0.0  0.0   7452  3048 ?        Ss   05:39   0:00 /bin/bash -ex /tmp/script_7383.sh[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu      1363  0.0  0.0   7452  2984 ?        S    05:39   0:00 bash /tmp/install-podman-on-ubuntu.sh[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + podman ps[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu      1364  0.0  0.0  11156  3972 ?        R    05:39   0:00 ps ux[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu adm cdrom sudo dip lxd[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: /tmp/install-podman-on-ubuntu.sh: line 35: podman: command not found[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + install_podman[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + sudo DEBIAN_FRONTEND=noninteractive apt -qq update[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: WARNING: apt does not have a stable CLI interface. Use with caution in scripts.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: 13 packages can be upgraded. Run 'apt list --upgradable' to see them.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + sudo DEBIAN_FRONTEND=noninteractive apt-get -y -qq install podman[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package netavark.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: (Reading database ... 73126 files and directories currently installed.)[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../00-netavark_1.4.0-4_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking netavark (1.4.0-4) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package aardvark-dns.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../01-aardvark-dns_1.4.0-5_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking aardvark-dns (1.4.0-5) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package libsubid4:arm64.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../02-libsubid4_1%3a4.13+dfsg1-4ubuntu3.2_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking libsubid4:arm64 (1:4.13+dfsg1-4ubuntu3.2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package uidmap.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../03-uidmap_1%3a4.13+dfsg1-4ubuntu3.2_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking uidmap (1:4.13+dfsg1-4ubuntu3.2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package containernetworking-plugins.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../04-containernetworking-plugins_1.1.1+ds1-3ubuntu0.24.04.3_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking containernetworking-plugins (1.1.1+ds1-3ubuntu0.24.04.3) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package golang-github-containers-image.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../05-golang-github-containers-image_5.29.2-2_all.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking golang-github-containers-image (5.29.2-2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package golang-github-containers-common.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../06-golang-github-containers-common_0.57.4+ds1-2ubuntu0.2_all.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking golang-github-containers-common (0.57.4+ds1-2ubuntu0.2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package buildah.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../07-buildah_1.33.7+ds1-1ubuntu0.24.04.3_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking buildah (1.33.7+ds1-1ubuntu0.24.04.3) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package catatonit.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../08-catatonit_0.1.7-1_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking catatonit (0.1.7-1) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package conmon.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../09-conmon_2.1.10+ds1-1build2_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking conmon (2.1.10+ds1-1build2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package libyajl2:arm64.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../10-libyajl2_2.1.0-5build1_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking libyajl2:arm64 (2.1.0-5build1) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package crun.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../11-crun_1.14.1-1_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking crun (1.14.1-1) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package fuse-overlayfs.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../12-fuse-overlayfs_1.13-1_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking fuse-overlayfs (1.13-1) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package libslirp0:arm64.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../13-libslirp0_4.7.0-1ubuntu3_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking libslirp0:arm64 (4.7.0-1ubuntu3) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package passt.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../14-passt_0.0~git20240220.1e6f92b-1_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking passt (0.0~git20240220.1e6f92b-1) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package podman.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../15-podman_4.9.3+ds1-1ubuntu0.2_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking podman (4.9.3+ds1-1ubuntu0.2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Selecting previously unselected package slirp4netns.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Preparing to unpack .../16-slirp4netns_1.2.1-1build2_arm64.deb ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Unpacking slirp4netns (1.2.1-1build2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up libyajl2:arm64 (2.1.0-5build1) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up libsubid4:arm64 (1:4.13+dfsg1-4ubuntu3.2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up golang-github-containers-image (5.29.2-2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up conmon (2.1.10+ds1-1build2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up containernetworking-plugins (1.1.1+ds1-3ubuntu0.24.04.3) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up catatonit (0.1.7-1) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up netavark (1.4.0-4) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up aardvark-dns (1.4.0-5) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up libslirp0:arm64 (4.7.0-1ubuntu3) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up passt (0.0~git20240220.1e6f92b-1) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up fuse-overlayfs (1.13-1) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up golang-github-containers-common (0.57.4+ds1-2ubuntu0.2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up slirp4netns (1.2.1-1build2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up crun (1.14.1-1) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up uidmap (1:4.13+dfsg1-4ubuntu3.2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up podman (4.9.3+ds1-1ubuntu0.2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Created symlink /etc/systemd/system/default.target.wants/podman-auto-update.service → /usr/lib/systemd/system/podman-auto-update.service.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Created symlink /etc/systemd/system/timers.target.wants/podman-auto-update.timer → /usr/lib/systemd/system/podman-auto-update.timer.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Created symlink /etc/systemd/system/default.target.wants/podman-clean-transient.service → /usr/lib/systemd/system/podman-clean-transient.service.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Created symlink /etc/systemd/system/default.target.wants/podman-restart.service → /usr/lib/systemd/system/podman-restart.service.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Created symlink /etc/systemd/system/default.target.wants/podman.service → /usr/lib/systemd/system/podman.service.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Created symlink /etc/systemd/system/sockets.target.wants/podman.socket → /usr/lib/systemd/system/podman.socket.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Setting up buildah (1.33.7+ds1-1ubuntu0.24.04.3) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Processing triggers for man-db (2.12.0-4build2) ...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Processing triggers for libc-bin (2.39-0ubuntu8.5) ...[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: Running kernel seems to be up-to-date.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: No services need to be restarted.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: No containers need to be restarted.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: No user sessions are running outdated binaries.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: No VM guests are running outdated hypervisor (qemu) binaries on this host.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + systemctl --user enable --now podman.socket[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: Created symlink /home/ubuntu/.config/systemd/user/sockets.target.wants/podman.socket → /usr/lib/systemd/user/podman.socket.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + install_docker_compose[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + local hardware[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ++ uname -m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + hardware=aarch64[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + curl -SL https://github.com/docker/compose/releases/download/v2.39.1/docker-compose-linux-aarch64 -o /tmp/docker-compose[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:                                  Dload  Upload   Total   Spent    Left  Speed[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: 100 70.3M  100 70.3M    0     0   136M      0 --:--:-- --:--:-- --:--:--  503M[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + file /tmp/docker-compose[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + grep -q 'ELF 64-bit LSB executable'[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + install -m 755 -D /tmp/docker-compose /home/ubuntu/.docker/cli-plugins/docker-compose[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + sudo install -m 755 /tmp/docker-compose /usr/local/bin/docker-compose[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + true[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell4027170069[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + ps ux[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + id -Gn[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu      1146  0.4  0.0  20328 10792 ?        Ss   05:39   0:00 /usr/lib/systemd/systemd --user[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu      1147  0.0  0.0  22196  3368 ?        S    05:39   0:00 (sd-pam)[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu      1269  0.0  0.0  16708  6584 ?        S    05:39   0:00 sshd: ubuntu@notty[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu      2882  0.0  0.0   7452  2980 ?        Ss   05:40   0:00 /bin/bash -ex /tmp/script_9721.sh[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu      2884  0.0  0.0  11156  3972 ?        R    05:40   0:00 ps ux[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + sudo install -m 755 /tmp/setup.v2.sh /usr/local/bin/setup.v2.sh[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ubuntu adm cdrom sudo dip lxd[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Provisioning with shell script: /var/folders/9h/bj4nh9ss6pq0_2bkd39t0p0w0000gn/T/packer-shell4125096984[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + setup.v2.sh --yes --install 11.1.2[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #### setup.v2.sh - QueryPie Installer 25.09.1, /usr/bin/bash 5.2.21(1)-release on Linux aarch64 ####[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ### Install QueryPie ###[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # QP_VERSION: 11.1.2[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # PACKAGE_VERSION: universal[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Configure sudo privileges[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # 'sudo' will be used for privileged commands.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Install Docker engine[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Podman is already installed at /usr/bin/podman[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Verify Container Engine installation[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Podman is already running and functional.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Podman socket is active.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: active[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ podman --version[0m[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: podman version 4.9.3[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Install Docker Compose tool[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Compose Tool, docker-compose is already installed at /home/ubuntu/.docker/cli-plugins/docker-compose[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Compose Tool is enabled as a plugin for podman[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ podman compose version[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Docker Compose version v2.39.1[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [0m#[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Install configuration files: docker-compose.yml, .env, and others[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Target directory is ./querypie/11.1.2/[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ curl -fsSL https://dl.querypie.com/releases/compose/universal/package.tar.gz -o package.tar.gz[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ umask 0022[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ tar zxvf package.tar.gz -C ./querypie/11.1.2[0m[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./nginx.d/[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./nginx.d/ssl.conf[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./nginx.d/.gitkeep[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./README.md[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./systemd/[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./systemd/podman-querypie-database.service[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./systemd/podman-querypie-app.service[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./README.ja.md[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./certs/[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ rm package.tar.gz[0m[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./certs/.gitkeep[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ sed -i.orig -e s#- \./mysql:/var/lib/mysql#- ../mysql:/var/lib/mysql# -e s#harbor.chequer.io/querypie/#docker.io/querypie/# -e s#docker.io/querypie/#docker.io/querypie/# -e s#source: /var/log/querypie#source: ../log# ./querypie/11.1.2/compose.yml[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ cp ./querypie/11.1.2/.env.template ./querypie/11.1.2/.env[0m[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./skip_command_config.json.example[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ sed -i.orig -e s#^VERSION=.*#VERSION=11.1.2# -e s#CABINET_DATA_DIR=/data#CABINET_DATA_DIR=../data# ./querypie/11.1.2/.env[0m[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./logrotate[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./compose.yml[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./mysql_init/[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./mysql_init/init.sql[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./.env.template[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ mkdir -p ./querypie/mysql[0m[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./skip_command_config.json[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./.gitignore[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./README.ko.md[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ./novac-compose.yml[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ mkdir -p ./querypie/log[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Verify SELinux settings[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # SELinux is not found. Skipping SELinux settings verification.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ~/querypie/11.1.2 ~[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## No ./offline/images.txt file found. Skipping loading Docker images from tarball files.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Configure the .env file in ./querypie/11.1.2/[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ pushd ./querypie/11.1.2/[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Generating Docker environment file from .env to /tmp/env_file.IIvlXs[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Replacing original file .env with generated file /tmp/env_file.IIvlXs[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ podman compose --profile database --profile querypie --profile tools pull --quiet[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [0m app Pulling[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  tools Pulling[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  mysql Pulling[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  redis Pulling[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  tools Pulled[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  redis Pulled[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  mysql Pulled[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  app Pulled[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Start MySQL and Redis services for QueryPie[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ podman compose --profile database up --detach[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [0m Network querypie_database  Creating[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Network querypie_database  Created[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-redis-1  Creating[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-mysql-1  Creating[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-redis-1  Created[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-mysql-1  Created[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-redis-1  Starting[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-mysql-1  Starting[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-mysql-1  Started[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-redis-1  Started[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ sleep 20[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ podman compose --profile tools up --detach[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [0m Network querypie_tools  Creating[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Network querypie_tools  Created[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-tools-1  Creating[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-tools-1  Created[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-tools-1  Starting[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-tools-1  Started[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ tools::wait_and_print_banner[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Run migrate.sh to initialize MySQL database for QueryPie[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # This process may take more than a minute if this is the first installation.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: .--------------------------------------------------------.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: |  🚀 QueryPie Tools has been successfully started! 🚀   |[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ podman exec querypie-tools-1 /app/script/migrate.sh runall[0m[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: |  Timestamp in UTC: Tue Sep  2 05:41:54 UTC 2025        |[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: |  Timestamp in KST: Tue Sep  2 14:41:54 KST 2025        |[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: '--------------------------------------------------------'[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: .......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................... Done.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ podman exec querypie-tools-1 /app/script/migrate.sh runall[0m[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: [2025-09-02 05:44:04] Tools server is ready.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: [2025-09-02 05:44:04] QueryPie migration is started.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: [2025-09-02 05:44:04] QueryPie migration is finished.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: [2025-09-02 05:44:04] QueryPie Log migration is started.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: [2025-09-02 05:44:04] QueryPie Log migration is finished.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: [2025-09-02 05:44:05] QueryPie Snapshot migration is started.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: --------------------------------------------------------------------------------[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: [2025-09-02 05:44:05] QueryPie Snapshot migration is finished.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: --------------------------------------------------------------------------------[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ podman compose --profile tools down[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [0m Container querypie-tools-1  Stopping[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-tools-1  Stopped[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-tools-1  Removing[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-tools-1  Removed[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Network querypie_tools  Removing[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Network querypie_tools  Removed[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Start the QueryPie container (initialization takes about 2 minutes)[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ podman compose --profile querypie up --detach[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [4m>>>> Executing external compose provider "/usr/local/bin/docker-compose". Please refer to the documentation for details. <<<<[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [0m Network querypie_app  Creating[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Network querypie_app  Created[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-app-1  Creating[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-app-1  Created[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-app-1  Starting[0m
+[1;31m==> amazon-ebs.ubuntu-24-04:  Container querypie-app-1  Started[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ podman exec querypie-app-1 readyz[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ popd[0m[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ########################################################################[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: #                                                                      #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Create a symbolic link 'current' pointing to 11.1.2[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: #     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██████╗ ██╗███████╗    #[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: #    ██╔═══██╗██║   ██║██╔════╝██╔══██╗╚██╗ ██╔╝██╔══██╗██║██╔════╝    #[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: #    ██║   ██║██║   ██║█████╗  ██████╔╝ ╚████╔╝ ██████╔╝██║█████╗      #[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: #    ██║▄▄ ██║██║   ██║██╔══╝  ██╔══██╗  ╚██╔╝  ██╔═══╝ ██║██╔══╝      #[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: #    ╚██████╔╝╚██████╔╝███████╗██║  ██║   ██║   ██║     ██║███████╗    #[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: #     ╚══▀▀═╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝╚══════╝    #[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: #                                                                      #[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ########################################################################[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: .--------------------------------------------------------.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: |  🚀 QueryPie Server has been successfully started! 🚀  |[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: |  Timestamp in UTC: Tue Sep  2 05:46:07 UTC 2025        |[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: |  Timestamp in KST: Tue Sep  2 14:46:07 KST 2025        |[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: '--------------------------------------------------------'[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ~[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ pushd ./querypie/[0m[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ~/querypie ~[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ rm -f current[0m[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: ~[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ ln -s 11.1.2 current[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ popd[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Enable systemd service for rootless Podman[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Enabling linger for user ubuntu.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ sudo loginctl enable-linger ubuntu[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Enabling and starting podman-querypie-database.service and podman-querypie-app.service[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ systemctl --user link querypie/current/systemd/podman-querypie-database.service[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: Created symlink /home/ubuntu/.config/systemd/user/podman-querypie-database.service → /home/ubuntu/querypie/current/systemd/podman-querypie-database.service.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ systemctl --user link querypie/current/systemd/podman-querypie-app.service[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: Created symlink /home/ubuntu/.config/systemd/user/podman-querypie-app.service → /home/ubuntu/querypie/current/systemd/podman-querypie-app.service.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ systemctl --user enable --now podman-querypie-database.service[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: Created symlink /home/ubuntu/.config/systemd/user/default.target.wants/podman-querypie-database.service → /home/ubuntu/querypie/11.1.2/systemd/podman-querypie-database.service.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ systemctl --user enable --now podman-querypie-app.service[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: Created symlink /home/ubuntu/.config/systemd/user/default.target.wants/podman-querypie-app.service → /home/ubuntu/querypie/11.1.2/systemd/podman-querypie-app.service.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ### Installation completed successfully[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ### Access QueryPie at http://172.31.6.159:8000 or https://172.31.6.159:8443 in your browser[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ### Determine the public IP address of your host machine if needed[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: + setup.v2.sh --verify-installation[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #### setup.v2.sh - QueryPie Installer 25.09.1, /usr/bin/bash 5.2.21(1)-release on Linux aarch64 ####[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ### Verify the installation[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Verify Container Engine installation[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: #[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Podman is already running and functional.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Podman socket is active.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: active[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Container version: 11.1.2[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # Current of ./querypie/current: 11.1.2[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # The container version is the same as the current version.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # The installation looks good so far.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Verify the QueryPie app container is running properly[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # QueryPie app container, querypie-app-1 is running.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # QueryPie version: 11.1.2[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: [1;36m+ podman exec querypie-app-1 readyz wait[0m[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: # QueryPie app container, querypie-app-1 is ready for service.[0m
+[1;31m==> amazon-ebs.ubuntu-24-04: ## Installation verification completed successfully.[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Skipping AMI creation...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Skipping AMI region copy...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Skipping fast-launch template setup...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Skipping Enable AMI deprecation...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Skipping Enable AMI deregistration protection...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Skipping AMI modify attributes...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Skipping AMI create tags...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Terminating the source AWS instance...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Cleaning up any extra volumes...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: No volumes to clean up, skipping[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Deleting temporary security group...[0m
+[1;32m==> amazon-ebs.ubuntu-24-04: Deleting temporary keypair...[0m
+[1;32mBuild 'amazon-ebs.ubuntu-24-04' finished after 9 minutes 37 seconds.[0m
+
+==> Wait completed after 9 minutes 37 seconds
+
+==> Builds finished but no artifacts were created.

@@ -76,7 +76,7 @@ locals {
 # "Description": "CentOS Stream 9 aarch64 20250818"
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
-data "amazon-ami" "centos9" {
+data "amazon-ami" "centos-9" {
   filters = {
     name                = "CentOS Stream 9 *"
     root-device-type    = "ebs"
@@ -91,10 +91,10 @@ data "amazon-ami" "centos9" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# centos9-install : Name of the builder
-source "amazon-ebs" "centos9-install" {
+# centos-9 : Name of the builder
+source "amazon-ebs" "centos-9" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.centos9.id
+  source_ami      = data.amazon-ami.centos-9.id
   ami_name        = local.ami_name
 
   region               = local.region
@@ -140,7 +140,7 @@ source "amazon-ebs" "centos9-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.centos9-install"
+    "source.amazon-ebs.centos-9"
   ]
 
   provisioner "shell" {
@@ -151,7 +151,7 @@ build {
     ]
   }
 
-  # Install scripts such as setup.v2.sh
+  # Copy files in scripts, such as setup.v2.sh
   provisioner "file" {
     source      = "../scripts/"
     destination = "/tmp/"
@@ -168,11 +168,6 @@ build {
     ]
   }
 
-  # Install scripts such as setup.v2.sh
-  provisioner "file" {
-    source      = "../scripts/"
-    destination = "/tmp/"
-  }
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
@@ -181,28 +176,12 @@ build {
     ]
   }
 
-  # Install QueryPie Deployment Package
+  # Install QueryPie
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --universal --install ${var.querypie_version}",
+      "setup.v2.sh --yes --install ${var.querypie_version}",
       "setup.v2.sh --verify-installation",
-    ]
-  }
-
-  # Final cleanup
-  provisioner "shell" {
-    inline_shebang = "/bin/bash -ex"
-    inline = [
-      "echo '# Performing final cleanup...'",
-      "sudo dnf clean all",
-      "sudo rm -rf /tmp/*",
-      "sudo rm -rf /var/tmp/*",
-      "history -c",
-      "cat /dev/null > ~/.bash_history",
-      "sudo rm -f /root/.bash_history",
-      "sudo find /var/log -type f -exec truncate -s 0 {} \\;",
-      "echo 'Cleanup completed'"
     ]
   }
 

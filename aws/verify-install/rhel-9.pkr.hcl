@@ -76,7 +76,7 @@ locals {
 # "Description": "Provided by Red Hat, Inc."
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
-data "amazon-ami" "rhel9" {
+data "amazon-ami" "rhel-9" {
   filters = {
     name                = "RHEL-9.*_HVM-*"
     root-device-type    = "ebs"
@@ -91,10 +91,10 @@ data "amazon-ami" "rhel9" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# rhel9-install : Name of the builder
-source "amazon-ebs" "rhel9-install" {
+# rhel-9 : Name of the builder
+source "amazon-ebs" "rhel-9" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.rhel9.id
+  source_ami      = data.amazon-ami.rhel-9.id
   ami_name        = local.ami_name
 
   region               = local.region
@@ -140,7 +140,7 @@ source "amazon-ebs" "rhel9-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.rhel9-install"
+    "source.amazon-ebs.rhel-9"
   ]
 
   provisioner "shell" {
@@ -173,28 +173,12 @@ build {
     ]
   }
 
-  # Install QueryPie Deployment Package
+  # Install QueryPie
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --universal --install ${var.querypie_version}",
+      "setup.v2.sh --yes --install ${var.querypie_version}",
       "setup.v2.sh --verify-installation",
-    ]
-  }
-
-  # Final cleanup
-  provisioner "shell" {
-    inline_shebang = "/bin/bash -ex"
-    inline = [
-      "echo '# Performing final cleanup...'",
-      "sudo dnf clean all",
-      "sudo rm -rf /tmp/*",
-      "sudo rm -rf /var/tmp/*",
-      "history -c",
-      "cat /dev/null > ~/.bash_history",
-      "sudo rm -f /root/.bash_history",
-      "sudo find /var/log -type f -exec truncate -s 0 {} \\;",
-      "echo 'Cleanup completed'"
     ]
   }
 

@@ -76,7 +76,7 @@ locals {
 # "Description": "Rocky-8-EC2-LVM-8.10-20240528.0.aarch64"
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
-data "amazon-ami" "rocky8" {
+data "amazon-ami" "rocky-8" {
   filters = {
     name                = "Rocky-8-EC2-LVM-*"
     root-device-type    = "ebs"
@@ -91,10 +91,10 @@ data "amazon-ami" "rocky8" {
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# rocky8-install : Name of the builder
-source "amazon-ebs" "rocky8-install" {
+# rocky-8: Name of the builder
+source "amazon-ebs" "rocky-8" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.rocky8.id
+  source_ami      = data.amazon-ami.rocky-8.id
   ami_name        = local.ami_name
 
   region               = local.region
@@ -140,7 +140,7 @@ source "amazon-ebs" "rocky8-install" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.rocky8-install"
+    "source.amazon-ebs.rocky-8"
   ]
 
   provisioner "shell" {
@@ -155,7 +155,7 @@ build {
     ]
   }
 
-  # Install scripts such as setup.v2.sh
+  # Copy files in scripts, such as setup.v2.sh
   provisioner "file" {
     source      = "../scripts/"
     destination = "/tmp/"
@@ -170,12 +170,6 @@ build {
         var.container_engine == "none" ? "/tmp/setup.v2.sh --install-container-engine" : "true",
     ]
   }
-
-  # Install scripts such as setup.v2.sh
-  provisioner "file" {
-    source      = "../scripts/"
-    destination = "/tmp/"
-  }
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
@@ -184,28 +178,12 @@ build {
     ]
   }
 
-  # Install QueryPie Deployment Package
+  # Install QueryPie
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --universal --install ${var.querypie_version}",
+      "setup.v2.sh --yes --install ${var.querypie_version}",
       "setup.v2.sh --verify-installation",
-    ]
-  }
-
-  # Final cleanup
-  provisioner "shell" {
-    inline_shebang = "/bin/bash -ex"
-    inline = [
-      "echo '# Performing final cleanup...'",
-      "sudo dnf clean all",
-      "sudo rm -rf /tmp/*",
-      "sudo rm -rf /var/tmp/*",
-      "history -c",
-      "cat /dev/null > ~/.bash_history",
-      "sudo rm -f /root/.bash_history",
-      "sudo find /var/log -type f -exec truncate -s 0 {} \\;",
-      "echo 'Cleanup completed'"
     ]
   }
 
