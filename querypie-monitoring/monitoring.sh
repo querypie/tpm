@@ -214,7 +214,7 @@ services:
       - prometheus_data:/prometheus
     restart: unless-stopped
   grafana:
-    image: grafana/grafana:11.3.1
+    image: grafana/grafana:12.1.1
     container_name: grafana
     ports:
       - "3000:3000"
