@@ -87,4 +87,4 @@ chmod +x setup-tccli
 ## 참고 자료
 
 - [Tencent Cloud CLI 문서](https://www.tencentcloud.com/document/product/1080/38762)
-- [API 자격 증명 관리](https://console.cloud.tencent.com/cam/capi)
+- [Cloud Access Management - API Keys](https://console.tencentcloud.com/cam/capi)
