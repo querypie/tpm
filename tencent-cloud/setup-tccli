@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Tencent Cloud CLI Setup Script (macOS)
+# Install TCCLI in an isolated Python venv environment.
+
+set -o nounset -o errexit -o pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR=".venv"
+
+# Color codes
+BOLD_CYAN="\e[1;36m"
+BOLD_YELLOW="\e[1;33m"
+BOLD_RED="\e[1;91m"
+RESET="\e[0m"
+
+# Logging functions
+function log::do() {
+  # shellcheck disable=SC2064
+  trap "log::error 'Failed to run: $*'" ERR
+  printf "%b+ %s%b\n" "$BOLD_CYAN" "$*" "$RESET" 1>&2
+  "$@"
+}
+
+function log::warning() {
+  printf "%bWARNING: %s%b\n" "$BOLD_YELLOW" "$*" "$RESET" 1>&2
+}
+
+function log::error() {
+  printf "%bERROR: %s%b\n" "$BOLD_RED" "$*" "$RESET" 1>&2
+}
+
+# Command existence check
+function command_exists() {
+  command -v "$@" >/dev/null 2>&1
+}
+
+# Setup TCCLI environment
+function setup::tccli() {
+  # Setup venv
+  echo >&2 "# Setting up Python virtual environment..."
+  if [[ -d "$VENV_DIR" ]]; then
+    echo >&2 "# Removing existing virtual environment..."
+    log::do rm -rf "$VENV_DIR"
+  fi
+  
+  echo >&2 "# Creating new virtual environment: $VENV_DIR"
+  if ! python3 -m venv "$VENV_DIR" 2>/dev/null; then
+    log::error "Failed to create virtual environment. venv module not found."
+    echo >&2 "# Install Python with venv using Homebrew: brew install python"
+    exit 1
+  fi
+  
+  echo >&2 "# Installing TCCLI..."
+  # shellcheck disable=SC1091
+  source "$VENV_DIR/bin/activate" && pip install tccli
+  
+  # Verify installation
+  if "$VENV_DIR/bin/tccli" --version >/dev/null 2>&1; then
+    local tccli_version
+    tccli_version=$("$VENV_DIR/bin/tccli" --version)
+    echo >&2 "# TCCLI installation completed: $tccli_version"
+  else
+    log::error "TCCLI installation failed."
+    exit 1
+  fi
+  
+  # Show usage
+  echo
+  echo >&2 "# Tencent Cloud CLI setup completed!"
+  echo
+  echo "To activate the environment, run:"
+  echo "  source .venv/bin/activate"
+  echo
+  echo "Then you can use TCCLI commands:"
+  echo "  tccli --version          # Check version"
+  echo "  tccli configure          # Configure settings"
+  echo "  tccli cvm DescribeInstances  # List CVM instances"
+  echo
+  echo "To deactivate the environment:"
+  echo "  deactivate"
+  echo
+  echo >&2 "# For detailed usage, refer to README.md file."
+}
+
+function main() {
+  log::do cd "$SCRIPT_DIR"
+  setup::tccli
+}
+
+main "$@"
