@@ -9,7 +9,7 @@
 # Ensure script exits on error
 set -o nounset -o errexit -o errtrace -o pipefail
 
-readonly SCRIPT_VERSION="25.08.3" # YY.MM.PATCH
+readonly SCRIPT_VERSION="25.09.1" # YY.MM.PATCH
 
 # Color definitions
 readonly BOLD_CYAN="\e[1;36m"
