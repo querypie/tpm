@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# EC2 Instance Management Script
-# This script provides a simple interface to manage EC2 instances.
+# Tencent Cloud CVM Instance Management Script
+# This script provides a simple interface to manage Tencent Cloud CVM instances.
 # Usage:
-#   ./ec2 start   - Start all instances owned by the current user
-#   ./ec2 stop    - Stop all instances owned by the current user
-#   ./ec2 status  - List instances owned by the current user
+#   ./cvm start   - Start all instances owned by the current user
+#   ./cvm stop    - Stop all instances owned by the current user
+#   ./cvm status  - List instances owned by the current user
 
 # Ensure script exits on error
 set -o nounset -o errexit -o errtrace -o pipefail
 
-readonly SCRIPT_VERSION="25.09.1" # YY.MM.PATCH
+readonly SCRIPT_VERSION="25.08.3" # YY.MM.PATCH
 
 # Color definitions
 readonly BOLD_CYAN="\e[1;36m"
@@ -35,24 +35,24 @@ function log::error() {
   printf "%bERROR: %s%b\n" "$BOLD_RED" "$*" "$RESET" 1>&2
 }
 
-# AWS CLI validation functions
-function aws::check_cli() {
-  if ! command -v aws >/dev/null 2>&1; then
-    log::error "AWS CLI is not installed."
-    echo >&2 "## Installation guide: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+# Tencent Cloud CLI validation functions
+function tccli::check_cli() {
+  if ! command -v tccli >/dev/null 2>&1; then
+    log::error "Tencent Cloud CLI (tccli) is not installed."
+    echo >&2 "## Installation guide: https://cloud.tencent.com/document/product/440/34011"
     exit 1
   fi
 }
 
-function aws::check_credentials() {
-  if ! aws sts get-caller-identity >/dev/null 2>&1; then
-    log::error "AWS credentials are not configured."
-    echo >&2 "## Configure credentials using: aws configure"
+function tccli::check_credentials() {
+  if ! tccli configure list >/dev/null 2>&1; then
+    log::error "Tencent Cloud credentials are not configured."
+    echo >&2 "## Configure credentials using: tccli configure"
     exit 1
   fi
 }
 
-function ec2::get_username_variations() {
+function cvm::get_username_variations() {
   local username=$1 username_lower username_upper username_capitalized
 
   # Create username variations
@@ -66,56 +66,117 @@ function ec2::get_username_variations() {
 
 # Write instance list rows (no header) into the specified tmp file.
 # Columns (tab-separated): Name, InstanceId, State, Type, PublicIP, PrivateIP, Created
-function ec2::show_instance_list() {
+function cvm::show_instance_list() {
   local out_file=${1:-}
   if [[ -z "${out_file}" ]]; then
-    log::error "ec2::show_instance_list requires an output file path argument"
+    log::error "cvm::show_instance_list requires an output file path argument"
     return 1
   fi
   local username username_list
   username=${USERNAME:-$(whoami)}
-  echo >&2 "## Listing EC2 instances owned by ${username}..."
+  echo >&2 "## Listing CVM instances owned by ${username}..."
 
-  username_list=$(ec2::get_username_variations "${username}")
-  # Capture describe-instances output into the provided file; do not fail caller on errors
-  log::do aws ec2 describe-instances \
-    --filters "Name=tag:Owner,Values=${username_list}" \
-    --query 'sort_by(Reservations[].Instances[], &LaunchTime)[].[Tags[?Key==`Name`].Value|[0], InstanceId, State.Name, InstanceType, PublicIpAddress, PrivateIpAddress, LaunchTime]' \
-    --output text >"${out_file}" || true
+  username_list=$(cvm::get_username_variations "${username}")
+  
+  # Create temporary file for JSON data
+  local json_tmp_file
+  json_tmp_file=$(mktemp -t cvm_json_XXXXXX)
+  # shellcheck disable=SC2064
+  trap "rm -f ${json_tmp_file}" RETURN
 
-  # Check tmpfile size/content instead of using an intermediate rows variable
-  if [[ ! -s "${out_file}" ]] || grep -qx "None" "${out_file}"; then
+  # Get all instances from Tencent Cloud API
+  log::do tccli cvm DescribeInstances \
+    --output json >"${json_tmp_file}" || true
+
+  # Check if we got any data
+  if [[ ! -s "${json_tmp_file}" ]] || grep -qx "None" "${json_tmp_file}"; then
     log::warning "No instances found with Owner tag matching ${username} (variations: ${username_list})"
     return
   fi
 
+  # Parse JSON, filter by Owner tag, and write filtered results to out_file
+  python3 -c "
+import json
+import sys
+try:
+    with open('${json_tmp_file}', 'r') as f:
+        data = json.load(f)
+    
+    username_variations = '${username_list}'.split(',')
+    
+    # Collect filtered instances
+    filtered_instances = []
+    for instance in data.get('InstanceSet', []):
+        # Check if instance has Owner tag matching any variation
+        owner_match = False
+        for tag in instance.get('Tags', []):
+            if tag.get('Key') == 'Owner':
+                tag_value = tag.get('Value', '')
+                if tag_value in username_variations:
+                    owner_match = True
+                    break
+        
+        if owner_match:
+            name = instance.get('InstanceName', 'NoName')
+            public_ip = instance.get('PublicIpAddresses', ['-'])[0] if instance.get('PublicIpAddresses') else '-'
+            private_ip = instance.get('PrivateIpAddresses', ['-'])[0] if instance.get('PrivateIpAddresses') else '-'
+            filtered_instances.append([
+                name,
+                instance.get('InstanceId', '-'),
+                instance.get('InstanceState', '-'),
+                instance.get('InstanceType', '-'),
+                public_ip,
+                private_ip,
+                instance.get('CreatedTime', '-')
+            ])
+    
+    # Sort by CreatedTime (LaunchTime equivalent)
+    filtered_instances.sort(key=lambda x: x[6])
+    
+    # Write to output file in AWS EC2 --output text format
+    with open('${out_file}', 'w') as f:
+        for instance in filtered_instances:
+            f.write('\t'.join(instance) + '\n')
+            
+except Exception as e:
+    print(f'Error parsing JSON: {e}', file=sys.stderr)
+    sys.exit(1)
+" 2>/dev/null || true
+
+  # Check if we got any filtered results
+  if [[ ! -s "${out_file}" ]]; then
+    log::warning "No instances found with Owner tag matching ${username} (variations: ${username_list})"
+    return
+  fi
+
+  # Display results with header
   {
     printf "Name\tInstanceId\tState\tType\tPublicIP\tPrivateIP\tCreated\n"
     cat "${out_file}" || true
   } | sed -e 's/\bNone\b/-/g' | column -t -s $'\t'
 }
 
-function ec2::start() {
+function cvm::start() {
   # Show the list first
   local tmp_file
-  tmp_file=$(mktemp -t ec2_describe_XXXXXX)
+  tmp_file=$(mktemp -t cvm_describe_XXXXXX)
   # shellcheck disable=SC2064
   trap "rm -f ${tmp_file}" RETURN
   # Populate describe-instances output into a temp file via helper, then post-process
-  ec2::show_instance_list "${tmp_file}"
+  cvm::show_instance_list "${tmp_file}"
 
   # Collect eligible instance IDs (only stopped) and start them in a single call
   local name instance_id state type public_ip private_ip created
   local -a eligible_ids=()
   while IFS=$'\t' read -r name instance_id state type public_ip private_ip created; do
-    # Validate instance_id format
-    if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^i-[a-f0-9]+$ ]]; then
+    # Validate instance_id format (Tencent Cloud CVM instance IDs start with 'ins-')
+    if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^ins-[a-zA-Z0-9]+$ ]]; then
       continue
     fi
 
     # Only start instances that are currently stopped; silently skip others
     case "${state}" in
-    "stopped")
+    "STOPPED")
       eligible_ids+=("${instance_id}")
       ;;
     *)
@@ -130,7 +191,10 @@ function ec2::start() {
   fi
 
   echo >&2 "## Starting instances: ${eligible_ids[*]}..."
-  if log::do aws ec2 start-instances --instance-ids "${eligible_ids[@]}" >/dev/null; then
+  # Convert array to JSON format for tccli
+  local json_ids
+  json_ids=$(python3 -c "import json; print(json.dumps(\"${eligible_ids[*]}\".split()))")
+  if log::do tccli cvm StartInstances --InstanceIds "${json_ids}" >/dev/null; then
     echo >&2 "## Start request submitted for: ${eligible_ids[*]}"
   else
     log::error "Failed to start one or more instances."
@@ -138,26 +202,26 @@ function ec2::start() {
   fi
 }
 
-function ec2::stop() {
+function cvm::stop() {
   # Show the list first
   local tmp_file
-  tmp_file=$(mktemp -t ec2_describe_XXXXXX)
+  tmp_file=$(mktemp -t cvm_describe_XXXXXX)
   # shellcheck disable=SC2064
   trap "rm -f ${tmp_file}" RETURN
   # Populate describe-instances output into a temp file via helper, then post-process
-  ec2::show_instance_list "${tmp_file}"
+  cvm::show_instance_list "${tmp_file}"
 
   # Collect eligible instance IDs and stop them in a single call
   local name instance_id state type public_ip private_ip created
   local -a eligible_ids=()
   while IFS=$'\t' read -r name instance_id state type public_ip private_ip created; do
-    # Validate instance_id format
-    if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^i-[a-f0-9]+$ ]]; then
+    # Validate instance_id format (Tencent Cloud CVM instance IDs start with 'ins-')
+    if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^ins-[a-zA-Z0-9]+$ ]]; then
       continue
     fi
 
     case "${state}" in
-    "terminated"|"shutting-down"|"stopping"|"stopped")
+    "TERMINATED"|"SHUTTING_DOWN"|"STOPPING"|"STOPPED")
       continue
       ;;
     esac
@@ -171,7 +235,10 @@ function ec2::stop() {
   fi
 
   echo >&2 "## Stopping instances: ${eligible_ids[*]}..."
-  if log::do aws ec2 stop-instances --instance-ids "${eligible_ids[@]}" >/dev/null; then
+  # Convert array to JSON format for tccli
+  local json_ids
+  json_ids=$(python3 -c "import json; print(json.dumps(\"${eligible_ids[*]}\".split()))")
+  if log::do tccli cvm StopInstances --InstanceIds "${json_ids}" >/dev/null; then
     echo >&2 "## Stop request submitted for: ${eligible_ids[*]}"
   else
     log::error "Failed to stop one or more instances."
@@ -179,25 +246,25 @@ function ec2::stop() {
   fi
 }
 
-function ec2::status() {
+function cvm::status() {
   local tmp_file
-  tmp_file=$(mktemp -t ec2_describe_XXXXXX)
+  tmp_file=$(mktemp -t cvm_describe_XXXXXX)
   # Ensure a temp file is removed on return from this function
   # shellcheck disable=SC2064
   trap "rm -f ${tmp_file}" RETURN
 
   # Populate the tmp_file with an instance list via helper
-  ec2::show_instance_list "${tmp_file}"
+  cvm::show_instance_list "${tmp_file}"
 }
 
-function ec2::terminate() {
+function cvm::terminate() {
   # Show the list first
   local tmp_file
-  tmp_file=$(mktemp -t ec2_describe_XXXXXX)
+  tmp_file=$(mktemp -t cvm_describe_XXXXXX)
   # shellcheck disable=SC2064
   trap "rm -f ${tmp_file}" RETURN
   # Populate describe-instances output into a temp file via helper, then post-process
-  ec2::show_instance_list "${tmp_file}"
+  cvm::show_instance_list "${tmp_file}"
 
   echo "For each instance below, type 'yes' to confirm termination. Any other input will skip."
 
@@ -206,17 +273,17 @@ function ec2::terminate() {
   # Open tmp_file on FD 9 so stdin remains available for user prompts inside the loop
   exec 9< "${tmp_file}"
   while IFS=$'\t' read -r name instance_id state type public_ip private_ip created <&9; do
-    # Validate instance_id format
-    if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^i-[a-f0-9]+$ ]]; then
+    # Validate instance_id format (Tencent Cloud CVM instance IDs start with 'ins-')
+    if [[ -z "${instance_id:-}" ]] || [[ ! "${instance_id}" =~ ^ins-[a-zA-Z0-9]+$ ]]; then
       continue
     fi
 
     case "${state}" in
-    "terminated")
+    "TERMINATED")
       log::warning "Instance ${instance_id} (${name:-NoName}) is already terminated. Skipping."
       continue
       ;;
-    "shutting-down")
+    "SHUTTING_DOWN")
       log::warning "Instance ${instance_id} (${name:-NoName}) is already shutting down. Skipping."
       continue
       ;;
@@ -227,7 +294,10 @@ function ec2::terminate() {
 
     if ask_yes "[type 'yes' to proceed]: "; then
       echo >&2 "## Terminating instance ${instance_id}..."
-      if log::do aws ec2 terminate-instances --instance-ids "${instance_id}" >/dev/null; then
+      # Convert single instance ID to JSON format for tccli
+      local json_id
+      json_id=$(python3 -c "import json; print(json.dumps([\"${instance_id}\"]))")
+      if log::do tccli cvm TerminateInstances --InstanceIds "${json_id}" >/dev/null; then
         echo >&2 "## Instance ${instance_id} termination request submitted."
       else
         log::error "Failed to terminate instance ${instance_id}."
@@ -251,10 +321,10 @@ function ask_yes() {
   esac
 }
 
-function ec2::help() {
+function cvm::help() {
   local username
   username=${USERNAME:-$(whoami)}
-  echo "EC2 Instance Management Script v${SCRIPT_VERSION}"
+  echo "Tencent Cloud CVM Instance Management Script v${SCRIPT_VERSION}"
   echo ""
   echo "Usage:"
   echo "  $0 start     - Start all instances owned by ${username}"
@@ -263,37 +333,37 @@ function ec2::help() {
   echo "  $0 status    - List instances owned by ${username}"
   echo "  $0 help      - Show this help message"
   echo ""
-  echo "Note: This script automatically finds and manages all EC2 instances"
+  echo "Note: This script automatically finds and manages all CVM instances"
   echo "      tagged with Owner=${username} (case-insensitive matching)"
   echo ""
 }
 
 function main() {
-  # Check AWS CLI and credentials
-  aws::check_cli
-  aws::check_credentials
+  # Check Tencent Cloud CLI and credentials
+  tccli::check_cli
+  tccli::check_credentials
 
   # Process command
   case "${1:-help}" in
   "start")
-    ec2::start
+    cvm::start
     ;;
   "stop")
-    ec2::stop
+    cvm::stop
     ;;
   "terminate")
-    ec2::terminate
+    cvm::terminate
     ;;
   "status")
-    ec2::status
+    cvm::status
     ;;
   "help" | "-h" | "--help")
-    ec2::help
+    cvm::help
     ;;
   *)
     log::error "Unknown command: $1"
     echo ""
-    ec2::help
+    cvm::help
     exit 1
     ;;
   esac
