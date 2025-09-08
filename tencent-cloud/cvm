@@ -9,7 +9,7 @@
 # Ensure script exits on error
 set -o nounset -o errexit -o errtrace -o pipefail
 
-readonly SCRIPT_VERSION="25.08.3" # YY.MM.PATCH
+readonly SCRIPT_VERSION="25.09.1" # YY.MM.PATCH
 
 # Color definitions
 readonly BOLD_CYAN="\e[1;36m"
@@ -234,12 +234,12 @@ function cvm::stop() {
     return
   fi
 
-  echo >&2 "## Stopping instances: ${eligible_ids[*]}..."
+  echo >&2 "## Stopping instances with STOP_CHARGING: ${eligible_ids[*]}..."
   # Convert array to JSON format for tccli
   local json_ids
   json_ids=$(python3 -c "import json; print(json.dumps(\"${eligible_ids[*]}\".split()))")
-  if log::do tccli cvm StopInstances --InstanceIds "${json_ids}" >/dev/null; then
-    echo >&2 "## Stop request submitted for: ${eligible_ids[*]}"
+  if log::do tccli cvm StopInstances --InstanceIds "${json_ids}" --StopType "SOFT" --StoppedMode "STOP_CHARGING" >/dev/null; then
+    echo >&2 "## Stop request submitted for: ${eligible_ids[*]} (billing will be stopped)"
   else
     log::error "Failed to stop one or more instances."
     exit 1
@@ -328,13 +328,14 @@ function cvm::help() {
   echo ""
   echo "Usage:"
   echo "  $0 start     - Start all instances owned by ${username}"
-  echo "  $0 stop      - Stop all instances owned by ${username}"
+  echo "  $0 stop      - Stop all instances owned by ${username} (with billing stopped)"
   echo "  $0 terminate - Terminate instances owned by ${username} (per-instance confirmation)"
   echo "  $0 status    - List instances owned by ${username}"
   echo "  $0 help      - Show this help message"
   echo ""
   echo "Note: This script automatically finds and manages all CVM instances"
   echo "      tagged with Owner=${username} (case-insensitive matching)"
+  echo "      Stop command uses STOP_CHARGING to minimize billing costs."
   echo ""
 }
 
