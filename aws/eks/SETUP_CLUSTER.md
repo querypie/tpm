@@ -6,7 +6,7 @@ QueryPie ACP 제품 설치 및 검증을 위한 EKS Cluster 구성 절차입니�
 
 | 항목 | 값 |
 |------|-----|
-| 클러스터 이름 | querypie-test |
+| 클러스터 이름 | jk-querypie |
 | AWS Account | 142605707876 (QPE) |
 | 리전 | ap-northeast-2 (서울) |
 | Kubernetes 버전 | 1.29 |
@@ -78,7 +78,7 @@ aws sts get-caller-identity --profile 142605707876_AWSAdministratorAccess
 
 ```bash
 eksctl create cluster \
-  --name querypie-test \
+  --name jk-querypie \
   --region ap-northeast-2 \
   --profile 142605707876_AWSAdministratorAccess \
   --version 1.29 \
@@ -104,7 +104,7 @@ eksctl create cluster \
 
 ```bash
 # kubeconfig 업데이트
-aws eks update-kubeconfig --name querypie-test --region ap-northeast-2 --profile 142605707876_AWSAdministratorAccess
+aws eks update-kubeconfig --name jk-querypie --region ap-northeast-2 --profile 142605707876_AWSAdministratorAccess
 
 # 클러스터 연결 확인
 kubectl get nodes
@@ -126,7 +126,7 @@ PersistentVolume 사용이 필요한 경우 EBS CSI Driver를 설치합니다.
 ```bash
 # OIDC Provider 생성
 eksctl utils associate-iam-oidc-provider \
-  --cluster querypie-test \
+  --cluster jk-querypie \
   --region ap-northeast-2 \
   --profile 142605707876_AWSAdministratorAccess \
   --approve
@@ -134,7 +134,7 @@ eksctl utils associate-iam-oidc-provider \
 # EBS CSI Driver 애드온 설치
 eksctl create addon \
   --name aws-ebs-csi-driver \
-  --cluster querypie-test \
+  --cluster jk-querypie \
   --region ap-northeast-2 \
   --profile 142605707876_AWSAdministratorAccess \
   --force
@@ -146,7 +146,7 @@ eksctl create addon \
 
 ```bash
 eksctl delete cluster \
-  --name querypie-test \
+  --name jk-querypie \
   --region ap-northeast-2 \
   --profile 142605707876_AWSAdministratorAccess
 ```
@@ -177,5 +177,5 @@ aws cloudformation describe-stacks --profile 142605707876_AWSAdministratorAccess
 ### kubectl 연결 실패 시
 ```bash
 # kubeconfig 재설정
-aws eks update-kubeconfig --name querypie-test --region ap-northeast-2 --profile 142605707876_AWSAdministratorAccess
+aws eks update-kubeconfig --name jk-querypie --region ap-northeast-2 --profile 142605707876_AWSAdministratorAccess
 ```
