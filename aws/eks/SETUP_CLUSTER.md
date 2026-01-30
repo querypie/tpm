@@ -13,12 +13,12 @@ QueryPie ACP 제품 설치 및 검증을 위한 EKS Cluster 구성 절차입니�
 | 노드 그룹 | standard-workers-m7i |
 | 노드 타입 | m7i.xlarge (4 vCPU, 16GB RAM) |
 | 노드 수 | 2 (min: 1, max: 3) |
-| API Endpoint | https://D4CC44A8F752CD7DE08E6A28567D4293.gr7.ap-northeast-2.eks.amazonaws.com |
+| API Endpoint | https://8BEED4DE1ADF092D73E5546DD845F3AF.gr7.ap-northeast-2.eks.amazonaws.com |
 | 생성일 | 2026-01-30 |
 
 **노드 목록:**
-- ip-192-168-21-85.ap-northeast-2.compute.internal
-- ip-192-168-92-137.ap-northeast-2.compute.internal
+- ip-192-168-61-24.ap-northeast-2.compute.internal
+- ip-192-168-64-184.ap-northeast-2.compute.internal
 
 ## 사전 요구사항
 
