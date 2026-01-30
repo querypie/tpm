@@ -119,25 +119,59 @@ EKS 기본 애드온이 정상 설치되었는지 확인합니다:
 kubectl get pods -n kube-system
 ```
 
-## EBS CSI Driver 설치 (선택사항)
+## EBS CSI Driver 설치 (필수)
 
-PersistentVolume 사용이 필요한 경우 EBS CSI Driver를 설치합니다.
+QueryPie는 PersistentVolume을 사용하므로 EBS CSI Driver가 필요합니다.
+
+> **Important:** OIDC Provider와 IAM Role을 먼저 생성해야 EBS CSI Driver가 정상 작동합니다.
+
+### 4.1 OIDC Provider 연결
 
 ```bash
-# OIDC Provider 생성
 eksctl utils associate-iam-oidc-provider \
   --cluster jk-querypie \
   --region ap-northeast-2 \
   --profile 142605707876_AWSAdministratorAccess \
   --approve
+```
 
-# EBS CSI Driver 애드온 설치
+### 4.2 EBS CSI Driver IAM Role 생성
+
+```bash
+eksctl create iamserviceaccount \
+  --name ebs-csi-controller-sa \
+  --namespace kube-system \
+  --cluster jk-querypie \
+  --region ap-northeast-2 \
+  --profile 142605707876_AWSAdministratorAccess \
+  --role-name AmazonEKS_EBS_CSI_DriverRole_jk-querypie \
+  --role-only \
+  --attach-policy-arn arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy \
+  --approve
+```
+
+### 4.3 EBS CSI Driver 애드온 설치
+
+```bash
 eksctl create addon \
   --name aws-ebs-csi-driver \
   --cluster jk-querypie \
   --region ap-northeast-2 \
   --profile 142605707876_AWSAdministratorAccess \
+  --service-account-role-arn arn:aws:iam::142605707876:role/AmazonEKS_EBS_CSI_DriverRole_jk-querypie \
   --force
+```
+
+### 4.4 설치 확인
+
+```bash
+kubectl get pods -n kube-system | grep ebs
+```
+
+예상 출력:
+```
+ebs-csi-controller-xxxxx   6/6     Running   0          1m
+ebs-csi-node-xxxxx         3/3     Running   0          1m
 ```
 
 ## 정리 (Cluster 삭제)
