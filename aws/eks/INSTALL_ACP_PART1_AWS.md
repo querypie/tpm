@@ -66,7 +66,7 @@ eksctl utils associate-iam-oidc-provider \
   --approve
 ```
 
-### 1.2 IAM Policy 확인
+### 1.2 IAM Policy 확인 및 업데이트
 
 AWS Load Balancer Controller가 사용할 IAM Policy가 이미 존재하는지 확인합니다.
 
@@ -76,8 +76,6 @@ aws iam list-policies --scope Local --profile 142605707876_AWSAdministratorAcces
   --query "Policies[?PolicyName=='AWSLoadBalancerControllerIAMPolicy'].Arn" --output text
 ```
 
-Policy가 이미 존재하면 (ARN이 출력되면) 다음 단계로 진행합니다.
-
 > **Note:** 이 계정에는 `AWSLoadBalancerControllerIAMPolicy`가 이미 생성되어 있습니다.
 > ARN: `arn:aws:iam::142605707876:policy/AWSLoadBalancerControllerIAMPolicy`
 
@@ -85,8 +83,8 @@ Policy가 이미 존재하면 (ARN이 출력되면) 다음 단계로 진행합�
 <summary>Policy가 없는 경우 (클릭하여 펼치기)</summary>
 
 ```bash
-# Download policy document
-curl -o iam_policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.7.1/docs/install/iam_policy.json
+# Download latest policy document
+curl -o iam_policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.11.0/docs/install/iam_policy.json
 
 # Create IAM Policy
 aws iam create-policy \
@@ -96,6 +94,24 @@ aws iam create-policy \
 ```
 
 </details>
+
+#### IAM Policy 업데이트 (최신 버전 권한 추가)
+
+AWS Load Balancer Controller v2.11+ 버전에서는 `elasticloadbalancing:DescribeListenerAttributes` 권한이 필요합니다. 기존 Policy에 이 권한이 없으면 추가해야 합니다.
+
+```bash
+# Download latest policy document
+curl -o iam_policy_latest.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.11.0/docs/install/iam_policy.json
+
+# Create new policy version
+aws iam create-policy-version \
+  --policy-arn arn:aws:iam::142605707876:policy/AWSLoadBalancerControllerIAMPolicy \
+  --policy-document file://iam_policy_latest.json \
+  --set-as-default \
+  --profile 142605707876_AWSAdministratorAccess
+```
+
+> **Important:** ALB 생성 시 `DescribeListenerAttributes` 권한 오류가 발생하면 이 단계를 수행하세요.
 
 ### 1.3 Service Account 생성
 
