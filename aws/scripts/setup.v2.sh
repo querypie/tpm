@@ -8,7 +8,7 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="26.01.1" # YY.MM.PATCH
+SCRIPT_VERSION="26.02.1" # YY.MM.PATCH
 echo -n "#### setup.v2.sh - QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
@@ -17,7 +17,7 @@ echo >&2 " on $(uname -s) $(uname -m) ####"
 [[ -n "${ZSH_VERSION:-}" ]] && emulate bash
 set -o nounset -o errexit -o pipefail
 
-RECOMMENDED_VERSION="11.5.1" # QueryPie version to install by default.
+RECOMMENDED_VERSION="11.6.0" # QueryPie version to install by default.
 ASSUME_YES=false
 DOCKER=docker          # The default Container Engine
 COMPOSE=docker-compose # The default Compose tool
