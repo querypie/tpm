@@ -1,35 +1,35 @@
 # Podman と Docker をサポートするユニバーサル実行環境
 
-Version of compose.yml: 25.08.2
-最終更新日: 2025年8月26日
+Version of compose.yml: 26.02.1
+最終更新日: 2026年2月24日
 
-QueryPie はコンテナ方式で配布されるアプリケーションであり、コンテナエンジンとして Docker と Podman をサポートしています。
-このディレクトリのファイルは、Compose ツールを使用して QueryPie を実行および運用するための設定ファイルです。
+QueryPie ACP はコンテナ方式で配布されるアプリケーションであり、コンテナエンジンとして Docker と Podman をサポートしています。
+このディレクトリのファイルは、Compose ツールを使用して QueryPie ACP を実行および運用するための設定ファイルです。
 
 Linux ディストリビューションによって、Podman と Docker Compose の組み合わせ、または Docker と Docker Compose の組み合わせを使用することをお勧めします。
 
-## Podman をサポートする Linux ディストリビューション
+## Linux ディストリビューション別 Docker/Podman サポート状況
 
-以下の Linux ディストリビューションでは、Podman と Docker Compose の組み合わせを使用することをお勧めします：
+推奨されるコンテナエンジンは Linux ディストリビューションによって異なります。
+詳細は [Linux ディストリビューション別 Docker/Podman サポート状況](https://docs.querypie.com/ja/installation/prerequisites/linux-distribution-and-docker-podman-support-status) をご参照ください。
 
-- Red Hat Enterprise Linux 8+
-- Rocky Linux 8+
-- CentOS 8+
+| ディストリビューション | Docker | Podman |
+|------------------------|--------|--------|
+| Amazon Linux 2 | ✅ サポート | ❌ 非サポート |
+| Amazon Linux 2023 | ✅ サポート | ❌ 非サポート |
+| RHEL 8 | ✅ 利用可能 | ✅ 推奨 |
+| RHEL 9 | ✅ 利用可能 | ✅ 推奨 |
+| RHEL 10 | ❌ 非サポート | ✅ 推奨 |
+| Rocky Linux 9 | ✅ 利用可能 | ✅ 推奨 |
+| Ubuntu 22.04 LTS | ✅ サポート | ❌ 非サポート |
+| Ubuntu 24.04 LTS | ✅ サポート | ✅ サポート |
 
-### 今後サポート予定の Linux ディストリビューション
+## Docker または Podman のインストール
 
-以下の Linux ディストリビューションでは、Podman と Docker Compose の組み合わせを検証できていません。
-Docker と Docker Compose の組み合わせを使用することをお勧めします：
+`setup.v2.sh` を使用すると、Linux サーバーに Docker または Podman、および Docker Compose を自動的にインストールできます。
+QueryPie ACP をインストールするために setup.v2.sh を実行するだけで十分です。
 
-- Amazon Linux 2, Amazon Linux 2023
-- Ubuntu 22.04 LTS, 24.04 LTS
-
-## Podman と Docker Compose のインストール
-
-`setup.v2.sh` を使用すると、Linux サーバーに Podman と Docker Compose を自動的にインストールできます。
-QueryPie をインストールするために setup.v2.sh を実行するだけで十分です。
-
-## QueryPie を自動的にインストールして実行する
+## QueryPie ACP を自動的にインストールして実行する
 
 まず、サポートされている Linux ディストリビューションをインストールした Linux サーバーを準備します。
 
@@ -44,10 +44,10 @@ $ bash setup.v2.sh
 ```
 
 `setup.v2.sh` を使用したインストールの詳細なガイドについては、次のドキュメントを参照してください：
-[Installation Guide - setup.v2.sh (JA)](https://querypie.atlassian.net/wiki/spaces/QCP/pages/1177387032/Installation+Guide+-+setup.v2.sh+JA)
+[Installation Guide - setup.v2.sh](https://docs.querypie.com/ja/installation/installation/installation-guide-setupv2sh)
 
 
-## Podman で QueryPie を手動で実行する
+## Podman で QueryPie ACP を手動で実行する
 
 Podman は Docker と互換性のある方法で使用できます。ほとんどの Docker コマンドが Podman でサポートされています。
 
@@ -60,19 +60,19 @@ Podman は Docker と互換性のある方法で使用できます。ほとん�
 2. サービスの開始: `podman compose --profile=database up -d`
 3. サービスの停止: `podman compose --profile=database down`
 
-### QueryPie ツールの実行
+### QueryPie ACP ツールの実行
 
 1. ツールの開始: `podman compose --profile=tools up -d`
 2. マイグレーションの実行: `podman compose --profile=tools exec tools /app/script/migrate.sh runall`
 3. ツールの停止: `podman compose --profile=tools down`
 
-### QueryPie アプリケーションの実行
+### QueryPie ACP アプリケーションの実行
 
 1. アプリケーションの開始: `podman compose --profile=app up -d`
 2. 正常な実行の確認: `podman compose --profile=app exec app readyz`
 3. アプリケーションの停止: `podman compose --profile=app down`
 
-## Docker で QueryPie を手動で実行する
+## Docker で QueryPie ACP を手動で実行する
 
 ### MySQL と Redis の実行
 
@@ -83,13 +83,13 @@ Podman は Docker と互換性のある方法で使用できます。ほとん�
 2. サービスの開始: `docker compose --profile=database up -d`
 3. サービスの停止: `docker compose --profile=database down`
 
-### QueryPie ツールの実行
+### QueryPie ACP ツールの実行
 
 1. ツールの開始: `docker compose --profile=tools up -d`
 2. マイグレーションの実行: `docker compose --profile=tools exec tools /app/script/migrate.sh runall`
 3. ツールの停止: `docker compose --profile=tools down`
 
-### QueryPie アプリケーションの実行
+### QueryPie ACP アプリケーションの実行
 
 1. アプリケーションの開始: `docker compose --profile=app up -d`
 2. 正常な実行の確認: `docker compose --profile=app exec app readyz`
@@ -97,7 +97,4 @@ Podman は Docker と互換性のある方法で使用できます。ほとん�
 
 ## 技術サポートのお問い合わせ
 
-- Community Edition ユーザー：
-  [QueryPie 公式 Discord チャンネル](https://discord.gg/Cu39M55gMk)に参加して、他のユーザーと質問や情報を共有することができます。
-- Enterprise Edition ユーザー：
-  技術サポートを担当するパートナーにお問い合わせください。
+[技術サポート](https://docs.querypie.com/ja/support) ページをご参照ください。

@@ -1,6 +1,12 @@
 # Optimized for QueryPie 11.0.x or later
 # Compatible with both Docker and Podman
-# Version of novac-compose.yml: 25.08.2
+# Version of novac-compose.yml: 26.02.1
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "14"
 
 name: querypie-novac
 services:
@@ -16,3 +22,4 @@ services:
       - NOVAC_TOKEN=e1134c60-d28f-4773-ade8-5001b412f778 # Needs to be modified
       - NOVAC_NAME=example_novac1 # Needs to be modified
       - NOVAC_TAGS=VPC=dev_infra;Env=Production # Needs to be modified
+    logging: *default-logging
