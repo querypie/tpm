@@ -1,6 +1,12 @@
 # Optimized for QueryPie 11.0.x or later
 # Compatible with both Docker and Podman
-# Version of compose.yml: 25.08.2
+# Version of compose.yml: 26.02.1
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "14"
 
 name: querypie
 services:
@@ -23,6 +29,7 @@ services:
       - MYSQL_PASSWORD=${DB_PASSWORD}
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
       - MYSQL_DATABASE=${DB_CATALOG:?ex. querypie}
+    logging: *default-logging
 
   redis:
     profiles:
@@ -38,6 +45,7 @@ services:
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"]
+    logging: *default-logging
 
   app:
     profiles:
@@ -106,6 +114,8 @@ services:
       # This value can initially be set to any string, but it must remain unchanged once established.
       - KEY_ENCRYPTION_KEY=${KEY_ENCRYPTION_KEY}
 
+    logging: *default-logging
+
     # Works with both Docker and Podman
     sysctls:
       net.ipv4.ip_local_port_range: "10000 39999"
@@ -147,6 +157,7 @@ services:
       # This two-layer encryption approach safeguards sensitive information even if the encrypted data is compromised.
       # The KEK can be initially set to any string value, but must remain consistent after it has been established.
       - KEK=${KEY_ENCRYPTION_KEY}
+    logging: *default-logging
 
 networks:
   database-network: # Internal network identifier used in service definitions
