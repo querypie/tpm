@@ -313,18 +313,37 @@ function install::docker_compose() {
   echo >&2 "## Install Docker Compose tool"
   echo >&2 "#"
 
-  if $DOCKER compose version &>/dev/null; then
-    if $DOCKER compose version 2>/dev/null | grep -q "Docker Compose"; then
-      COMPOSE=docker-compose
-    elif $DOCKER compose version 2>/dev/null | grep -q "podman-compose"; then
-      COMPOSE=podman-compose
-    else
-      COMPOSE="(Unknown)"
-    fi
-    echo >&2 "# Compose Tool, $COMPOSE is already installed at $(command::whereis $COMPOSE || echo '(Unknown)')"
+  local compose_ver compose_tool_ver
+  compose_ver=$($DOCKER compose version 2>/dev/null || true)
+  compose_tool_ver=$(echo "$compose_ver" | grep -i "compose" | grep -oE "v?[0-9]+\.[0-9]+\.[0-9]+")
+
+  if [[ "$compose_ver" == *"Docker Compose version v2"* ]]; then
+    COMPOSE=docker-compose
+  elif [[ -n "$compose_ver" ]]; then
+    COMPOSE=unsupported
+  else
+    COMPOSE=
+  fi
+
+  if [[ $COMPOSE == docker-compose ]]; then
+    echo >&2 "# Compose Tool, $COMPOSE ${compose_tool_ver} is already installed at $(command::whereis $COMPOSE || echo '(Unknown)')"
     echo >&2 "# Compose Tool is enabled as a plugin for $DOCKER"
     log::do $DOCKER compose version
     return
+  elif [[ $COMPOSE == unsupported ]]; then
+    # Covers cases such as:
+    # - podman-compose (not supported; --profile option is required)
+    # - docker-compose v1 (legacy)
+    #
+    # $ podman compose version
+    #   >>>> Executing external compose provider "/usr/bin/docker-compose". <<<<
+    #
+    #   docker-compose version 1.29.2, build unknown
+    #   docker-py version: 5.0.3
+    #   CPython version: 3.12.3
+    #   OpenSSL version: OpenSSL 3.0.13 30 Jan 2024
+    echo >&2 "# Unsupported Compose tool detected. Proceeding to install Docker Compose v2."
+    log::do $DOCKER compose version
   fi
 
   local kernel hardware
