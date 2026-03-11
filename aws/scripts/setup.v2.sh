@@ -319,6 +319,8 @@ function install::docker_compose() {
 
   if [[ "$compose_ver" == *"Docker Compose version v2"* ]]; then
     COMPOSE=docker-compose
+  elif [[ "$compose_ver" == *"Docker Compose version v5"* ]]; then
+    COMPOSE=docker-compose
   elif [[ -n "$compose_ver" ]]; then
     COMPOSE=unsupported
   else
