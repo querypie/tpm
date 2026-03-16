@@ -96,8 +96,15 @@ function validate_proxy_address() {
         return 1
     fi
 
-    # IPv4
+    # IPv4: format check then range check (each octet must be 0-255)
     if [[ "${input}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+        local IFS='.' octet
+        for octet in ${input}; do
+            if [[ $octet -gt 255 ]]; then
+                log::error "Invalid IPv4 address: ${input} (octet ${octet} is out of range)"
+                return 1
+            fi
+        done
         return 0
     fi
 

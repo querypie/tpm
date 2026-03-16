@@ -59,6 +59,16 @@ setup() {
     [ "$status" -eq 1 ]
 }
 
+@test "validate_proxy_address: rejects IPv4 with octet > 255" {
+    run validate_proxy_address "256.0.0.1"
+    [ "$status" -eq 1 ]
+}
+
+@test "validate_proxy_address: rejects IPv4 999.999.999.999" {
+    run validate_proxy_address "999.999.999.999"
+    [ "$status" -eq 1 ]
+}
+
 @test "validate_proxy_address: rejects empty string" {
     run validate_proxy_address ""
     [ "$status" -eq 1 ]
