@@ -205,7 +205,7 @@ function main() {
         case "$1" in
             -h|--help) print_usage_and_exit 0 ;;
             -y|--yes) ASSUME_YES=true; shift ;;
-            --) shift; break ;;
+            --) shift; arguments+=("$@"); break ;;
             -*) log::error "Unexpected option: $1"; print_usage_and_exit 1 ;;
             *) arguments+=("$1"); shift ;;
         esac

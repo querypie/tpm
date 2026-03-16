@@ -127,6 +127,31 @@ setup() {
 # --yes flag: ask_yes must auto-confirm without a TTY
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# -- argument parsing: positional args after -- must be preserved
+# ---------------------------------------------------------------------------
+
+@test "argument parsing: positional arg after -- is collected" {
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        arguments=()
+        set -- -- 192.168.1.100
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --) shift; arguments+=("$@"); break ;;
+                *) arguments+=("$1"); shift ;;
+            esac
+        done
+        echo "${arguments[0]}"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == "192.168.1.100" ]]
+}
+
+# ---------------------------------------------------------------------------
+# --yes flag: ask_yes must auto-confirm without a TTY
+# ---------------------------------------------------------------------------
+
 @test "ask_yes: auto-confirms when ASSUME_YES is true" {
     run bash -c '
         source compose/universal/configure-proxy.sh
