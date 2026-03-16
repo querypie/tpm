@@ -161,6 +161,10 @@ build {
     source      = "../scripts/"
     destination = "/tmp/"
   }
+  provisioner "file" {
+    source      = "../../compose/setup.v2.sh"
+    destination = "/tmp/setup.v2.sh"
+  }
   provisioner "shell" {
     expect_disconnect = true # It will logout at the end of this provisioner.
     inline_shebang = "/bin/bash -ex"

@@ -175,7 +175,7 @@ build {
 
   # Install setup.v2.sh in /usr/local/bin
   provisioner "file" {
-    source      = "../scripts/setup.v2.sh"
+    source      = "../../compose/setup.v2.sh"
     destination = "/tmp/setup.v2.sh"
   }
   provisioner "shell" {
