@@ -199,7 +199,7 @@ function configure_dac_sac() {
 
 # --- KAC proxy configuration ---
 # Ref: https://docs.querypie.com/ko/installation/post-installation-setup
-# Note: KAC proxy address must include a scheme (http:// or https://).
+# Note: KAC proxy address must include https:// (http:// is not supported).
 #       A container restart is required after this change for TLS certificate issuance.
 function configure_kac() {
     local host="$1"
