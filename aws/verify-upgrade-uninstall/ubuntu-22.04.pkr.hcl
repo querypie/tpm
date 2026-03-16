@@ -98,7 +98,7 @@ data "amazon-ami" "ubuntu-22-04" {
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
 # ubuntu-22-04 : Name of the builder
-source "amazon-ebs" "ubuntu22-04" {
+source "amazon-ebs" "ubuntu-22-04" {
   skip_create_ami = true
   source_ami      = data.amazon-ami.ubuntu-22-04.id
   ami_name        = local.ami_name
