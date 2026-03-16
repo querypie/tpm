@@ -112,10 +112,15 @@ function validate_proxy_address() {
 }
 
 # --- Detect container engine ---
-# Finds the engine (docker or podman) that owns querypie-app-1.
-# The container may be stopped; running state is checked separately.
+# Prefers the engine where querypie-app-1 is running.
+# Falls back to the engine that merely has the container (stopped),
+# so require_container_running can report a helpful error.
 function detect_container_engine() {
-    if docker inspect querypie-app-1 >/dev/null 2>&1; then
+    if docker inspect --format '{{.State.Running}}' querypie-app-1 2>/dev/null | grep -q "^true$"; then
+        DOCKER=docker
+    elif podman inspect --format '{{.State.Running}}' querypie-app-1 2>/dev/null | grep -q "^true$"; then
+        DOCKER=podman
+    elif docker inspect querypie-app-1 >/dev/null 2>&1; then
         DOCKER=docker
     elif podman inspect querypie-app-1 >/dev/null 2>&1; then
         DOCKER=podman

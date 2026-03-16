@@ -106,6 +106,27 @@ setup() {
     [[ "$output" == *"podman"* ]]
 }
 
+@test "detect_container_engine: selects podman when docker has stopped container but podman is running" {
+    # docker inspect exists but returns running=false; podman inspect returns running=true
+    docker() {
+        if [[ "$1" == "inspect" && "$2" == "--format" ]]; then echo "false"; return 0; fi
+        if [[ "$1" == "inspect" ]]; then return 0; fi
+    }
+    podman() {
+        if [[ "$1" == "inspect" && "$2" == "--format" ]]; then echo "true"; return 0; fi
+        if [[ "$1" == "inspect" ]]; then return 0; fi
+    }
+    export -f docker podman
+
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        detect_container_engine
+        echo "${DOCKER}"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"podman"* ]]
+}
+
 # ---------------------------------------------------------------------------
 # Review issue: KAC host is always forced to https://
 # proxy_input is validated to have no scheme; kac_host prepends https:// unconditionally.
