@@ -14,11 +14,14 @@
 #   - WAC proxy address      (Admin Page → Web Apps → Web App Configurations)
 #
 # Usage:
-#   ./configure-proxy.sh [PROXY_ADDRESS]
+#   ./configure-proxy.sh [OPTIONS] [PROXY_ADDRESS]
 #
 #   PROXY_ADDRESS  FQDN or IPv4 address of this host (e.g. 192.168.1.100 or querypie.example.com).
-#                  If omitted, the host IP is auto-detected and confirmed interactively.
+#                  If omitted, the host IP is auto-detected.
+#   --yes          Assume yes to all prompts and run non-interactively.
 set -o nounset -o errexit -o errtrace -o pipefail
+
+ASSUME_YES=false
 
 function print_usage_and_exit() {
     local code=${1:-0} out=2
@@ -31,9 +34,10 @@ Configure QueryPie ACP proxy settings for DAC/SAC and KAC in one step.
 ARGUMENTS:
   PROXY_ADDRESS  FQDN or IPv4 address of this host.
                  e.g. 192.168.1.100, querypie.example.com
-                 If omitted, the host IP is auto-detected and confirmed interactively.
+                 If omitted, the host IP is auto-detected.
 
 OPTIONS:
+  -y, --yes      Assume yes to all prompts; run non-interactively.
   -h, --help     Show this help message
 
 END_OF_USAGE
@@ -59,10 +63,16 @@ function log::do() {
 
 # --- Interactive confirmation ---
 # Adapted from install::ask_yes in setup.v2.sh.
+# Respects ASSUME_YES: when true, prints "yes" and returns 0 without prompting.
 function ask_yes() {
     echo "$@" >&2
+    if [[ "${ASSUME_YES}" == true ]]; then
+        printf 'Do you agree? [y/N] : yes\n'
+        return 0
+    fi
     if [[ ! -t 0 ]]; then
         log::error "Standard input is not a terminal. Unable to receive user input."
+        log::error "Run interactively, or pass --yes to skip confirmations."
         return 1
     fi
     printf 'Do you agree? [y/N] : '
@@ -194,17 +204,12 @@ function main() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -h|--help) print_usage_and_exit 0 ;;
+            -y|--yes) ASSUME_YES=true; shift ;;
             --) shift; break ;;
             -*) log::error "Unexpected option: $1"; print_usage_and_exit 1 ;;
             *) arguments+=("$1"); shift ;;
         esac
     done
-
-    # Terminal check: interactive input is required for everything beyond --help.
-    if [[ ! -t 0 ]]; then
-        log::error "This script requires an interactive terminal. Do not run via pipe."
-        exit 1
-    fi
 
     if [[ ${#arguments[@]} -gt 1 ]]; then
         log::error "Too many arguments."
@@ -220,7 +225,15 @@ function main() {
     if [[ -z "${proxy_input}" ]]; then
         local detected_ip
         detected_ip=$(detect_host_ip)
-        if [[ -n "${detected_ip}" ]]; then
+        if [[ "${ASSUME_YES}" == true ]]; then
+            # Non-interactive: use auto-detected IP without prompting.
+            proxy_input="${detected_ip}"
+            if [[ -z "${proxy_input}" ]]; then
+                log::error "Could not auto-detect host IP. Provide PROXY_ADDRESS as an argument."
+                exit 1
+            fi
+            log::info "Using auto-detected proxy address: ${proxy_input}"
+        elif [[ -n "${detected_ip}" ]]; then
             read -rp "Proxy address [${detected_ip}]: " proxy_input
             proxy_input="${proxy_input:-${detected_ip}}"
         else

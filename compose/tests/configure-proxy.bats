@@ -122,3 +122,26 @@ setup() {
     [ "$status" -eq 0 ]
     [[ "$output" == "https://querypie.example.com" ]]
 }
+
+# ---------------------------------------------------------------------------
+# --yes flag: ask_yes must auto-confirm without a TTY
+# ---------------------------------------------------------------------------
+
+@test "ask_yes: auto-confirms when ASSUME_YES is true" {
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        ASSUME_YES=true
+        ask_yes "Apply settings?"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"yes"* ]]
+}
+
+@test "ask_yes: fails without TTY when ASSUME_YES is false" {
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        ASSUME_YES=false
+        ask_yes "Apply settings?"
+    '
+    [ "$status" -eq 1 ]
+}
