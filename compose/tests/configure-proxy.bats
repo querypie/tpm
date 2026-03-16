@@ -220,3 +220,90 @@ setup() {
     '
     [ "$status" -eq 1 ]
 }
+
+# ---------------------------------------------------------------------------
+# detect_host_ip: macOS must use darwin path even when `ip` command exists
+# ---------------------------------------------------------------------------
+
+@test "detect_host_ip: on macOS uses route+ipconfig, not ip command" {
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        OSTYPE=darwin20
+        ip()     { echo "SHOULD_NOT_BE_CALLED"; }
+        route()  { echo "   interface: en0"; }
+        ipconfig() { echo "192.168.1.42"; }
+        export -f ip route ipconfig
+        detect_host_ip
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == "192.168.1.42" ]]
+}
+
+
+@test "detect_host_ip: on Linux uses ip route with grep -oP" {
+    echo '' | grep -P '' >/dev/null 2>&1 || skip "requires GNU grep (-P not supported)"
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        OSTYPE=linux-gnu
+        ip() {
+            if [[ "$1 $2 $3" == "route get 8.8.8.8" ]]; then
+                echo "8.8.8.8 via 192.168.1.1 dev eth0 src 172.16.0.10 uid 1000"
+            fi
+        }
+        export -f ip
+        detect_host_ip
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == "172.16.0.10" ]]
+}
+
+@test "detect_host_ip: on Linux without ip falls back to hostname -i" {
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        OSTYPE=linux-gnu
+        # ip not available
+        hostname() { echo "10.10.10.99"; }
+        export -f hostname
+        PATH=/nonexistent detect_host_ip
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == "10.10.10.99" ]]
+}
+
+@test "detect_host_ip: on Linux falls back to hostname -i when ip route fails" {
+    echo '' | grep -P '' >/dev/null 2>&1 || skip "requires GNU grep (-P not supported)"
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        OSTYPE=linux-gnu
+        ip() { return 1; }
+        hostname() { echo "10.20.30.40"; }
+        export -f ip hostname
+        detect_host_ip
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == "10.20.30.40" ]]
+}
+
+# ---------------------------------------------------------------------------
+# detect_host_ip: integration tests using real system commands
+# ---------------------------------------------------------------------------
+
+@test "detect_host_ip: returns valid IPv4 on macOS (integration)" {
+    [[ "$OSTYPE" == "darwin"* ]] || skip "macOS only"
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        detect_host_ip
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}
+
+@test "detect_host_ip: returns valid IPv4 on Linux (integration)" {
+    [[ "$OSTYPE" == "linux"* ]] || skip "Linux only"
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        detect_host_ip
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}

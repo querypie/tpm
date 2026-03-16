@@ -525,12 +525,13 @@ function install::base_url() {
     fi
   fi
 
-  if command -v ip >/dev/null 2>&1; then
-    ip_addr=$(ip route get 8.8.8.8 | grep -oP 'src \K[\d.]+')
-  elif [[ "$OSTYPE" == "darwin"* ]]; then
+  if [[ "$OSTYPE" == "darwin"* ]]; then
     local iface
     iface=$(route get default | awk '/interface:/ {print $2}')
     ip_addr=$(ipconfig getifaddr "$iface")
+  elif command -v ip >/dev/null 2>&1; then
+    ip_addr=$(ip route get 8.8.8.8 2>/dev/null | grep -oP 'src \K[\d.]+' 2>/dev/null) || \
+      ip_addr=$(hostname -i 2>/dev/null || true)
   else
     ip_addr=$(hostname -i)
   fi
@@ -1538,4 +1539,8 @@ function main() {
   esac
 }
 
-main "$@"
+# bats guard: source 시에는 main을 실행하지 않고 함수 정의만 로드한다.
+# bats 테스트에서 `source setup.v2.sh`로 함수를 불러올 때 main이 실행되면 안 되기 때문이다.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
