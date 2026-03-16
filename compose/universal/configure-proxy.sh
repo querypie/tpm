@@ -239,9 +239,19 @@ function main() {
             fi
             log::info "Using auto-detected proxy address: ${proxy_input}"
         elif [[ -n "${detected_ip}" ]]; then
+            if [[ ! -t 0 ]]; then
+                log::error "Standard input is not a terminal."
+                log::error "Pass PROXY_ADDRESS as an argument, or use --yes to accept the auto-detected address (${detected_ip})."
+                exit 1
+            fi
             read -rp "Proxy address [${detected_ip}]: " proxy_input
             proxy_input="${proxy_input:-${detected_ip}}"
         else
+            if [[ ! -t 0 ]]; then
+                log::error "Standard input is not a terminal and host IP could not be auto-detected."
+                log::error "Provide PROXY_ADDRESS as an argument."
+                exit 1
+            fi
             read -rp "Proxy address: " proxy_input
         fi
         if [[ -z "${proxy_input}" ]]; then

@@ -173,6 +173,29 @@ setup() {
 # --yes flag: ask_yes must auto-confirm without a TTY
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Non-interactive path: missing PROXY_ADDRESS without TTY must fail with guidance
+# ---------------------------------------------------------------------------
+
+@test "no PROXY_ADDRESS without TTY: fails with guidance when IP is detectable" {
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        detected_ip="192.168.1.100"
+        ASSUME_YES=false
+        if [[ ! -t 0 ]]; then
+            log::error "Standard input is not a terminal."
+            log::error "Pass PROXY_ADDRESS as an argument, or use --yes to accept the auto-detected address (${detected_ip})."
+            exit 1
+        fi
+    '
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--yes"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# --yes flag: ask_yes must auto-confirm without a TTY
+# ---------------------------------------------------------------------------
+
 @test "ask_yes: auto-confirms when ASSUME_YES is true" {
     run bash -c '
         source compose/universal/configure-proxy.sh
