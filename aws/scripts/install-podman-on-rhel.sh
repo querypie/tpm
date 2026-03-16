@@ -40,6 +40,9 @@ function main() {
   if test_if_podman_installed_already; then
     # Enable the Podman socket for docker-compose to interact with Podman
     systemctl --user enable --now podman.socket
+    # RHEL 10 ships with Podman pre-installed but without docker-compose.
+    # setup.v2.sh needs docker-compose to manage QueryPie containers.
+    install_docker_compose
   else
     install_podman
     install_docker_compose

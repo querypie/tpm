@@ -21,7 +21,12 @@ function install_docker_and_compose() {
 
   sudo dnf -y -q --best install "${packages[@]}"
 
-  sudo systemctl start docker
+  sudo systemctl start docker || {
+    echo "### docker.service failed to start — diagnostics below ###"
+    sudo systemctl status docker.service --no-pager || true
+    sudo journalctl -xeu docker.service --no-pager | tail -80 || true
+    exit 1
+  }
   sudo systemctl enable docker
 
   sudo usermod -aG docker "$USER"

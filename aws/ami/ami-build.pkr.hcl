@@ -12,7 +12,7 @@ packer {
 # Variables
 variable "querypie_version" {
   type        = string
-  default     = "10.3.0"
+  default     = "11.1.2"
   description = "Version of QueryPie to install"
 }
 
@@ -79,20 +79,20 @@ locals {
 # amazon-ami : Type of data source, or plugin name
 # amazon-linux-2023 : Name of the data source
 ###
-# aws ec2 describe-images --image-ids ami-0811349cae530179a
-# "Name": "al2023-ami-2023.8.20250804.0-kernel-6.1-x86_64"
-# "Description": "Amazon Linux 2023 AMI 2023.8.20250804.0 x86_64 HVM kernel-6.1"
+# aws ec2 describe-images --image-ids ami-00aa851417c591bb3
+# "Name": "al2023-ami-2023.10.20260302.1-kernel-6.12-x86_64"
+# "Description": "Amazon Linux 2023 AMI 2023.10.20260302.1 x86_64 HVM kernel-6.12"
 # "Architecture": "x86_64"
 # "DeviceName": "/dev/xvda"
 ###
-# aws ec2 describe-images --image-ids ami-0de81378d4317284d
-# "Name": "al2023-ami-2023.8.20250804.0-kernel-6.1-arm64"
-# "Description": "Amazon Linux 2023 AMI 2023.8.20250804.0 arm64 HVM kernel-6.1"
+# aws ec2 describe-images --image-ids ami-0257962c1c28dd1ad
+# "Name": "al2023-ami-2023.10.20260105.0-kernel-6.12-arm64"
+# "Description": "Amazon Linux 2023 AMI 2023.10.20260105.0 arm64 HVM kernel-6.12"
 # "Architecture": "arm64"
 # "DeviceName": "/dev/xvda"
 data "amazon-ami" "amazon-linux-2023" {
   filters = {
-    name                = "al2023-ami-2023.8.*"
+    name                = "al2023-ami-2023.10.*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"

@@ -12,7 +12,7 @@ packer {
 # Variables
 variable "querypie_version" {
   type        = string
-  default     = "10.3.0"
+  default     = "11.1.2"
   description = "Version of QueryPie to install"
 }
 
@@ -191,7 +191,7 @@ build {
     output     = "manifest.json"
     strip_path = true
     custom_data = {
-      timestmap        = local.timestamp
+      timestamp        = local.timestamp
       querypie_version = var.querypie_version
     }
   }

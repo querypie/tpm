@@ -23,8 +23,8 @@ variable "upgrade_version" {
 }
 
 variable "architecture" {
-  type = string
-  default = "x86_64"
+  type        = string
+  default     = "x86_64"
   description = "x86_64 | arm64"
 }
 
@@ -38,7 +38,7 @@ variable "container_engine" {
 
 variable "resource_owner" {
   type        = string
-  default     = "Ubuntu24.04-Installer"
+  default     = "RHEL10-Installer"
   description = "Owner of AWS Resources"
 }
 
@@ -48,7 +48,7 @@ locals {
   ami_name = "QueryPie-Suite-Installer-${local.timestamp}"
 
   region = "ap-northeast-2"
-  ssh_username = "ubuntu" # SSH username for Ubuntu 24.04
+  ssh_username = "ec2-user" # SSH username for RHEL 10
 
   common_tags = {
     CreatedBy = "Packer"
@@ -61,56 +61,57 @@ locals {
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "Ubuntu24.04-Installer-${var.initial_version}"
+      Name = "RHEL10-Installer-${var.initial_version}"
     }
   )
 }
 
-# Data source for latest Ubuntu 24.04 LTS AMI
+# Data source for latest RHEL 10 AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# ubuntu-24-04 : Name of the data source
+# rhel-10 : Name of the data source
 ###
-# aws ec2 describe-images --image-ids ami-0811349cae530179a
-# "Name": "ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-20250610"
-# "Description": "Canonical, Ubuntu, 24.04, amd64 noble image"
+# aws ec2 describe-images --image-ids ami-0bde778d2028cc971
+# "Name": "RHEL-10.0.0_HVM-20250730-x86_64-0-Hourly2-GP3"
+# "Description": "Provided by Red Hat, Inc."
 # "Architecture": "x86_64"
 # "DeviceName": "/dev/sda1"
 ###
-# aws ec2 describe-images --image-ids ami-09ed9bca6a01cd74a
-# "Name": "ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-arm64-server-20250610"
-# "Description": "Canonical, Ubuntu, 24.04, arm64 noble image"
+# aws ec2 describe-images --image-ids ami-024e0ba491eac8686
+# "Name": "RHEL-10.0.0_HVM-20250730-arm64-0-Hourly2-GP3"
+# "Description": "Provided by Red Hat, Inc."
 # "Architecture": "arm64"
 # "DeviceName": "/dev/sda1"
-data "amazon-ami" "ubuntu-24-04" {
+data "amazon-ami" "rhel-10" {
   filters = {
-    name                = "ubuntu/images/*/ubuntu-noble-24.04-*-server-*"
+    name                = "RHEL-10.*_HVM-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
   }
   most_recent = true
-  owners = ["099720109477"] # # Canonical's AWS Account ID
+  owners = ["309956199498"] # Red Hat's AWS Account ID
   region      = local.region
 }
 
 # Builder Configuration
 # source : Keyword to begin a source block
 # amazon-ebs : Type of builder, or plugin name
-# ubuntu-24-04 : Name of the builder
-source "amazon-ebs" "ubuntu-24-04" {
+# rhel-10 : Name of the builder
+source "amazon-ebs" "rhel-10" {
   skip_create_ami = true
-  source_ami      = data.amazon-ami.ubuntu-24-04.id
+  source_ami      = data.amazon-ami.rhel-10.id
   ami_name        = local.ami_name
 
-  region       = local.region
-  ssh_username = local.ssh_username
+  region               = local.region
+  ssh_username         = local.ssh_username
   # ssh_private_key_file = "demo-targets.pem"
   # ssh_keypair_name = "demo-targets"
 
   # spot_instance_types = ["t4g.xlarge"]
   spot_instance_types = var.architecture == "arm64" ? ["t4g.xlarge"] : ["t3.xlarge"]
-  spot_price = "0.09" # the maximum hourly price
+  spot_price          = "0.16" # the maximum hourly price
+  # + $0.08 for software cost
   # $0.0646 for t4g.xlarge instance in ap-northeast-2
   # $0.078 for t3.xlarge instance
 
@@ -145,7 +146,7 @@ source "amazon-ebs" "ubuntu-24-04" {
 # Build configuration
 build {
   sources = [
-    "source.amazon-ebs.ubuntu-24-04"
+    "source.amazon-ebs.rhel-10"
   ]
 
   provisioner "shell" {
@@ -164,13 +165,12 @@ build {
     source      = "../../compose/setup.v2.sh"
     destination = "/tmp/setup.v2.sh"
   }
-
   provisioner "shell" {
     expect_disconnect = true # It will logout at the end of this provisioner.
     inline_shebang = "/bin/bash -ex"
     inline = [
-        var.container_engine == "docker" ? "/tmp/install-docker-on-ubuntu.sh" : "true",
-        var.container_engine == "podman" ? "/tmp/install-podman-on-ubuntu.sh" : "true",
+        var.container_engine == "docker" ? "/tmp/docker-unavailable.sh" : "true",
+        var.container_engine == "podman" ? "/tmp/install-podman-on-rhel.sh" : "true",
         var.container_engine == "none" ? "/tmp/setup.v2.sh --install-container-engine" : "true",
     ]
   }
@@ -205,7 +205,7 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "setup.v2.sh --uninstall",
-      "docker ps --all",
+      "podman ps --all",
       "setup.v2.sh --verify-not-installed",
     ]
   }
@@ -215,7 +215,7 @@ build {
     output     = "manifest.json"
     strip_path = true
     custom_data = {
-      timestmap        = local.timestamp
+      timestamp        = local.timestamp
       initial_version = var.initial_version
       upgrade_version = var.upgrade_version
     }
