@@ -95,6 +95,54 @@ Podman can be used in a way that is compatible with Docker. Most Docker commands
 2. Verify successful execution: `docker compose --profile=app exec app readyz`
 3. Stop application: `docker compose --profile=app down`
 
+## Restarting Services
+
+The restart method depends on what was changed.
+
+### When container configuration changes (`.env`, `compose.yml` modifications, etc.)
+
+The container must be removed and recreated.
+
+```shell
+# Podman
+podman compose --profile=app down
+podman compose --profile=app up -d
+
+# Docker
+docker compose --profile=app down
+docker compose --profile=app up -d
+```
+
+### When only internal settings change (DB settings, etc.)
+
+Restart the process without recreating the container.
+
+```shell
+docker restart querypie-app-1
+# or
+podman restart querypie-app-1
+```
+
+## Post-Installation Setup
+
+### Proxy Address Configuration
+
+Use the `configure-proxy.sh` script to automatically configure DAC/SAC and KAC Proxy addresses.
+
+```shell
+# Interactive (auto-detect address)
+./configure-proxy.sh
+
+# Pass address as argument
+./configure-proxy.sh 192.168.1.100
+./configure-proxy.sh querypie.example.com
+
+# Non-interactive (apply without confirmation)
+./configure-proxy.sh 192.168.1.100 --yes
+```
+
+For more details, refer to the [Post-Installation Setup](https://docs.querypie.com/en/installation/post-installation-setup) documentation.
+
 ## Technical Support
 
 Please refer to the [Technical Support](https://docs.querypie.com/en/support) page.
