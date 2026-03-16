@@ -205,7 +205,7 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "setup.v2.sh --uninstall",
-      "docker ps --all",
+      "podman ps --all",
       "setup.v2.sh --verify-not-installed",
     ]
   }
