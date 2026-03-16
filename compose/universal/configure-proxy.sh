@@ -103,22 +103,16 @@ function validate_proxy_address() {
 
 # --- Detect container engine ---
 # Adapted from verify::container_engine_installation in setup.v2.sh.
-# Sets global COMPOSE array to (docker compose) or (podman compose).
+# Sets global DOCKER to 'docker' or 'podman'.
 function detect_container_engine() {
-    local docker_cmd
-    if docker --version 2>/dev/null | grep -q "^Docker version"; then
-        docker_cmd=docker
-    elif podman --version 2>/dev/null | grep -q "^podman version"; then
-        docker_cmd=podman
+    if docker --version 2>/dev/null | grep -q "^Docker version" && docker ps >/dev/null 2>&1; then
+        DOCKER=docker
+    elif podman --version 2>/dev/null | grep -q "^podman version" && podman ps >/dev/null 2>&1; then
+        DOCKER=podman
     else
-        log::error "Neither docker nor podman found."
+        log::error "Neither docker nor podman is available and running."
         exit 1
     fi
-    if ! ${docker_cmd} ps >/dev/null 2>&1; then
-        log::error "${docker_cmd} is not running or current user lacks permission. Please check your container engine."
-        exit 1
-    fi
-    COMPOSE=("${docker_cmd}" compose)
 }
 
 # --- Detect host IP ---
@@ -139,12 +133,10 @@ function detect_host_ip() {
 
 # --- Service restart ---
 function restart_services() {
-    log::info "Stopping app..."
-    log::do "${COMPOSE[@]}" -f "${COMPOSE_DIR}/compose.yml" --profile=app stop
-    log::info "Starting app..."
-    log::do "${COMPOSE[@]}" -f "${COMPOSE_DIR}/compose.yml" --profile=app up -d
-    log::info "Verifying app readiness..."
-    log::do "${COMPOSE[@]}" -f "${COMPOSE_DIR}/compose.yml" --profile=app exec app readyz
+    log::do "${DOCKER}" restart querypie-app-1
+    log::info "Waiting for app to be ready..."
+    log::do "${DOCKER}" exec querypie-app-1 readyz wait
+    log::ok "App is ready."
 }
 
 # --- SQL executor ---
@@ -152,8 +144,8 @@ function restart_services() {
 function run_sql() {
     local sql="$1"
     printf "%b+ [querypie-app-1] mariadb -e \"%s\"%b\n" "$BOLD_CYAN" "$sql" "$RESET" >&2
-    docker exec querypie-app-1 \
-        sh -c 'mariadb --ssl=FALSE -h"${DB_HOST}" -u"${DB_USERNAME}" -p"${DB_PASSWORD}" -D querypie -e "$1"' \
+    "${DOCKER}" exec querypie-app-1 \
+        sh -c 'mariadb --ssl=FALSE -h"${DB_HOST}" -u"${DB_USERNAME}" -p"${DB_PASSWORD}" -D"${DB_CATALOG}" -e "$1"' \
         sh "${sql}" 2>/dev/null
 }
 
@@ -163,9 +155,9 @@ function run_sql() {
 function configure_dac_sac() {
     local host="$1"
     log::info "Configuring DAC/SAC proxy: ${host}"
-    run_sql "UPDATE querypie.proxies SET host = '${host}' WHERE id = 1;"
+    run_sql "UPDATE proxies SET host = '${host}' WHERE id = 1;"
     log::ok "DAC/SAC proxy updated."
-    run_sql "SELECT id, host FROM querypie.proxies WHERE id = 1;"
+    run_sql "SELECT id, host FROM proxies WHERE id = 1;"
 }
 
 # --- KAC proxy configuration ---
@@ -175,20 +167,14 @@ function configure_dac_sac() {
 function configure_kac() {
     local host="$1"
     log::info "Configuring KAC proxy: ${host}"
-    run_sql "UPDATE querypie.k_proxy_setting SET host = '${host}';"
+    run_sql "UPDATE k_proxy_setting SET host = '${host}';"
     log::ok "KAC proxy updated."
-    run_sql "SELECT host FROM querypie.k_proxy_setting;"
+    run_sql "SELECT host FROM k_proxy_setting;"
 }
 
 # --- Main ---
 function main() {
-    # Terminal check: this script requires interactive input.
-    if [[ ! -t 0 ]]; then
-        log::error "This script requires an interactive terminal. Do not run via pipe."
-        exit 1
-    fi
-
-    # Parse arguments
+    # Parse arguments first so --help works without a TTY.
     local -a arguments=()
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -199,6 +185,12 @@ function main() {
         esac
     done
 
+    # Terminal check: interactive input is required for everything beyond --help.
+    if [[ ! -t 0 ]]; then
+        log::error "This script requires an interactive terminal. Do not run via pipe."
+        exit 1
+    fi
+
     if [[ ${#arguments[@]} -gt 1 ]]; then
         log::error "Too many arguments."
         print_usage_and_exit 1
@@ -206,7 +198,7 @@ function main() {
 
     local proxy_input="${arguments[0]:-}"
 
-    # Detect container engine (COMPOSE is global: used by restart_services)
+    # Detect container engine (DOCKER is global: used by run_sql, restart_services)
     detect_container_engine
 
     # Resolve proxy address
@@ -232,19 +224,6 @@ function main() {
     #   KAC requires a scheme     (e.g. https://192.168.1.100)
     local dac_host="${proxy_input}"
     local kac_host="https://${proxy_input}"
-
-    # Resolve .env path (COMPOSE_DIR is global: used by restart_services)
-    local default_env_path="$HOME/querypie/current/.env"
-    local env_path
-    read -rp "Path to .env file [${default_env_path}]: " env_path
-    env_path="${env_path:-${default_env_path}}"
-
-    if [[ ! -f "${env_path}" ]]; then
-        log::error "File not found: ${env_path}"
-        exit 1
-    fi
-
-    COMPOSE_DIR="$(dirname "${env_path}")"
 
     # Show plan and confirm
     echo ""
@@ -275,4 +254,6 @@ function main() {
     log::ok "Done."
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
