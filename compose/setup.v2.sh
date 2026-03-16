@@ -525,12 +525,12 @@ function install::base_url() {
     fi
   fi
 
-  if command -v ip >/dev/null 2>&1; then
-    ip_addr=$(ip route get 8.8.8.8 | grep -oP 'src \K[\d.]+')
-  elif [[ "$OSTYPE" == "darwin"* ]]; then
+  if [[ "$OSTYPE" == "darwin"* ]]; then
     local iface
     iface=$(route get default | awk '/interface:/ {print $2}')
     ip_addr=$(ipconfig getifaddr "$iface")
+  elif command -v ip >/dev/null 2>&1; then
+    ip_addr=$(ip route get 8.8.8.8 | grep -oP 'src \K[\d.]+')
   else
     ip_addr=$(hostname -i)
   fi
