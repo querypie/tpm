@@ -1,182 +1,278 @@
 #!/usr/bin/env bash
-set -o nounset -o errexit -o pipefail
+# configure-proxy.sh — QueryPie ACP Post-Installation Proxy Setup
+#
+# This script automates the proxy address configuration step of the
+# QueryPie ACP post-installation setup guide:
+#   https://docs.querypie.com/ko/installation/post-installation-setup
+#
+# Covered by this script:
+#   - DAC/SAC proxy address  (UPDATE querypie.proxies)
+#   - KAC proxy address      (UPDATE querypie.k_proxy_setting)
+#
+# Not covered (requires Admin Page UI):
+#   - QueryPie Web Base URL  (Admin Page → General)
+#   - WAC proxy address      (Admin Page → Web Apps → Web App Configurations)
+#
+# Usage:
+#   ./configure-proxy.sh [PROXY_ADDRESS]
+#
+#   PROXY_ADDRESS  FQDN or IPv4 address of this host (e.g. 192.168.1.100 or querypie.example.com).
+#                  If omitted, the host IP is auto-detected and confirmed interactively.
+set -o nounset -o errexit -o errtrace -o pipefail
 
-# --- Colors ---
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly CYAN='\033[0;36m'
-readonly NC='\033[0m'
+function print_usage_and_exit() {
+    local code=${1:-0} out=2
+    [[ code -eq 0 ]] && out=1
+    cat >&"${out}" <<END_OF_USAGE
+Usage: $0 [OPTIONS] [PROXY_ADDRESS]
 
-log::info()  { echo -e "${CYAN}[INFO]${NC} $*"; }
-log::ok()    { echo -e "${GREEN}[OK]${NC} $*"; }
-log::error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
+Configure QueryPie ACP proxy settings for DAC/SAC and KAC in one step.
 
-# --- Detect container engine ---
-if command -v docker &>/dev/null; then
-    COMPOSE="docker compose"
-elif command -v podman &>/dev/null; then
-    COMPOSE="podman compose"
-else
-    log::error "Neither docker nor podman found."
-    exit 1
-fi
+ARGUMENTS:
+  PROXY_ADDRESS  FQDN or IPv4 address of this host.
+                 e.g. 192.168.1.100, querypie.example.com
+                 If omitted, the host IP is auto-detected and confirmed interactively.
 
-# --- Detect host IP ---
-detect_host_ip() {
-    hostname -I 2>/dev/null | awk '{print $1}' || echo "192.168.0.1"
+OPTIONS:
+  -h, --help     Show this help message
+
+END_OF_USAGE
+    exit "$code"
 }
 
-HOST_IP=$(detect_host_ip)
+# --- Colors ---
+readonly BOLD_CYAN="\e[1;36m"
+readonly BOLD_GREEN="\e[1;32m"
+readonly BOLD_RED="\e[1;91m"
+readonly RESET="\e[0m"
 
-# --- .env file path ---
-DEFAULT_ENV_PATH="$HOME/querypie/current/.env"
-read -rp "Path to .env file [${DEFAULT_ENV_PATH}]: " ENV_PATH
-ENV_PATH="${ENV_PATH:-${DEFAULT_ENV_PATH}}"
+function log::info()  { printf "%b[INFO]%b %s\n"  "$BOLD_CYAN"  "$RESET" "$*"; }
+function log::ok()    { printf "%b[OK]%b %s\n"    "$BOLD_GREEN" "$RESET" "$*"; }
+function log::error() { printf "%b[ERROR]%b %s\n" "$BOLD_RED"   "$RESET" "$*" >&2; }
 
-if [[ ! -f "${ENV_PATH}" ]]; then
-    log::error "File not found: ${ENV_PATH}"
-    exit 1
-fi
+function log::do() {
+    # shellcheck disable=SC2064
+    trap "log::error 'Failed to run: $*'" ERR
+    printf "%b+ %s%b\n" "$BOLD_CYAN" "$*" "$RESET" >&2
+    "$@"
+}
 
-COMPOSE_DIR="$(dirname "${ENV_PATH}")"
+# --- Interactive confirmation ---
+# Adapted from install::ask_yes in setup.v2.sh.
+function ask_yes() {
+    echo "$@" >&2
+    if [[ ! -t 0 ]]; then
+        log::error "Standard input is not a terminal. Unable to receive user input."
+        return 1
+    fi
+    printf 'Do you agree? [y/N] : '
+    local answer
+    read -r answer
+    case "${answer}" in
+        y|Y|yes|YES|Yes) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
-# --- Read DB credentials from .env ---
-DB_USERNAME=$(grep '^DB_USERNAME=' "${ENV_PATH}" | cut -d'=' -f2-)
-DB_PASSWORD=$(grep '^DB_PASSWORD=' "${ENV_PATH}" | cut -d'=' -f2-)
+# --- Validate proxy address ---
+# Accepts IPv4 (e.g. 192.168.1.100) or FQDN/hostname (e.g. querypie.example.com).
+# Rejects any input containing a scheme (http://, https://).
+function validate_proxy_address() {
+    local input="$1"
 
-if [[ -z "${DB_USERNAME}" || -z "${DB_PASSWORD}" ]]; then
-    log::error "DB_USERNAME or DB_PASSWORD not found in .env file."
-    exit 1
-fi
+    if [[ "${input}" =~ ^https?:// ]]; then
+        log::error "Proxy address must not include a scheme. Got: ${input}"
+        log::error "Example: 192.168.1.100 or querypie.example.com"
+        return 1
+    fi
 
-log::info "DB user: ${DB_USERNAME}"
+    # IPv4
+    if [[ "${input}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+        return 0
+    fi
+
+    # FQDN or hostname: labels of alphanumerics and hyphens, separated by dots
+    if [[ "${input}" =~ ^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$ ]]; then
+        return 0
+    fi
+
+    log::error "Invalid proxy address: ${input}"
+    log::error "Must be an IPv4 address (e.g. 192.168.1.100) or FQDN (e.g. querypie.example.com)."
+    return 1
+}
+
+# --- Detect container engine ---
+# Adapted from verify::container_engine_installation in setup.v2.sh.
+# Sets global COMPOSE array to (docker compose) or (podman compose).
+function detect_container_engine() {
+    local docker_cmd
+    if docker --version 2>/dev/null | grep -q "^Docker version"; then
+        docker_cmd=docker
+    elif podman --version 2>/dev/null | grep -q "^podman version"; then
+        docker_cmd=podman
+    else
+        log::error "Neither docker nor podman found."
+        exit 1
+    fi
+    if ! ${docker_cmd} ps >/dev/null 2>&1; then
+        log::error "${docker_cmd} is not running or current user lacks permission. Please check your container engine."
+        exit 1
+    fi
+    COMPOSE=("${docker_cmd}" compose)
+}
+
+# --- Detect host IP ---
+# Adapted from install::base_url in setup.v2.sh.
+function detect_host_ip() {
+    local ip_addr
+    if command -v ip >/dev/null 2>&1; then
+        ip_addr=$(ip route get 8.8.8.8 | grep -oP 'src \K[\d.]+')
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        local iface
+        iface=$(route get default | awk '/interface:/ {print $2}')
+        ip_addr=$(ipconfig getifaddr "$iface")
+    else
+        ip_addr=$(hostname -i)
+    fi
+    echo "${ip_addr:-}"
+}
 
 # --- Service restart ---
-restart_services() {
+function restart_services() {
     log::info "Stopping app..."
-    $COMPOSE -f "${COMPOSE_DIR}/compose.yml" --profile=app stop
+    log::do "${COMPOSE[@]}" -f "${COMPOSE_DIR}/compose.yml" --profile=app stop
     log::info "Starting app..."
-    $COMPOSE -f "${COMPOSE_DIR}/compose.yml" --profile=app up -d
+    log::do "${COMPOSE[@]}" -f "${COMPOSE_DIR}/compose.yml" --profile=app up -d
     log::info "Verifying app readiness..."
-    $COMPOSE -f "${COMPOSE_DIR}/compose.yml" --profile=app exec app readyz
+    log::do "${COMPOSE[@]}" -f "${COMPOSE_DIR}/compose.yml" --profile=app exec app readyz
 }
 
 # --- SQL executor ---
-run_sql() {
+# Runs SQL inside querypie-app-1 using the container's own DB credentials.
+function run_sql() {
     local sql="$1"
-    docker exec querypie-mysql-1 mysql \
-        -u"${DB_USERNAME}" -p"${DB_PASSWORD}" \
-        -D querypie -e "${sql}" 2>/dev/null
+    printf "%b+ [querypie-app-1] mariadb -e \"%s\"%b\n" "$BOLD_CYAN" "$sql" "$RESET" >&2
+    docker exec querypie-app-1 \
+        sh -c 'mariadb --ssl=FALSE -h"${DB_HOST}" -u"${DB_USERNAME}" -p"${DB_PASSWORD}" -D querypie -e "$1"' \
+        sh "${sql}" 2>/dev/null
 }
 
 # --- DAC/SAC proxy configuration ---
-configure_dac_sac() {
-    echo ""
-    log::info "=== DAC/SAC Proxy Configuration ==="
-    echo ""
-    read -rp "Enter DAC/SAC proxy address (e.g. ${HOST_IP} or qp.example.com) [${HOST_IP}]: " PROXY_ADDRESS
-    PROXY_ADDRESS="${PROXY_ADDRESS:-${HOST_IP}}"
-
-    local sql="UPDATE querypie.proxies SET host = '${PROXY_ADDRESS}' WHERE id = 1;"
-    echo ""
-    log::info "SQL to execute:"
-    echo "  ${sql}"
-    echo ""
-    read -rp "Proceed? [y/N]: " CONFIRM
-    case "${CONFIRM}" in
-        [yY]|[yY][eE][sS]) ;;
-        *)
-            log::info "Skipping DAC/SAC configuration."
-            return 0
-            ;;
-    esac
-
-    run_sql "${sql}"
+# Ref: https://docs.querypie.com/ko/installation/post-installation-setup
+# Note: DAC/SAC proxy address must NOT include a scheme (no http:// or https://).
+function configure_dac_sac() {
+    local host="$1"
+    log::info "Configuring DAC/SAC proxy: ${host}"
+    run_sql "UPDATE querypie.proxies SET host = '${host}' WHERE id = 1;"
     log::ok "DAC/SAC proxy updated."
-    echo ""
-    log::info "Result:"
     run_sql "SELECT id, host FROM querypie.proxies WHERE id = 1;"
 }
 
 # --- KAC proxy configuration ---
-configure_kac() {
-    echo ""
-    log::info "=== KAC Proxy Configuration ==="
-    echo ""
-    local default_kac="https://${HOST_IP}"
-    read -rp "Enter KAC proxy address with scheme (e.g. https://${HOST_IP} or https://kac.example.com) [${default_kac}]: " PROXY_ADDRESS
-    PROXY_ADDRESS="${PROXY_ADDRESS:-${default_kac}}"
-
-    # Validate scheme
-    if [[ ! "${PROXY_ADDRESS}" =~ ^https?:// ]]; then
-        log::error "Address must start with http:// or https://"
-        return 1
-    fi
-
-    local kac_host="${PROXY_ADDRESS}"
-
-    local sql="UPDATE querypie.k_proxy_setting SET host = '${kac_host}';"
-    echo ""
-    log::info "SQL to execute:"
-    echo "  ${sql}"
-    echo ""
-    read -rp "Proceed? [y/N]: " CONFIRM
-    case "${CONFIRM}" in
-        [yY]|[yY][eE][sS]) ;;
-        *)
-            log::info "Skipping KAC configuration."
-            return 0
-            ;;
-    esac
-
-    run_sql "${sql}"
+# Ref: https://docs.querypie.com/ko/installation/post-installation-setup
+# Note: KAC proxy address must include a scheme (http:// or https://).
+#       A container restart is required after this change for TLS certificate issuance.
+function configure_kac() {
+    local host="$1"
+    log::info "Configuring KAC proxy: ${host}"
+    run_sql "UPDATE querypie.k_proxy_setting SET host = '${host}';"
     log::ok "KAC proxy updated."
-    echo ""
-    log::info "Result:"
     run_sql "SELECT host FROM querypie.k_proxy_setting;"
 }
 
-# --- Menu ---
-echo ""
-echo "Select configuration type:"
-echo "  1) DAC/SAC proxy configuration"
-echo "  2) KAC proxy configuration"
-echo "  3) Both (DAC/SAC + KAC)"
-echo "  q) Quit"
-echo ""
-read -rp "Choose [1/2/3/q]: " PROXY_TYPE
-
-case "${PROXY_TYPE}" in
-    1)
-        configure_dac_sac
-        ;;
-    2)
-        configure_kac
-        ;;
-    3)
-        configure_dac_sac
-        configure_kac
-        ;;
-    [qQ])
-        log::info "Exiting."
-        exit 0
-        ;;
-    *)
-        log::error "Invalid selection. Please enter 1, 2, 3, or q."
+# --- Main ---
+function main() {
+    # Terminal check: this script requires interactive input.
+    if [[ ! -t 0 ]]; then
+        log::error "This script requires an interactive terminal. Do not run via pipe."
         exit 1
-        ;;
-esac
+    fi
 
-echo ""
-read -rp "Restart services to apply changes? [y/N]: " RESTART
-case "${RESTART}" in
-    [yY]|[yY][eE][sS])
+    # Parse arguments
+    local -a arguments=()
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help) print_usage_and_exit 0 ;;
+            --) shift; break ;;
+            -*) log::error "Unexpected option: $1"; print_usage_and_exit 1 ;;
+            *) arguments+=("$1"); shift ;;
+        esac
+    done
+
+    if [[ ${#arguments[@]} -gt 1 ]]; then
+        log::error "Too many arguments."
+        print_usage_and_exit 1
+    fi
+
+    local proxy_input="${arguments[0]:-}"
+
+    # Detect container engine (COMPOSE is global: used by restart_services)
+    detect_container_engine
+
+    # Resolve proxy address
+    if [[ -z "${proxy_input}" ]]; then
+        local detected_ip
+        detected_ip=$(detect_host_ip)
+        if [[ -n "${detected_ip}" ]]; then
+            read -rp "Proxy address [${detected_ip}]: " proxy_input
+            proxy_input="${proxy_input:-${detected_ip}}"
+        else
+            read -rp "Proxy address: " proxy_input
+        fi
+        if [[ -z "${proxy_input}" ]]; then
+            log::error "Proxy address is required."
+            exit 1
+        fi
+    fi
+
+    validate_proxy_address "${proxy_input}" || exit 1
+
+    # Derive per-product addresses:
+    #   DAC/SAC requires no scheme (e.g. 192.168.1.100)
+    #   KAC requires a scheme     (e.g. https://192.168.1.100)
+    local dac_host="${proxy_input}"
+    local kac_host="https://${proxy_input}"
+
+    # Resolve .env path (COMPOSE_DIR is global: used by restart_services)
+    local default_env_path="$HOME/querypie/current/.env"
+    local env_path
+    read -rp "Path to .env file [${default_env_path}]: " env_path
+    env_path="${env_path:-${default_env_path}}"
+
+    if [[ ! -f "${env_path}" ]]; then
+        log::error "File not found: ${env_path}"
+        exit 1
+    fi
+
+    COMPOSE_DIR="$(dirname "${env_path}")"
+
+    # Show plan and confirm
+    echo ""
+    log::info "Proxy settings to apply:"
+    printf "  DAC/SAC : %s\n" "${dac_host}"
+    printf "  KAC     : %s\n" "${kac_host}"
+    echo ""
+    if ! ask_yes "Apply the above proxy settings?"; then
+        log::info "Aborted."
+        exit 0
+    fi
+
+    # Apply proxy settings
+    echo ""
+    configure_dac_sac "${dac_host}"
+    echo ""
+    configure_kac "${kac_host}"
+
+    # Restart prompt
+    echo ""
+    if ask_yes "Restart services to apply changes?"; then
         restart_services
-        ;;
-    *)
+    else
         log::info "Skipping restart. Remember to restart services manually to apply changes."
-        ;;
-esac
+    fi
 
-echo ""
-log::ok "Done."
+    echo ""
+    log::ok "Done."
+}
+
+main "$@"
