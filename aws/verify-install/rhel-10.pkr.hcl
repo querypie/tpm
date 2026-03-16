@@ -191,7 +191,7 @@ build {
     output     = "manifest.json"
     strip_path = true
     custom_data = {
-      timestmap        = local.timestamp
+      timestamp        = local.timestamp
       querypie_version = var.querypie_version
     }
   }

@@ -215,7 +215,7 @@ build {
     output     = "manifest.json"
     strip_path = true
     custom_data = {
-      timestmap        = local.timestamp
+      timestamp        = local.timestamp
       initial_version = var.initial_version
       upgrade_version = var.upgrade_version
     }
