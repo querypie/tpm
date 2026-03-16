@@ -8,7 +8,7 @@
 # $ bash setup.v2.sh --upgrade <version>
 
 # The version will be manually increased by the author.
-SCRIPT_VERSION="26.03.1" # YY.MM.PATCH
+SCRIPT_VERSION="26.03.2" # YY.MM.PATCH
 echo -n "#### setup.v2.sh - QueryPie Installer ${SCRIPT_VERSION}, " >&2
 echo -n "${BASH:-}${ZSH_NAME:-} ${BASH_VERSION:-}${ZSH_VERSION:-}" >&2
 echo >&2 " on $(uname -s) $(uname -m) ####"
@@ -368,13 +368,15 @@ function install::docker_compose() {
     log::do rm docker-compose
   fi
 
-  if $DOCKER compose version &>/dev/null; then
+  local post_install_ver
+  post_install_ver=$($DOCKER compose version 2>/dev/null || true)
+  if [[ "$post_install_ver" == *"Docker Compose version v2"* ]] || [[ "$post_install_ver" == *"Docker Compose version v5"* ]]; then
     echo >&2 "# Now Docker Compose is installed at $(command::whereis docker-compose || echo '(Unknown)')"
     echo >&2 "# Docker Compose is enabled as a plugin for $DOCKER"
     log::do $DOCKER compose version
     return
   else
-    echo >&2 "# Failed to install Docker Compose properly: $($DOCKER compose version 2>&1 || true)"
+    echo >&2 "# Failed to install Docker Compose properly: ${post_install_ver}"
     log::error "Please report this problem to the technical support team of QueryPie."
     log::do uname -a
     log::do ${DOCKER} --version
