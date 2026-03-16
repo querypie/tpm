@@ -58,7 +58,7 @@ function pull_and_push_container_images() {
     exit 1
   fi
   (
-    PATH=../../aws/scripts:$SCRIPT_DIR:$PATH
+    PATH=$SCRIPT_DIR:$PATH
 
     set -o xtrace
     VERSION="$version" setup.v2.sh --populate-env .env

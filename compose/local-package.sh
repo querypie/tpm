@@ -22,5 +22,5 @@ git pull --rebase
 tar zcvf ~/offline/package.tar.gz .
 
 [[ -f ~/setup.v2.sh ]] && rm -f ~/setup.v2.sh
-[[ -f ../../aws/scripts/setup.v2.sh ]] &&
-  cp ../../aws/scripts/setup.v2.sh ~/setup.v2.sh
+[[ -f "$SCRIPT_DIR/setup.v2.sh" ]] &&
+  cp "$SCRIPT_DIR/setup.v2.sh" ~/setup.v2.sh

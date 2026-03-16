@@ -44,7 +44,7 @@ function archive_package() {
 
 function save_setup_script() {
   echo >&2 "## Saving setup.v2.sh script to offline/setup.v2.sh"
-  log::do cp "$SCRIPT_DIR"/../aws/scripts/setup.v2.sh "$SCRIPT_DIR"/offline/setup.v2.sh
+  log::do cp "$SCRIPT_DIR"/setup.v2.sh "$SCRIPT_DIR"/offline/setup.v2.sh
 }
 
 function save_docker_compose() {

@@ -97,11 +97,15 @@ build {
     ]
   }
 
-  # Install scripts such as setup.v2.sh
+  # Install helper scripts (install-*.sh, etc.)
   # TODO(JK): Remove this provisioner when setup.v2.sh is completed.
   provisioner "file" {
     source      = "../scripts/"
     destination = "/tmp/"
+  }
+  provisioner "file" {
+    source      = "../../compose/setup.v2.sh"
+    destination = "/tmp/setup.v2.sh"
   }
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
