@@ -159,7 +159,8 @@ function detect_host_ip() {
         iface=$(route get default | awk '/interface:/ {print $2}')
         ip_addr=$(ipconfig getifaddr "$iface")
     elif command -v ip >/dev/null 2>&1; then
-        ip_addr=$(ip route get 8.8.8.8 | grep -oP 'src \K[\d.]+')
+        ip_addr=$(ip route get 8.8.8.8 2>/dev/null | grep -oP 'src \K[\d.]+' 2>/dev/null) || \
+            ip_addr=$(hostname -i 2>/dev/null || true)
     else
         ip_addr=$(hostname -i)
     fi

@@ -241,7 +241,7 @@ setup() {
 
 
 @test "detect_host_ip: on Linux uses ip route with grep -oP" {
-    grep -P '' /dev/null 2>/dev/null || skip "requires GNU grep (-P not supported)"
+    echo '' | grep -P '' >/dev/null 2>&1 || skip "requires GNU grep (-P not supported)"
     run bash -c '
         source compose/universal/configure-proxy.sh
         OSTYPE=linux-gnu
@@ -268,6 +268,20 @@ setup() {
     '
     [ "$status" -eq 0 ]
     [[ "$output" == "10.10.10.99" ]]
+}
+
+@test "detect_host_ip: on Linux falls back to hostname -i when ip route fails" {
+    echo '' | grep -P '' >/dev/null 2>&1 || skip "requires GNU grep (-P not supported)"
+    run bash -c '
+        source compose/universal/configure-proxy.sh
+        OSTYPE=linux-gnu
+        ip() { return 1; }
+        hostname() { echo "10.20.30.40"; }
+        export -f ip hostname
+        detect_host_ip
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == "10.20.30.40" ]]
 }
 
 # ---------------------------------------------------------------------------
