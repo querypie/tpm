@@ -176,7 +176,7 @@ function run_sql() {
     printf "%b+ [querypie-app-1] mariadb -e \"%s\"%b\n" "$BOLD_CYAN" "$sql" "$RESET" >&2
     "${DOCKER}" exec querypie-app-1 \
         sh -c 'mariadb --ssl=FALSE -h"${DB_HOST}" -u"${DB_USERNAME}" -p"${DB_PASSWORD}" -D"${DB_CATALOG}" -e "$1"' \
-        sh "${sql}" 2>/dev/null
+        sh "${sql}"
 }
 
 # --- DAC/SAC proxy configuration ---
