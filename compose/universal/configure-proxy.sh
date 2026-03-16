@@ -102,15 +102,28 @@ function validate_proxy_address() {
 }
 
 # --- Detect container engine ---
-# Adapted from verify::container_engine_installation in setup.v2.sh.
-# Sets global DOCKER to 'docker' or 'podman'.
+# Finds the engine (docker or podman) that owns querypie-app-1.
+# The container may be stopped; running state is checked separately.
 function detect_container_engine() {
-    if docker --version 2>/dev/null | grep -q "^Docker version" && docker ps >/dev/null 2>&1; then
+    if docker inspect querypie-app-1 >/dev/null 2>&1; then
         DOCKER=docker
-    elif podman --version 2>/dev/null | grep -q "^podman version" && podman ps >/dev/null 2>&1; then
+    elif podman inspect querypie-app-1 >/dev/null 2>&1; then
         DOCKER=podman
     else
-        log::error "Neither docker nor podman is available and running."
+        log::error "querypie-app-1 container not found in docker or podman."
+        log::error "Ensure QueryPie is deployed before running this script."
+        exit 1
+    fi
+}
+
+# --- Require container running ---
+# Called immediately before exec/restart. Exits with guidance if stopped.
+function require_container_running() {
+    local state
+    state=$("${DOCKER}" inspect --format '{{.State.Status}}' querypie-app-1 2>/dev/null || echo "unknown")
+    if [[ "${state}" != "running" ]]; then
+        log::error "querypie-app-1 is ${state}, not running."
+        log::error "Start it first: ${DOCKER} start querypie-app-1"
         exit 1
     fi
 }
@@ -133,6 +146,7 @@ function detect_host_ip() {
 
 # --- Service restart ---
 function restart_services() {
+    require_container_running
     log::do "${DOCKER}" restart querypie-app-1
     log::info "Waiting for app to be ready..."
     log::do "${DOCKER}" exec querypie-app-1 readyz wait
@@ -143,6 +157,7 @@ function restart_services() {
 # Runs SQL inside querypie-app-1 using the container's own DB credentials.
 function run_sql() {
     local sql="$1"
+    require_container_running
     printf "%b+ [querypie-app-1] mariadb -e \"%s\"%b\n" "$BOLD_CYAN" "$sql" "$RESET" >&2
     "${DOCKER}" exec querypie-app-1 \
         sh -c 'mariadb --ssl=FALSE -h"${DB_HOST}" -u"${DB_USERNAME}" -p"${DB_PASSWORD}" -D"${DB_CATALOG}" -e "$1"' \
@@ -254,6 +269,7 @@ function main() {
     log::ok "Done."
 }
 
+# Guard: allows sourcing this file in bats tests without executing main.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi

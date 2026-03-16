@@ -91,16 +91,10 @@ setup() {
 # If docker is installed but not running, podman should be selected.
 # ---------------------------------------------------------------------------
 
-@test "detect_container_engine: prefers podman when docker ps fails" {
-    # Stub docker to exist but fail on ps, stub podman to succeed
-    docker() {
-        if [[ "$1" == "--version" ]]; then echo "Docker version 24.0.0"; return 0; fi
-        if [[ "$1" == "ps" ]];        then return 1; fi
-    }
-    podman() {
-        if [[ "$1" == "--version" ]]; then echo "podman version 4.0.0"; return 0; fi
-        if [[ "$1" == "ps" ]];        then return 0; fi
-    }
+@test "detect_container_engine: selects podman when docker does not have the container" {
+    # Stub docker inspect to fail (container not found), podman inspect to succeed
+    docker() { if [[ "$1" == "inspect" ]]; then return 1; fi; }
+    podman() { if [[ "$1" == "inspect" ]]; then return 0; fi; }
     export -f docker podman
 
     run bash -c '
