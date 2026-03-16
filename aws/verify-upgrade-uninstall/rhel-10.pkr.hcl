@@ -10,10 +10,16 @@ packer {
 }
 
 # Variables
-variable "querypie_version" {
+variable "initial_version" {
   type        = string
   default     = "11.1.2"
   description = "Version of QueryPie to install"
+}
+
+variable "upgrade_version" {
+  type        = string
+  default     = "11.6.0"
+  description = "Version of QueryPie to upgrade"
 }
 
 variable "architecture" {
@@ -49,13 +55,13 @@ locals {
     Owner     = var.resource_owner
     Purpose   = "Automated QueryPie Installer"
     BuildDate = local.timestamp
-    Version   = var.querypie_version
+    Version   = var.initial_version
   }
 
   instance_tags = merge(
     local.common_tags,
     {
-      Name = "RHEL10-Installer-${var.querypie_version}"
+      Name = "RHEL10-Installer-${var.initial_version}"
     }
   )
 }
@@ -63,7 +69,7 @@ locals {
 # Data source for latest RHEL 10 AMI
 # data : Keyword to begin a data source block
 # amazon-ami : Type of data source, or plugin name
-# rhel10 : Name of the data source
+# rhel-10 : Name of the data source
 ###
 # aws ec2 describe-images --image-ids ami-0bde778d2028cc971
 # "Name": "RHEL-10.0.0_HVM-20250730-x86_64-0-Hourly2-GP3"
@@ -159,7 +165,6 @@ build {
     source      = "../../compose/setup.v2.sh"
     destination = "/tmp/setup.v2.sh"
   }
-
   provisioner "shell" {
     expect_disconnect = true # It will logout at the end of this provisioner.
     inline_shebang = "/bin/bash -ex"
@@ -181,8 +186,27 @@ build {
   provisioner "shell" {
     inline_shebang = "/bin/bash -ex"
     inline = [
-      "setup.v2.sh --yes --install ${var.querypie_version}",
+      "setup.v2.sh --yes --install ${var.initial_version}",
       "setup.v2.sh --verify-installation",
+    ]
+  }
+
+  # Upgrade QueryPie
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      "setup.v2.sh --yes --upgrade ${var.upgrade_version}",
+      "setup.v2.sh --verify-installation",
+    ]
+  }
+
+  # Uninstall QueryPie
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      "setup.v2.sh --uninstall",
+      "docker ps --all",
+      "setup.v2.sh --verify-not-installed",
     ]
   }
 
@@ -192,7 +216,8 @@ build {
     strip_path = true
     custom_data = {
       timestmap        = local.timestamp
-      querypie_version = var.querypie_version
+      initial_version = var.initial_version
+      upgrade_version = var.upgrade_version
     }
   }
 }

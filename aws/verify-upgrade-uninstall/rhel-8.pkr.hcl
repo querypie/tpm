@@ -12,13 +12,13 @@ packer {
 # Variables
 variable "initial_version" {
   type        = string
-  default     = "11.0.1"
+  default     = "11.1.2"
   description = "Version of QueryPie to install"
 }
 
 variable "upgrade_version" {
   type        = string
-  default     = "11.1.1"
+  default     = "11.6.0"
   description = "Version of QueryPie to upgrade"
 }
 
