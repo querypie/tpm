@@ -107,8 +107,13 @@ data "amazon-ami" "amazon-linux-2023" {
 # amazon-ebs : Type of builder, or plugin name
 # amazon-linux-2023 : Name of the builder
 source "amazon-ebs" "amazon-linux-2023" {
-  source_ami = data.amazon-ami.amazon-linux-2023.id
-  ami_name   = local.ami_name
+  source_ami              = data.amazon-ami.amazon-linux-2023.id
+  ami_name                = local.ami_name
+  ami_description         = "QueryPie Suite ${var.querypie_version} on Amazon Linux 2023"
+  ami_virtualization_type = "hvm"
+  ena_support             = true
+  encrypt_boot            = false
+  imds_support            = "v2.0"
 
   region       = local.region
   ssh_username = local.ssh_username
@@ -132,7 +137,7 @@ source "amazon-ebs" "amazon-linux-2023" {
     iops = 16000 # Max: 16000 IOPS for gp3
     throughput = 1000  # Max: 1000 MiB/s throughput
     delete_on_termination = true
-    encrypted             = true
+    encrypted             = false
   }
 
   # Instance metadata options
@@ -213,20 +218,14 @@ build {
     ]
   }
 
-  # Final cleanup
+  # Marketplace source AMIs cannot contain encrypted file systems.
   provisioner "shell" {
-    inline_shebang = "/bin/bash -ex"
-    inline = [
-      "echo '# Performing final cleanup...'",
-      "sudo dnf clean all",
-      "sudo rm -rf /tmp/*",
-      "sudo rm -rf /var/tmp/*",
-      "history -c",
-      "cat /dev/null > ~/.bash_history",
-      "sudo rm -f /root/.bash_history",
-      "sudo find /var/log -type f -exec truncate -s 0 {} \\;",
-      "echo 'Cleanup completed'"
-    ]
+    script = "validate-image-runtime.sh"
+  }
+
+  # Harden and sanitize the image as the final provisioning step.
+  provisioner "shell" {
+    script = "sanitize-image-before-snapshot.sh"
   }
 
   # Generate manifest
