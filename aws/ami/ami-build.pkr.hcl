@@ -79,20 +79,20 @@ locals {
 # amazon-ami : Type of data source, or plugin name
 # amazon-linux-2023 : Name of the data source
 ###
-# aws ec2 describe-images --image-ids ami-00aa851417c591bb3
-# "Name": "al2023-ami-2023.10.20260302.1-kernel-6.12-x86_64"
-# "Description": "Amazon Linux 2023 AMI 2023.10.20260302.1 x86_64 HVM kernel-6.12"
+# aws ec2 describe-images --image-ids ami-06882388850fd4a12
+# "Name": "al2023-ami-2023.12.20260803.3-kernel-6.12-x86_64"
+# "Description": "Amazon Linux 2023 AMI 2023.12.20260803.3 x86_64 HVM kernel-6.12"
 # "Architecture": "x86_64"
 # "DeviceName": "/dev/xvda"
 ###
-# aws ec2 describe-images --image-ids ami-0257962c1c28dd1ad
-# "Name": "al2023-ami-2023.10.20260105.0-kernel-6.12-arm64"
-# "Description": "Amazon Linux 2023 AMI 2023.10.20260105.0 arm64 HVM kernel-6.12"
+# aws ec2 describe-images --image-ids ami-0a5d374fd3072c21c
+# "Name": "al2023-ami-2023.12.20260803.3-kernel-6.12-arm64"
+# "Description": "Amazon Linux 2023 AMI 2023.12.20260803.3 arm64 HVM kernel-6.12"
 # "Architecture": "arm64"
 # "DeviceName": "/dev/xvda"
 data "amazon-ami" "amazon-linux-2023" {
   filters = {
-    name                = "al2023-ami-2023.10.*"
+    name                = "al2023-ami-2023.12.*-kernel-6.12-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
     architecture        = var.architecture == "arm64" ? "arm64" : "x86_64"
