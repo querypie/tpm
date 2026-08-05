@@ -127,6 +127,8 @@ END_OF_USAGE
     log::error "The completed build did not produce an AMI named $ami_name in $region."
     exit 1
   fi
+
+  AMI_REGION="$region" ./ami-validate.sh "$image_id"
   echo "Built AMI: $image_id"
 }
 
