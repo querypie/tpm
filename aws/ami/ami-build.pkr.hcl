@@ -23,9 +23,20 @@ variable "ami_name" {
 }
 
 variable "architecture" {
-  type = string
-  default = "x86_64"
+  type        = string
+  default     = "x86_64"
   description = "x86_64 | arm64"
+
+  validation {
+    condition     = contains(["x86_64", "arm64"], var.architecture)
+    error_message = "Architecture must be either x86_64 or arm64."
+  }
+}
+
+variable "region" {
+  type        = string
+  default     = "ap-northeast-2"
+  description = "AWS Region where Packer builds the AMI"
 }
 
 variable "resource_owner" {
@@ -37,10 +48,8 @@ variable "resource_owner" {
 # Local variables
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
-  ami_name = "${var.ami_name}"
+  ami_name = var.ami_name
 
-  region = "ap-northeast-2"
-  instance_type = "t3.xlarge" # Use t3.xlarge to accelerate the build process
   ssh_username = "ec2-user" # SSH username for Amazon Linux 2023
 
   common_tags = {
@@ -99,7 +108,7 @@ data "amazon-ami" "amazon-linux-2023" {
   }
   most_recent = true
   owners = ["amazon"]
-  region      = local.region
+  region      = var.region
 }
 
 # Builder Configuration
@@ -115,16 +124,12 @@ source "amazon-ebs" "amazon-linux-2023" {
   encrypt_boot            = false
   imds_support            = "v2.0"
 
-  region       = local.region
+  region       = var.region
   ssh_username = local.ssh_username
   # ssh_private_key_file = "demo-targets.pem"
   # ssh_keypair_name = "demo-targets"
 
-  # spot_instance_types = ["t4g.xlarge"]
   spot_instance_types = var.architecture == "arm64" ? ["t4g.xlarge"] : ["t3.xlarge"]
-  spot_price = "0.09" # the maximum hourly price
-  # $0.0646 for t4g.xlarge instance in ap-northeast-2
-  # $0.078 for t3.xlarge instance
 
   # EBS configuration
   ebs_optimized = true
@@ -148,7 +153,7 @@ source "amazon-ebs" "amazon-linux-2023" {
   }
 
   # Security group configuration
-  temporary_security_group_source_cidrs = ["0.0.0.0/0"]
+  temporary_security_group_source_public_ip = true
 
   # Tags of the EC2 instance used for building the AMI
   run_tags = local.instance_tags
@@ -237,6 +242,8 @@ build {
       querypie_version = var.querypie_version
       timestamp        = local.timestamp
       base_ami         = data.amazon-ami.amazon-linux-2023.name
+      region           = var.region
+      architecture     = var.architecture
     }
   }
 }
