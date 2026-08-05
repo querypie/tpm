@@ -62,6 +62,8 @@ function main() {
 
   validate_environment
 
+  AMI_REGION="$region" ./ami-validate.sh "$ami_id"
+
   local architecture
   architecture=$(aws ec2 describe-images \
     --region "$region" \

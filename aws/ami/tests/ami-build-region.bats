@@ -11,12 +11,20 @@ set -o nounset -o errexit -o pipefail
 
 arguments=" $* "
 
-if [[ "$arguments" == *" sts get-caller-identity "* ]]; then
+if [[ "$arguments" == *" ec2 describe-images "* && "$arguments" == *"State,Architecture,RootDeviceType"* ]]; then
+  printf '%b\n' 'available\tx86_64\tebs\thvm\tv2.0\tQueryPie Suite'
+elif [[ "$arguments" == *" sts get-caller-identity "* ]]; then
   printf 'AROAEXAMPLE\t123456789012\tarn:aws:sts::123456789012:assumed-role/test/session\n'
 elif [[ "$arguments" == *" ec2 get-ebs-encryption-by-default "* ]]; then
   printf '%s\n' "${MOCK_EBS_ENCRYPTION_BY_DEFAULT:-False}"
 elif [[ "$arguments" == *" ec2 describe-images "* && "$arguments" == *"sort_by(Images"* ]]; then
   printf 'ami-0123456789abcdef0\n'
+elif [[ "$arguments" == *" ec2 describe-images "* && "$arguments" == *"VolumeSize"* ]]; then
+  printf '32\n'
+elif [[ "$arguments" == *" ec2 describe-images "* && "$arguments" == *"SnapshotId"* ]]; then
+  printf 'snap-0123456789abcdef0\n'
+elif [[ "$arguments" == *" ec2 describe-snapshots "* ]]; then
+  printf 'False\n'
 else
   printf 'Unexpected aws invocation: %s\n' "$*" >&2
   exit 2
