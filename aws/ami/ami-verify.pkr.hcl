@@ -15,14 +15,30 @@ variable "source_ami" {
   description = "ID of the AMI to verify"
 }
 
+variable "architecture" {
+  type        = string
+  default     = "x86_64"
+  description = "Architecture of the AMI to verify"
+
+  validation {
+    condition     = contains(["x86_64", "arm64"], var.architecture)
+    error_message = "Architecture must be either x86_64 or arm64."
+  }
+}
+
+variable "region" {
+  type        = string
+  default     = "ap-northeast-2"
+  description = "Region containing the AMI to verify"
+}
+
 # Local variables
 locals {
-  timestamp = regex_replace(timestamp(), "[- TZ:]", "")
-  source_ami = var.source_ami
-  ami_name   = "QueryPie-Suite-Verification-${local.timestamp}"
+  timestamp     = regex_replace(timestamp(), "[- TZ:]", "")
+  source_ami    = var.source_ami
+  ami_name      = "QueryPie-Suite-Verification-${local.timestamp}"
+  instance_type = var.architecture == "arm64" ? "t4g.xlarge" : "t3.xlarge"
 
-  region = "ap-northeast-2"
-  instance_type = "t3.xlarge" # Use t3.xlarge to accelerate the build process
   ssh_username = "ec2-user" # SSH username for Amazon Linux 2023
 
   common_tags = {
@@ -49,14 +65,13 @@ source "amazon-ebs" "ami-verify" {
   source_ami      = local.source_ami
   ami_name        = local.ami_name
 
-  region        = local.region
+  region        = var.region
   instance_type = local.instance_type
   ssh_username = local.ssh_username
 
   # EBS configuration
   ebs_optimized = true
   ena_support   = true
-  sriov_support = true
 
   # Root volume configuration
   launch_block_device_mappings {
@@ -66,7 +81,8 @@ source "amazon-ebs" "ami-verify" {
     iops = 16000 # Max: 16000 IOPS for gp3
     throughput = 1000  # Max: 1000 MiB/s throughput
     delete_on_termination = true
-    encrypted             = true
+    # The verification volume is temporary and is not submitted to Marketplace.
+    encrypted = true
   }
 
   # Instance metadata options
@@ -77,7 +93,7 @@ source "amazon-ebs" "ami-verify" {
   }
 
   # Security group configuration
-  temporary_security_group_source_cidrs = ["0.0.0.0/0"]
+  temporary_security_group_source_public_ip = true
 
   # Tags of the EC2 instance used for building the AMI
   run_tags = local.instance_tags
@@ -122,6 +138,11 @@ build {
     ]
   }
 
+  # API-level AMI inspection cannot detect encrypted guest file systems.
+  provisioner "shell" {
+    script = "validate-image-runtime.sh"
+  }
+
   # Generate manifest
   post-processor "manifest" {
     output     = "manifest.json"
@@ -129,6 +150,7 @@ build {
     custom_data = {
       timestamp = local.timestamp
       ami_name  = local.ami_name
+      region    = var.region
     }
   }
 }

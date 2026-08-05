@@ -6,6 +6,9 @@ BOLD_CYAN="\e[1;36m"
 BOLD_RED="\e[1;91m"
 RESET="\e[0m"
 
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+cd "$SCRIPT_DIR"
+
 function log::do() {
   local line_no
   line_no=$(caller | awk '{print $1}')
@@ -20,7 +23,7 @@ function log::error() {
 }
 
 function packer::verify() {
-  local ami_id=$1 packer_option="${PACKER_OPTION:-}"
+  local ami_id=$1 region=$2 architecture=$3 packer_option="${PACKER_OPTION:-}"
   # NOTE(JK): Use `PACKER_OPTION=-on-error=abort` to allow debugging the AMI build process.
   echo >&2 "### Verify AMI with Packer ###"
   echo >&2 "PACKER_OPTION: $packer_option"
@@ -29,6 +32,8 @@ function packer::verify() {
   # shellcheck disable=SC2086
   log::do packer build \
     -var "source_ami=$ami_id" \
+    -var "region=$region" \
+    -var "architecture=$architecture" \
     -timestamp-ui \
     ${packer_option} \
     ami-verify.pkr.hcl |
@@ -49,7 +54,7 @@ function validate_environment() {
 }
 
 function main() {
-  local ami_id=${1:-} ami_name timestamp
+  local ami_id=${1:-} region=${AMI_REGION:-ap-northeast-2}
   if [[ -z "$ami_id" ]]; then
     echo "Usage: $0 <ami_id>"
     exit 1
@@ -57,7 +62,15 @@ function main() {
 
   validate_environment
 
-  packer::verify "$ami_id"
+  local architecture
+  architecture=$(aws ec2 describe-images \
+    --region "$region" \
+    --owners self \
+    --image-ids "$ami_id" \
+    --query 'Images[0].Architecture' \
+    --output text)
+
+  packer::verify "$ami_id" "$region" "$architecture"
 }
 
 main "$@"
