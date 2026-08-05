@@ -130,7 +130,7 @@ MODE=release ./ami-build.sh 11.6.0
 ami-build.sh 실행
     │
     ▼
-베이스 AMI 탐색 (al2023-ami-2023.10.*)
+베이스 AMI 탐색 (al2023-ami-2023.12.*-kernel-6.12-*)
     │
     ▼
 Spot Fleet 인스턴스 기동 (t3.xlarge, ~$0.078/시간)
@@ -225,14 +225,14 @@ Error: Datasource.Execute failed: No AMI was found matching filters
 ```
 
 `ami-build.pkr.hcl`의 AMI 필터가 오래된 버전을 가리키고 있습니다.
-현재 유효한 필터는 `al2023-ami-2023.10.*`입니다.
+현재 유효한 필터는 `al2023-ami-2023.12.*-kernel-6.12-*`입니다.
 
 현재 사용 가능한 최신 베이스 AMI를 확인하려면:
 
 ```bash
 # x86_64
 aws ec2 describe-images \
-  --filters "Name=name,Values=al2023-ami-2023.*" \
+  --filters "Name=name,Values=al2023-ami-2023.12.*-kernel-6.12-*" \
             "Name=root-device-type,Values=ebs" \
             "Name=virtualization-type,Values=hvm" \
             "Name=architecture,Values=x86_64" \
@@ -242,7 +242,7 @@ aws ec2 describe-images \
 
 # arm64
 aws ec2 describe-images \
-  --filters "Name=name,Values=al2023-ami-2023.*" \
+  --filters "Name=name,Values=al2023-ami-2023.12.*-kernel-6.12-*" \
             "Name=root-device-type,Values=ebs" \
             "Name=virtualization-type,Values=hvm" \
             "Name=architecture,Values=arm64" \
