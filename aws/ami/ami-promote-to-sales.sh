@@ -41,6 +41,7 @@ COPY_AVAILABLE=false
 COPY_TERMINAL=false
 declare -a SOURCE_SNAPSHOT_IDS=()
 
+export AWS_CLI_AUTO_PROMPT=off
 export AWS_PAGER=""
 
 function log::error() {
@@ -56,12 +57,17 @@ function log::info() {
 }
 
 function log::do() {
-  local line_no
+  local line_no status
   line_no=$(caller | awk '{print $1}')
-  # shellcheck disable=SC2064
-  trap "log::error 'Failed to run at line $line_no: $*'" ERR
   printf "%b+ %s%b\n" "$BOLD_CYAN" "$*" "$RESET" 1>&2
-  "$@"
+  if "$@"; then
+    return 0
+  else
+    status=$?
+  fi
+
+  log::error "Failed to run at line $line_no: $*"
+  return "$status"
 }
 
 function print_usage_and_exit() {
@@ -193,32 +199,51 @@ function permissions::contains_sales_account() {
   [[ "$permissions" =~ (^|[[:space:]])${SALES_ACCOUNT_ID}($|[[:space:]]) ]]
 }
 
-function permissions::image_exists() {
+function permissions::image_state() {
   local permissions
-  permissions=$(aws::qpe ec2 describe-image-attribute \
+  if ! permissions=$(aws::qpe ec2 describe-image-attribute \
     --image-id "$SOURCE_AMI_ID" \
     --attribute launchPermission \
     --query 'LaunchPermissions[].UserId' \
-    --output text)
-  permissions::contains_sales_account "$permissions"
+    --output text); then
+    log::error "Could not inspect launch permissions for AMI $SOURCE_AMI_ID."
+    return 1
+  fi
+
+  if permissions::contains_sales_account "$permissions"; then
+    echo "present"
+  else
+    echo "absent"
+  fi
 }
 
-function permissions::snapshot_exists() {
+function permissions::snapshot_state() {
   local snapshot_id=$1 permissions
-  permissions=$(aws::qpe ec2 describe-snapshot-attribute \
+  if ! permissions=$(aws::qpe ec2 describe-snapshot-attribute \
     --snapshot-id "$snapshot_id" \
     --attribute createVolumePermission \
     --query 'CreateVolumePermissions[].UserId' \
-    --output text)
-  permissions::contains_sales_account "$permissions"
+    --output text); then
+    log::error "Could not inspect create-volume permissions for snapshot $snapshot_id."
+    return 1
+  fi
+
+  if permissions::contains_sales_account "$permissions"; then
+    echo "present"
+  else
+    echo "absent"
+  fi
 }
 
 function permissions::grant() {
-  local snapshot_id
+  local image_state snapshot_id snapshot_state
   log::info "### Grant temporary Sales access to the QPE AMI ###"
   SHARING_ATTEMPTED=true
 
-  if permissions::image_exists; then
+  if ! image_state=$(permissions::image_state); then
+    return 1
+  fi
+  if [[ "$image_state" == "present" ]]; then
     log::info "AMI launch permission already includes Sales account $SALES_ACCOUNT_ID."
   else
     aws::qpe ec2 modify-image-attribute \
@@ -227,7 +252,10 @@ function permissions::grant() {
   fi
 
   for snapshot_id in "${SOURCE_SNAPSHOT_IDS[@]}"; do
-    if permissions::snapshot_exists "$snapshot_id"; then
+    if ! snapshot_state=$(permissions::snapshot_state "$snapshot_id"); then
+      return 1
+    fi
+    if [[ "$snapshot_state" == "present" ]]; then
       log::info "Snapshot $snapshot_id already includes Sales account $SALES_ACCOUNT_ID."
     else
       aws::qpe ec2 modify-snapshot-attribute \
@@ -238,12 +266,18 @@ function permissions::grant() {
     fi
   done
 
-  if ! permissions::image_exists; then
+  if ! image_state=$(permissions::image_state); then
+    return 1
+  fi
+  if [[ "$image_state" != "present" ]]; then
     log::error "Sales launch permission was not applied to AMI $SOURCE_AMI_ID."
     return 1
   fi
   for snapshot_id in "${SOURCE_SNAPSHOT_IDS[@]}"; do
-    if ! permissions::snapshot_exists "$snapshot_id"; then
+    if ! snapshot_state=$(permissions::snapshot_state "$snapshot_id"); then
+      return 1
+    fi
+    if [[ "$snapshot_state" != "present" ]]; then
       log::error "Sales create-volume permission was not applied to snapshot $snapshot_id."
       return 1
     fi
@@ -251,7 +285,11 @@ function permissions::grant() {
 }
 
 function permissions::revoke_image() {
-  if permissions::image_exists; then
+  local image_state
+  if ! image_state=$(permissions::image_state); then
+    return 1
+  fi
+  if [[ "$image_state" == "present" ]]; then
     aws::qpe ec2 modify-image-attribute \
       --image-id "$SOURCE_AMI_ID" \
       --launch-permission "Remove=[{UserId=${SALES_ACCOUNT_ID}}]"
@@ -259,8 +297,11 @@ function permissions::revoke_image() {
 }
 
 function permissions::revoke_snapshot() {
-  local snapshot_id=$1
-  if permissions::snapshot_exists "$snapshot_id"; then
+  local snapshot_id=$1 snapshot_state
+  if ! snapshot_state=$(permissions::snapshot_state "$snapshot_id"); then
+    return 1
+  fi
+  if [[ "$snapshot_state" == "present" ]]; then
     aws::qpe ec2 modify-snapshot-attribute \
       --snapshot-id "$snapshot_id" \
       --attribute createVolumePermission \
@@ -270,7 +311,7 @@ function permissions::revoke_snapshot() {
 }
 
 function permissions::revoke_all() {
-  local snapshot_id status=0
+  local image_state snapshot_id snapshot_state status=0
   log::info "### Revoke Sales access from the QPE AMI ###"
 
   permissions::revoke_image || status=$((status + 1))
@@ -278,12 +319,16 @@ function permissions::revoke_all() {
     permissions::revoke_snapshot "$snapshot_id" || status=$((status + 1))
   done
 
-  if permissions::image_exists; then
+  if ! image_state=$(permissions::image_state); then
+    status=$((status + 1))
+  elif [[ "$image_state" == "present" ]]; then
     log::error "Sales launch permission remains on AMI $SOURCE_AMI_ID."
     status=$((status + 1))
   fi
   for snapshot_id in "${SOURCE_SNAPSHOT_IDS[@]}"; do
-    if permissions::snapshot_exists "$snapshot_id"; then
+    if ! snapshot_state=$(permissions::snapshot_state "$snapshot_id"); then
+      status=$((status + 1))
+    elif [[ "$snapshot_state" == "present" ]]; then
       log::error "Sales create-volume permission remains on snapshot $snapshot_id."
       status=$((status + 1))
     fi

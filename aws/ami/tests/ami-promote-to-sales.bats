@@ -57,7 +57,10 @@ elif [[ "$arguments" == *" ec2 describe-images "* && "$arguments" == *"Key=='Ver
 elif [[ "$arguments" == *" ec2 describe-images "* && "$arguments" == *"Key=='BuildDate'"* ]]; then
   printf '20260807062224\n'
 elif [[ "$arguments" == *" ec2 describe-image-attribute "* ]]; then
-  if [[ -f "${AWS_INVOCATIONS_FILE}.image-permission-revoked" ]]; then
+  if [[ "${MOCK_IMAGE_PERMISSION_DESCRIBE_FAILURE_AFTER_REVOKE:-false}" == "true" && -f "${AWS_INVOCATIONS_FILE}.image-permission-revoked" ]]; then
+    printf 'image permission verification failed\n' >&2
+    exit 2
+  elif [[ -f "${AWS_INVOCATIONS_FILE}.image-permission-revoked" ]]; then
     printf 'None\n'
   elif [[ "${MOCK_PERMISSIONS_GRANTED:-false}" == "true" || -f "${AWS_INVOCATIONS_FILE}.image-permission-added" ]]; then
     printf '883790944456\n'
@@ -123,6 +126,8 @@ teardown() {
   grep -F -- '--region ap-northeast-2' "$AWS_INVOCATIONS_FILE"
   grep -F -- '--region us-east-1' "$AWS_INVOCATIONS_FILE"
   grep -F -- '--name QueryPie-Suite-11.6.5-202608071519-ami-0123456789abcdef0' "$AWS_INVOCATIONS_FILE"
+  grep -F -- '--no-encrypted' "$AWS_INVOCATIONS_FILE"
+  grep -F -- 'Key=SourceAMI,Value=ami-0123456789abcdef0' "$AWS_INVOCATIONS_FILE"
 }
 
 @test "promotion grants and then revokes AMI and every snapshot permission" {
@@ -145,6 +150,18 @@ teardown() {
 
   [ "$status" -eq 1 ]
   [[ "$output" == *"profile 'qpe' must use account 142605707876"* ]]
+  ! grep -F -- 'modify-image-attribute' "$AWS_INVOCATIONS_FILE"
+  ! grep -F -- 'modify-snapshot-attribute' "$AWS_INVOCATIONS_FILE"
+}
+
+@test "promotion aborts before sharing when the Sales profile uses the wrong account" {
+  run env \
+    PATH="$MOCK_BIN:$PATH" \
+    MOCK_SALES_ACCOUNT_ID=111122223333 \
+    "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" ami-0123456789abcdef0
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"profile 'sales' must use account 883790944456"* ]]
   ! grep -F -- 'modify-image-attribute' "$AWS_INVOCATIONS_FILE"
   ! grep -F -- 'modify-snapshot-attribute' "$AWS_INVOCATIONS_FILE"
 }
@@ -226,6 +243,18 @@ teardown() {
   [[ "$output" == *"Re-run this command"* ]]
 }
 
+@test "promotion treats permission verification API errors as cleanup failures" {
+  run env \
+    PATH="$MOCK_BIN:$PATH" \
+    MOCK_IMAGE_PERMISSION_DESCRIBE_FAILURE_AFTER_REVOKE=true \
+    "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" ami-0123456789abcdef0
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Could not inspect launch permissions"* ]]
+  [[ "$output" == *"Some source sharing permissions could not be revoked"* ]]
+  [[ "$output" == *"Re-run this command"* ]]
+}
+
 @test "promotion revokes source sharing when the completed Sales copy fails final validation" {
   run env \
     PATH="$MOCK_BIN:$PATH" \
@@ -271,4 +300,26 @@ teardown() {
 
   [ "$status" -eq 1 ]
   [[ "$output" == *"Unexpected option: --qpe-profile"* ]]
+}
+
+@test "promotion rejects invalid AMI IDs before calling AWS" {
+  run env \
+    PATH="$MOCK_BIN:$PATH" \
+    "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" not-an-ami
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"AMI ID must use the format"* ]]
+  [ ! -s "$AWS_INVOCATIONS_FILE" ]
+}
+
+@test "promotion rejects duplicate Sales AMIs before changing source permissions" {
+  run env \
+    PATH="$MOCK_BIN:$PATH" \
+    MOCK_EXISTING_TARGET_AMI_ID='ami-0fedcba9876543210 ami-0abcdef0123456789' \
+    "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" ami-0123456789abcdef0
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Found 2 Sales AMIs"* ]]
+  ! grep -F -- 'modify-image-attribute' "$AWS_INVOCATIONS_FILE"
+  ! grep -F -- 'modify-snapshot-attribute' "$AWS_INVOCATIONS_FILE"
 }
