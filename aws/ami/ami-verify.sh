@@ -51,11 +51,6 @@ function validate_environment() {
     log::error "AWS CLI is not installed. Please install AWS CLI to continue."
     exit 1
   fi
-
-  if ! command -v session-manager-plugin &>/dev/null; then
-    log::error "AWS Session Manager plugin is not installed. Please install session-manager-plugin to continue."
-    exit 1
-  fi
 }
 
 function main() {
