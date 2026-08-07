@@ -35,13 +35,11 @@ TARGET_AMI_NAME=""
 SOURCE_ARCHITECTURE=""
 SOURCE_VERSION=""
 SOURCE_BUILD_DATE=""
-IMAGE_PERMISSION_ADDED=false
+SHARING_ATTEMPTED=false
 COPY_IN_PROGRESS=false
 COPY_AVAILABLE=false
 COPY_TERMINAL=false
-PROMOTION_COMPLETE=false
 declare -a SOURCE_SNAPSHOT_IDS=()
-declare -a SNAPSHOT_PERMISSIONS_ADDED=()
 
 export AWS_PAGER=""
 
@@ -218,6 +216,7 @@ function permissions::snapshot_exists() {
 function permissions::grant() {
   local snapshot_id
   log::info "### Grant temporary Sales access to the QPE AMI ###"
+  SHARING_ATTEMPTED=true
 
   if permissions::image_exists; then
     log::info "AMI launch permission already includes Sales account $SALES_ACCOUNT_ID."
@@ -225,7 +224,6 @@ function permissions::grant() {
     aws::qpe ec2 modify-image-attribute \
       --image-id "$SOURCE_AMI_ID" \
       --launch-permission "Add=[{UserId=${SALES_ACCOUNT_ID}}]"
-    IMAGE_PERMISSION_ADDED=true
   fi
 
   for snapshot_id in "${SOURCE_SNAPSHOT_IDS[@]}"; do
@@ -237,7 +235,6 @@ function permissions::grant() {
         --attribute createVolumePermission \
         --operation-type add \
         --user-ids "$SALES_ACCOUNT_ID"
-      SNAPSHOT_PERMISSIONS_ADDED+=("$snapshot_id")
     fi
   done
 
@@ -293,24 +290,6 @@ function permissions::revoke_all() {
   done
 
   ((status == 0))
-}
-
-function permissions::rollback_added() {
-  local snapshot_id
-  log::warning "Promotion stopped before the Sales copy started. Rolling back permissions added by this run."
-
-  if [[ "$IMAGE_PERMISSION_ADDED" == true ]]; then
-    aws::qpe ec2 modify-image-attribute \
-      --image-id "$SOURCE_AMI_ID" \
-      --launch-permission "Remove=[{UserId=${SALES_ACCOUNT_ID}}]" || true
-  fi
-  for snapshot_id in "${SNAPSHOT_PERMISSIONS_ADDED[@]}"; do
-    aws::qpe ec2 modify-snapshot-attribute \
-      --snapshot-id "$snapshot_id" \
-      --attribute createVolumePermission \
-      --operation-type remove \
-      --user-ids "$SALES_ACCOUNT_ID" || true
-  done
 }
 
 function target::find_existing() {
@@ -429,12 +408,17 @@ function cleanup::on_exit() {
   if [[ $status -ne 0 && -n "$SOURCE_AMI_ID" && ${#SOURCE_SNAPSHOT_IDS[@]} -gt 0 ]]; then
     if [[ "$COPY_AVAILABLE" == true || "$COPY_TERMINAL" == true ]]; then
       log::warning "The Sales copy is no longer in progress, so the source sharing permissions will be revoked."
-      permissions::revoke_all || true
+      if ! permissions::revoke_all; then
+        log::error "Some source sharing permissions could not be revoked. Re-run this command with $SOURCE_AMI_ID after resolving the AWS error."
+      fi
     elif [[ "$COPY_IN_PROGRESS" == true ]]; then
       log::warning "The Sales copy may still be in progress. Source sharing permissions were left in place."
       log::warning "Re-run this command with $SOURCE_AMI_ID to resume validation and revoke sharing."
-    elif [[ "$PROMOTION_COMPLETE" != true && ("$IMAGE_PERMISSION_ADDED" == true || ${#SNAPSHOT_PERMISSIONS_ADDED[@]} -gt 0) ]]; then
-      permissions::rollback_added
+    elif [[ "$SHARING_ATTEMPTED" == true ]]; then
+      log::warning "Promotion stopped before the Sales copy started. Revoking temporary Sales access."
+      if ! permissions::revoke_all; then
+        log::error "Some source sharing permissions could not be revoked. Re-run this command with $SOURCE_AMI_ID after resolving the AWS error."
+      fi
     fi
   fi
 
@@ -502,8 +486,8 @@ function main() {
       COPY_AVAILABLE=true
       ;;
     pending)
-      permissions::grant
       COPY_IN_PROGRESS=true
+      permissions::grant
       ;;
     failed | error | invalid)
       COPY_TERMINAL=true
@@ -522,7 +506,6 @@ function main() {
   fi
   target::validate
   permissions::revoke_all
-  PROMOTION_COMPLETE=true
 
   echo "Promoted AMI: $TARGET_AMI_ID"
   echo "Sales sharing revoked from QPE AMI: $SOURCE_AMI_ID"
