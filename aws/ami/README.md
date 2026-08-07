@@ -29,8 +29,10 @@ export AMI_REGION=ap-northeast-2
 스크립트는 응답의 계정 ID나 IAM ARN이 위 표의 값과 일치하는지 검사하지 않습니다.
 `ami-verify.sh`, `ami-validate.sh`, `ami-ls.sh`도 계정이나 프로파일을 내부에서 변경하지 않습니다.
 
-AMI 빌드와 인스턴스 검증에는 `packer`, `aws`, `session-manager-plugin` 명령이 필요합니다.
-Packer는 Session Manager 플러그인을 사용해 빌드 및 검증 인스턴스에 대한 SSH 터널을 생성합니다.
+AMI 빌드와 인스턴스 검증에는 `packer`와 `aws` 명령이 필요합니다.
+Packer는 빌드 및 검증 인스턴스의 공인 IP에 직접 SSH로 연결합니다.
+실행 호스트는 외부 TCP 22번 연결을 허용해야 하며, 빌드 중 공인 IP가 변경되지 않아야 합니다.
+VPN이나 네트워크 정책이 이 연결을 차단하는 환경에서는 direct SSH가 가능한 별도 실행 환경을 사용해야 합니다.
 
 ## 파일과 호출 관계
 
@@ -104,9 +106,8 @@ AMI_REGION=ap-northeast-2 \
 
 1. `packer` 명령이 존재해야 합니다.
 2. `aws` 명령이 존재해야 합니다.
-3. `session-manager-plugin` 명령이 존재해야 합니다.
-4. 현재 AWS 자격 증명으로 `sts get-caller-identity`가 성공해야 합니다.
-5. `AMI_REGION`의 `EbsEncryptionByDefault` 값이 정확히 `False`여야 합니다.
+3. 현재 AWS 자격 증명으로 `sts get-caller-identity`가 성공해야 합니다.
+4. `AMI_REGION`의 `EbsEncryptionByDefault` 값이 정확히 `False`여야 합니다.
 
 EBS 기본 암호화가 활성화되어 있으면 Packer를 실행하지 않습니다.
 
@@ -125,7 +126,8 @@ EBS 기본 암호화가 활성화되어 있으면 Packer를 실행하지 않습�
 생성되는 AMI는 HVM과 ENA를 사용하고 IMDSv2를 요구합니다.
 루트 볼륨은 `gp3`, 32 GiB, 16,000 IOPS, 1,000 MiB/s로 설정됩니다.
 빌드 인스턴스와 AMI의 루트 볼륨은 암호화하지 않습니다.
-Packer는 `ec2-session-manager` 인스턴스 프로파일과 Session Manager를 통해 SSH를 연결합니다.
+Packer는 기본 public subnet의 빌드 인스턴스에 공인 IP를 할당하고 직접 SSH로 연결합니다.
+임시 보안 그룹은 Packer 실행 호스트의 공인 IP에서 들어오는 SSH만 허용합니다.
 
 ### Packer 실행 순서
 
@@ -221,7 +223,7 @@ Marketplace 제출, 스캔 실행 및 제품 등록도 이 옵션의 동작 범�
 
 `ami-verify.sh`는 다음 순서로 실행됩니다.
 
-1. `packer`, `aws`, `session-manager-plugin` 명령이 존재하는지 확인합니다.
+1. `packer`와 `aws` 명령이 존재하는지 확인합니다.
 2. `ami-validate.sh`로 AMI 구조를 검사합니다.
 3. AWS API에서 AMI 아키텍처를 조회합니다.
 4. `ami-verify.pkr.hcl`로 해당 AMI의 검증 인스턴스를 기동합니다.

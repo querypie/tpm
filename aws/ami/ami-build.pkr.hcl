@@ -125,8 +125,7 @@ source "amazon-ebs" "amazon-linux-2023" {
 
   region       = var.region
   ssh_username = local.ssh_username
-  ssh_interface        = "session_manager"
-  iam_instance_profile = "ec2-session-manager"
+  ssh_interface = "public_ip"
   associate_public_ip_address = true
   # ssh_private_key_file = "demo-targets.pem"
   # ssh_keypair_name = "demo-targets"
@@ -161,6 +160,9 @@ source "amazon-ebs" "amazon-linux-2023" {
     http_tokens                 = "required"
     http_put_response_hop_limit = 1
   }
+
+  # Security group configuration
+  temporary_security_group_source_public_ip = true
 
   # Tags of the EC2 instance used for building the AMI
   run_tags = local.instance_tags

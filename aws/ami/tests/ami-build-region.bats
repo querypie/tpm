@@ -40,12 +40,6 @@ printf '%s\n' "$*" >>"$PACKER_INVOCATIONS_FILE"
 EOF
   chmod +x "$MOCK_BIN/packer"
 
-  cat >"$MOCK_BIN/session-manager-plugin" <<'EOF'
-#!/usr/bin/env bash
-exit 0
-EOF
-  chmod +x "$MOCK_BIN/session-manager-plugin"
-
   PACKER_INVOCATIONS_FILE="$TEST_ROOT/packer-invocations"
   export PACKER_INVOCATIONS_FILE
   : >"$PACKER_INVOCATIONS_FILE"
@@ -76,32 +70,6 @@ teardown() {
 
   [ "$status" -eq 1 ]
   [[ "$output" == *"EBS encryption by default must be disabled"* ]]
-  [ ! -s "$PACKER_INVOCATIONS_FILE" ]
-}
-
-@test "AMI build stops before Packer when Session Manager plugin is missing" {
-  rm "$MOCK_BIN/session-manager-plugin"
-
-  run env \
-    PATH="$MOCK_BIN:/usr/bin:/bin" \
-    AMI_REGION=ap-northeast-2 \
-    "$BATS_TEST_DIRNAME/../ami-build.sh" 11.6.0 amazon-linux-2023 x86_64
-
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"AWS Session Manager plugin is not installed"* ]]
-  [ ! -s "$PACKER_INVOCATIONS_FILE" ]
-}
-
-@test "AMI verification stops before Packer when Session Manager plugin is missing" {
-  rm "$MOCK_BIN/session-manager-plugin"
-
-  run env \
-    PATH="$MOCK_BIN:/usr/bin:/bin" \
-    AMI_REGION=ap-northeast-2 \
-    "$BATS_TEST_DIRNAME/../ami-verify.sh" ami-0123456789abcdef0
-
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"AWS Session Manager plugin is not installed"* ]]
   [ ! -s "$PACKER_INVOCATIONS_FILE" ]
 }
 
@@ -145,36 +113,36 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
-@test "AMI template tunnels SSH through Session Manager" {
+@test "AMI template connects over direct public SSH" {
   run grep -E \
-    'ssh_interface[[:space:]]*=[[:space:]]*"session_manager"' \
-    "$BATS_TEST_DIRNAME/../ami-build.pkr.hcl"
-  [ "$status" -eq 0 ]
-
-  run grep -E \
-    'iam_instance_profile[[:space:]]*=[[:space:]]*"ec2-session-manager"' \
+    'ssh_interface[[:space:]]*=[[:space:]]*"public_ip"' \
     "$BATS_TEST_DIRNAME/../ami-build.pkr.hcl"
   [ "$status" -eq 0 ]
 
   run grep -F \
-    'temporary_security_group_source_public_ip' \
+    'temporary_security_group_source_public_ip = true' \
+    "$BATS_TEST_DIRNAME/../ami-build.pkr.hcl"
+  [ "$status" -eq 0 ]
+
+  run grep -E \
+    'session_manager|ec2-session-manager' \
     "$BATS_TEST_DIRNAME/../ami-build.pkr.hcl"
   [ "$status" -eq 1 ]
 }
 
-@test "AMI verification tunnels SSH through Session Manager" {
+@test "AMI verification connects over direct public SSH" {
   run grep -E \
-    'ssh_interface[[:space:]]*=[[:space:]]*"session_manager"' \
-    "$BATS_TEST_DIRNAME/../ami-verify.pkr.hcl"
-  [ "$status" -eq 0 ]
-
-  run grep -E \
-    'iam_instance_profile[[:space:]]*=[[:space:]]*"ec2-session-manager"' \
+    'ssh_interface[[:space:]]*=[[:space:]]*"public_ip"' \
     "$BATS_TEST_DIRNAME/../ami-verify.pkr.hcl"
   [ "$status" -eq 0 ]
 
   run grep -F \
-    'temporary_security_group_source_public_ip' \
+    'temporary_security_group_source_public_ip = true' \
+    "$BATS_TEST_DIRNAME/../ami-verify.pkr.hcl"
+  [ "$status" -eq 0 ]
+
+  run grep -E \
+    'session_manager|ec2-session-manager' \
     "$BATS_TEST_DIRNAME/../ami-verify.pkr.hcl"
   [ "$status" -eq 1 ]
 }
