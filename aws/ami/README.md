@@ -29,6 +29,9 @@ export AMI_REGION=ap-northeast-2
 스크립트는 응답의 계정 ID나 IAM ARN이 위 표의 값과 일치하는지 검사하지 않습니다.
 `ami-verify.sh`, `ami-validate.sh`, `ami-ls.sh`도 계정이나 프로파일을 내부에서 변경하지 않습니다.
 
+AMI 빌드와 인스턴스 검증에는 `packer`, `aws`, `session-manager-plugin` 명령이 필요합니다.
+Packer는 Session Manager 플러그인을 사용해 빌드 및 검증 인스턴스에 대한 SSH 터널을 생성합니다.
+
 ## 파일과 호출 관계
 
 사용자가 직접 실행하는 명령은 다음 네 개입니다.
@@ -101,8 +104,9 @@ AMI_REGION=ap-northeast-2 \
 
 1. `packer` 명령이 존재해야 합니다.
 2. `aws` 명령이 존재해야 합니다.
-3. 현재 AWS 자격 증명으로 `sts get-caller-identity`가 성공해야 합니다.
-4. `AMI_REGION`의 `EbsEncryptionByDefault` 값이 정확히 `False`여야 합니다.
+3. `session-manager-plugin` 명령이 존재해야 합니다.
+4. 현재 AWS 자격 증명으로 `sts get-caller-identity`가 성공해야 합니다.
+5. `AMI_REGION`의 `EbsEncryptionByDefault` 값이 정확히 `False`여야 합니다.
 
 EBS 기본 암호화가 활성화되어 있으면 Packer를 실행하지 않습니다.
 
@@ -116,25 +120,27 @@ EBS 기본 암호화가 활성화되어 있으면 Packer를 실행하지 않습�
 | 베이스 AMI 이름 | `al2023-ami-2023.12.*-kernel-6.12-*` | 동일 |
 | 루트 장치 유형 | `ebs` | `ebs` |
 | 가상화 유형 | `hvm` | `hvm` |
-| 빌드 인스턴스 | Spot `t3.xlarge` | Spot `t4g.xlarge` |
+| 빌드 인스턴스 | Spot `t3.xlarge` | Spot `t4g.xlarge`, `m7g.xlarge`, `m6g.xlarge` 순서의 용량 대안 |
 
 생성되는 AMI는 HVM과 ENA를 사용하고 IMDSv2를 요구합니다.
 루트 볼륨은 `gp3`, 32 GiB, 16,000 IOPS, 1,000 MiB/s로 설정됩니다.
 빌드 인스턴스와 AMI의 루트 볼륨은 암호화하지 않습니다.
-Packer의 임시 보안 그룹은 빌드를 실행한 공인 IP에서 SSH 접속을 허용합니다.
+Packer는 `ec2-session-manager` 인스턴스 프로파일과 Session Manager를 통해 SSH를 연결합니다.
 
 ### Packer 실행 순서
 
 `ami-build.pkr.hcl`은 다음 순서로 인스턴스를 구성합니다.
 
 1. `cloud-init status --wait`로 초기화 완료를 기다립니다.
-2. `../scripts/install-docker-on-amazon-linux-2023.sh`를 실행합니다.
-3. `compose/setup.v2.sh`를 `/usr/local/bin/setup.v2.sh`로 설치합니다.
-4. `setup.v2.sh --install-partially-for-ami <querypie_version>`을 실행합니다.
-5. `querypie-first-boot.service`를 설치하고 활성화합니다.
-6. `validate-image-runtime.sh`로 암호화된 장치와 파일시스템이 없는지 검사합니다.
-7. `sanitize-image-before-snapshot.sh`로 빌드 인스턴스 상태를 정리합니다.
-8. AMI 스냅샷과 `manifest.json`을 생성합니다.
+2. QueryPie listener 범위 `40000-40030`을 커널 임시 포트 할당에서 제외합니다.
+3. `../scripts/install-docker-on-amazon-linux-2023.sh`를 실행합니다.
+   Docker Compose 플러그인은 최초 부팅 systemd 서비스에서도 사용할 수 있도록 시스템 경로에 설치합니다.
+4. `compose/setup.v2.sh`를 `/usr/local/bin/setup.v2.sh`로 설치합니다.
+5. `setup.v2.sh --install-partially-for-ami <querypie_version>`을 실행합니다.
+6. `querypie-first-boot.service`를 설치하고 활성화합니다.
+7. `validate-image-runtime.sh`로 암호화된 장치와 파일시스템이 없는지 검사합니다.
+8. `sanitize-image-before-snapshot.sh`로 빌드 인스턴스 상태를 정리합니다.
+9. AMI 스냅샷과 `manifest.json`을 생성합니다.
 
 부분 설치 단계는 QueryPie 구성 파일을 배치하고 database, querypie, tools 프로파일의 컨테이너 이미지를 미리 받습니다.
 부분 설치 단계는 `.env`의 `AGENT_SECRET`, `KEY_ENCRYPTION_KEY`, `DB_PASSWORD`, `REDIS_PASSWORD` 값을 비운 상태로 AMI를 생성합니다.
@@ -147,7 +153,8 @@ Packer의 임시 보안 그룹은 빌드를 실행한 공인 IP에서 SSH 접속
 - SSH root 로그인을 비활성화하고 root 계정을 잠급니다.
 - `/root`와 `/home` 아래의 `authorized_keys`를 삭제합니다.
 - 기존 SSH host key를 삭제합니다.
-- `cloud-init clean --logs --machine-id`를 실행합니다.
+- `cloud-init clean --logs`를 실행하고 `/etc/machine-id`를 `uninitialized`로 초기화합니다.
+- 별도로 남은 D-Bus machine ID를 삭제합니다.
 - systemd random seed를 삭제합니다.
 - DNF 캐시, 임시 파일, 셸 히스토리 및 로그 내용을 정리합니다.
 - 비어 있지 않은 `authorized_keys`가 남아 있으면 빌드를 실패시킵니다.
@@ -214,7 +221,7 @@ Marketplace 제출, 스캔 실행 및 제품 등록도 이 옵션의 동작 범�
 
 `ami-verify.sh`는 다음 순서로 실행됩니다.
 
-1. `packer`와 `aws` 명령이 존재하는지 확인합니다.
+1. `packer`, `aws`, `session-manager-plugin` 명령이 존재하는지 확인합니다.
 2. `ami-validate.sh`로 AMI 구조를 검사합니다.
 3. AWS API에서 AMI 아키텍처를 조회합니다.
 4. `ami-verify.pkr.hcl`로 해당 AMI의 검증 인스턴스를 기동합니다.

@@ -67,7 +67,18 @@ source "amazon-ebs" "ami-verify" {
 
   region        = var.region
   instance_type = local.instance_type
-  ssh_username = local.ssh_username
+  ssh_username  = local.ssh_username
+  ssh_interface = "session_manager"
+
+  iam_instance_profile        = "ec2-session-manager"
+  associate_public_ip_address = true
+
+  subnet_filter {
+    filters = {
+      "default-for-az" = "true"
+    }
+    most_free = true
+  }
 
   # EBS configuration
   ebs_optimized = true
@@ -91,9 +102,6 @@ source "amazon-ebs" "ami-verify" {
     http_tokens                 = "required"
     http_put_response_hop_limit = 1
   }
-
-  # Security group configuration
-  temporary_security_group_source_public_ip = true
 
   # Tags of the EC2 instance used for building the AMI
   run_tags = local.instance_tags

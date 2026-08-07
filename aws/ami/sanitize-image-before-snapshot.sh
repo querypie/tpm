@@ -19,7 +19,11 @@ sudo find /root /home -xdev -type f -name authorized_keys -delete
 sudo find /etc/ssh -maxdepth 1 -type f -name 'ssh_host_*_key*' -delete
 
 # Force cloud-init and systemd to initialize per-instance state on the next boot.
-sudo cloud-init clean --logs --machine-id
+# Amazon Linux 2023's cloud-init does not expose the --machine-id flag, so
+# reproduce its documented systemd behavior explicitly.
+sudo cloud-init clean --logs
+printf 'uninitialized\n' | sudo tee /etc/machine-id >/dev/null
+sudo rm -f /var/lib/dbus/machine-id
 sudo rm -f /var/lib/systemd/random-seed
 
 # Remove build caches, temporary files, histories, and logs.
