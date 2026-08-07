@@ -120,16 +120,26 @@ source "amazon-ebs" "amazon-linux-2023" {
   ami_name                = local.ami_name
   ami_description         = "QueryPie Suite ${var.querypie_version} on Amazon Linux 2023"
   ami_virtualization_type = "hvm"
-  ena_support             = true
   encrypt_boot            = false
   imds_support            = "v2.0"
 
   region       = var.region
   ssh_username = local.ssh_username
+  ssh_interface        = "session_manager"
+  iam_instance_profile = "ec2-session-manager"
+  associate_public_ip_address = true
   # ssh_private_key_file = "demo-targets.pem"
   # ssh_keypair_name = "demo-targets"
 
-  spot_instance_types = var.architecture == "arm64" ? ["t4g.xlarge"] : ["t3.xlarge"]
+  spot_instance_types = var.architecture == "arm64" ? ["t4g.xlarge", "m7g.xlarge", "m6g.xlarge"] : ["t3.xlarge"]
+  spot_price          = "0.09"
+
+  subnet_filter {
+    filters = {
+      "default-for-az" = "true"
+    }
+    most_free = true
+  }
 
   # EBS configuration
   ebs_optimized = true
@@ -152,9 +162,6 @@ source "amazon-ebs" "amazon-linux-2023" {
     http_put_response_hop_limit = 1
   }
 
-  # Security group configuration
-  temporary_security_group_source_public_ip = true
-
   # Tags of the EC2 instance used for building the AMI
   run_tags = local.instance_tags
 
@@ -175,6 +182,19 @@ build {
     inline_shebang = "/bin/bash -ex"
     inline = [
       "cloud-init status --wait", # Now this EC2 instance is ready for more software installation.
+    ]
+  }
+
+  # Keep QueryPie listener ports out of the kernel's ephemeral allocation range.
+  provisioner "file" {
+    source      = "99-querypie-ports.conf"
+    destination = "/tmp/99-querypie-ports.conf"
+  }
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -ex"
+    inline = [
+      "sudo install -m 644 /tmp/99-querypie-ports.conf /etc/sysctl.d/99-querypie-ports.conf",
+      "sudo sysctl --system",
     ]
   }
 

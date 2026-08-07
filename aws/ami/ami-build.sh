@@ -66,6 +66,11 @@ function validate_environment() {
     exit 1
   fi
 
+  if ! command -v session-manager-plugin &>/dev/null; then
+    log::error "AWS Session Manager plugin is not installed. Please install session-manager-plugin to continue."
+    exit 1
+  fi
+
   log::do aws sts get-caller-identity --output text >/dev/null
 
   local encryption_by_default

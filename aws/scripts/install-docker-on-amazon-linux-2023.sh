@@ -19,6 +19,7 @@ function install_docker_compose() {
     -o /tmp/docker-compose
   if file /tmp/docker-compose | grep -q "ELF 64-bit LSB executable"; then
     install -m 755 -D /tmp/docker-compose ~/.docker/cli-plugins/docker-compose
+    sudo install -m 755 -D /tmp/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
     sudo install -m 755 /tmp/docker-compose /usr/local/bin/docker-compose
   fi
 }
@@ -31,7 +32,7 @@ function test_if_docker_installed_already {
 }
 
 function shutdown_ssh_session {
-  killall sshd
+  killall sshd sshd-session
 }
 
 function main() {
