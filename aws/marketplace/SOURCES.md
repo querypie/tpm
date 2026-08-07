@@ -27,6 +27,9 @@ AWS Marketplace 정책과 포털 필드는 변경될 수 있으므로 실제 제
 - [QueryPie EULA](https://www.querypie.com/eula): 모든 에디션의 일반 사용권 조항과 Community License 추가 조항
 - [QueryPie ACP product page](https://www.querypie.com/en/solutions/acp): ACP 범위, 핵심 기능, 통합 대상
 - [QueryPie ACP overview](https://docs.querypie.com/en/overview): 세분화된 접근 제어, 통합 인터페이스, 모니터링, 워크플로
+- [QueryPie Web SQL Editor](https://docs.querypie.com/en/user-manual/database-access-control/connecting-with-web-sql-editor): 브라우저 기반 데이터베이스 쿼리 실행과 결과 조회
+- [QueryPie Web Terminal](https://docs.querypie.com/en/user-manual/server-access-control/using-web-terminal): 브라우저 기반 서버 명령 실행과 다중 세션
+- [QueryPie Kubernetes Web Client](https://docs.querypie.com/en/user-manual/kubernetes-access-control/connecting-to-kubernetes-clusters-with-web-client): 브라우저 기반 Kubernetes 리소스 탐색, Pod 로그와 셸, Beta 상태
 - [QueryPie ACP Community Edition](https://docs.querypie.com/en/installation/querypie-acp-community-edition): 최대 5명, 지원 컨트롤러, 설치와 현재 라이선스 흐름
 - [QueryPie ACP product versions](https://docs.querypie.com/en/installation/product-versions): 에디션별 동일 컨테이너 이미지와 권장 버전 정책
 - [QueryPie ACP Standard Edition](https://docs.querypie.com/ko/support/standard-edition): 자체 운영, 최소 10명, 1년 라이선스

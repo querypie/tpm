@@ -2,13 +2,13 @@
 
 ## English - AWS source
 
-QueryPie ACP Enterprise Edition is a self-managed access control platform for organizations that need flexible licensing, resilient deployment options, and premium support.
-It centralizes least-privilege access, approvals, privileged activity monitoring, and audit trails across databases, servers, Kubernetes, web applications, and MCP tools.
+QueryPie ACP Enterprise Edition is a self-managed platform with flexible licensing, resilient deployment options, and premium support.
+It governs databases, servers, Kubernetes, web applications, and MCP tools, and provides a browser-based Web SQL Editor, Web Terminal, and Kubernetes Web Client (beta).
 
 ## 한국어 리뷰용 번역
 
-QueryPie ACP Enterprise Edition은 유연한 라이선스, 복원력을 고려한 배포 옵션, 프리미엄 지원이 필요한 조직을 위한 자체 운영형 접근 제어 플랫폼입니다.
-데이터베이스, 서버, Kubernetes, 웹 애플리케이션, MCP 도구의 최소 권한 접근, 승인, 권한 사용 활동 모니터링, 감사 추적을 중앙화합니다.
+QueryPie ACP Enterprise Edition은 유연한 라이선스, 복원력을 고려한 배포 옵션, 프리미엄 지원을 제공하는 자체 운영형 플랫폼입니다.
+데이터베이스, 서버, Kubernetes, 웹 애플리케이션, MCP 도구를 제어하며 브라우저 기반의 Web SQL Editor, Web Terminal, Kubernetes Web Client(베타)를 제공합니다.
 
 ## 검증
 
