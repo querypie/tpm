@@ -7,7 +7,7 @@
 | QueryPie ACP Documentation | https://docs.querypie.com/en |
 | QueryPie ACP Administrator Manual | https://docs.querypie.com/en/administrator-manual |
 | QueryPie ACP User Manual | https://docs.querypie.com/en/user-manual |
-| QueryPie Community Discussions | https://github.com/querypie/querypie-community/discussions |
+| QueryPie ACP Support | https://docs.querypie.com/support |
 
 ## 한국어 리뷰용 번역
 
@@ -16,7 +16,7 @@
 | QueryPie ACP 제품 문서 | https://docs.querypie.com/ko |
 | QueryPie ACP 관리자 매뉴얼 | https://docs.querypie.com/ko/administrator-manual |
 | QueryPie ACP 사용자 매뉴얼 | https://docs.querypie.com/ko/user-manual |
-| QueryPie Community Discussions | https://github.com/querypie/querypie-community/discussions |
+| QueryPie ACP 기술지원 | https://docs.querypie.com/support |
 
 ## 노출 제약
 

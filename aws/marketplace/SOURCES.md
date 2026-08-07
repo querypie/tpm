@@ -31,7 +31,7 @@ AWS Marketplace 정책과 포털 필드는 변경될 수 있으므로 실제 제
 - [QueryPie ACP Standard Edition](https://docs.querypie.com/ko/support/standard-edition): 자체 운영, 최소 10명, 1년 라이선스
 - [Standard Edition license policy](https://docs.querypie.com/ko/support/standard-edition-license-policy): 설치 단위, FQDN, Enterprise의 유연한 라이선스 조건
 - [QueryPie ACP premium support](https://docs.querypie.com/en/support/premium-support): Enterprise Customer Portal과 업그레이드 지원
-- [QueryPie ACP support](https://docs.querypie.com/en/support): Community와 Standard의 커뮤니티 지원
+- [QueryPie ACP support](https://docs.querypie.com/support): 기술지원 정보와 Community·Standard의 커뮤니티 지원
 - [QueryPie ACP administrator manual](https://docs.querypie.com/en/administrator-manual): 지원 기능과 관리 범위
 - [QueryPie ACP user manual](https://docs.querypie.com/en/user-manual): 사용자 접근과 워크플로
 - [QueryPie Community GitHub Discussions](https://github.com/querypie/querypie-community/discussions): Community와 Standard 지원 채널

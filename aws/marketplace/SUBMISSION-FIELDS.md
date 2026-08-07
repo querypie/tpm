@@ -97,11 +97,12 @@ AWS는 단순 실행 절차 외에도 다음 내용을 요구합니다.
 | Pricing | Free | 12개월 contract dimension과 가격 필요 | 공개 계약 차원 또는 private offer 정책 필요 |
 | EULA | AWS 표준 계약 또는 Community EULA 결정 | 자체 EULA와 AWS 표준 계약 중 결정 | 협상 가능한 계약 구조와 EULA 결정 |
 | Country availability | 판매 가능 국가 확정 | 판매 가능 국가 확정 | 판매 가능 국가 확정 |
-| Refund policy | 소프트웨어 요금 없음과 AWS 인프라 요금 제외 명시 | 환불 조건, 기간, 이메일 확정 | private offer 환불·해지 조건과 이메일 확정 |
+| Refund policy | 소프트웨어 요금 없음, AWS 인프라 요금 제외, `support@querypie.com` 명시 | 환불 조건과 기간 확정, 연락처는 `support@querypie.com` | private offer 환불·해지 조건 확정, 연락처는 `support@querypie.com` |
 | Test allowlist | 내부 구매 테스트 계정 | 내부 구매·entitlement 테스트 계정 | 내부 계정과 private offer 테스트 계정 |
 
 모든 유료 상품의 환불 정책에는 환불 조건과 판매자 연락 방법이 포함되어야 합니다.
 AWS 인프라 요금은 QueryPie 소프트웨어 환불과 별개임을 명시합니다.
+기술지원 정보는 `https://docs.querypie.com/support`에서 제공하고 문의는 `support@querypie.com`으로 받습니다.
 
 ## 공식 근거
 

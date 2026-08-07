@@ -41,7 +41,8 @@ products/<edition>/
 
 영어 섹션은 실제 Marketplace 제출 원문입니다.
 한국어 섹션은 한국어 사용 개발자가 영어 원문을 검토하기 위한 번역입니다.
-`[MARKETPLACE_SUPPORT_EMAIL]`, `[PUBLIC_S3_LOGO_URL]` 같은 대괄호 표기는 제출 전에 확정해야 하는 값입니다.
+지원 이메일은 `support@querypie.com`이고 기술지원 정보 웹사이트는 `https://docs.querypie.com/support`입니다.
+`[PUBLIC_S3_LOGO_URL]` 같은 대괄호 표기는 제출 전에 확정해야 하는 값입니다.
 
 ## 공통 문서
 
