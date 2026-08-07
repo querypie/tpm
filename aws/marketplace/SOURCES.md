@@ -24,6 +24,7 @@ AWS Marketplace 정책과 포털 필드는 변경될 수 있으므로 실제 제
 
 ## QueryPie 공식 문서
 
+- [QueryPie EULA](https://www.querypie.com/eula): 모든 에디션의 일반 사용권 조항과 Community License 추가 조항
 - [QueryPie ACP product page](https://www.querypie.com/en/solutions/acp): ACP 범위, 핵심 기능, 통합 대상
 - [QueryPie ACP overview](https://docs.querypie.com/en/overview): 세분화된 접근 제어, 통합 인터페이스, 모니터링, 워크플로
 - [QueryPie ACP Community Edition](https://docs.querypie.com/en/installation/querypie-acp-community-edition): 최대 5명, 지원 컨트롤러, 설치와 현재 라이선스 흐름

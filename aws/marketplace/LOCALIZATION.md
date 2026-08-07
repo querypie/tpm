@@ -34,7 +34,7 @@ AWS가 지원하는 현지 언어 UI에서는 영어 원문의 자동 번역이 
 
 상품 정보와 달리 EULA는 AWS가 지원하는 언어로 제출할 수 있습니다.
 현지 언어 EULA를 사용할 때는 해당 상품 오퍼를 그 언어가 주 언어인 국가에 geo-targeting해야 합니다.
-현지 EULA가 필요하지 않으면 영어 EULA만 관리합니다.
+세 상품에는 영어로 제공되는 [QueryPie EULA](https://www.querypie.com/eula)를 사용하며 별도의 현지 언어 EULA는 관리하지 않습니다.
 
 ## 검수 절차
 

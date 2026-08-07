@@ -51,7 +51,7 @@ AWS의 메타데이터 작성 지침에 따라 제목과 제출 원문에는 ASC
 | 그룹 | 입력 항목 |
 |------|-----------|
 | Pricing | 가격 모델, 활성 인스턴스 타입별 가격 또는 계약 차원과 기간별 가격 |
-| EULA | AWS 표준 계약 사용 여부 또는 다운로드 가능한 자체 EULA URL |
+| EULA | 자체 EULA URL: [QueryPie EULA](https://www.querypie.com/eula) |
 | Country availability | 구매 허용 또는 제외 국가 |
 | Refund policy | 소프트웨어 환불 조건과 판매자 연락 방법 |
 | Allowlist | Limited 상태에서 테스트할 AWS 계정 ID 목록, 선택 사항 |
