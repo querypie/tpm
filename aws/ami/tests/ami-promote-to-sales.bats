@@ -62,7 +62,7 @@ elif [[ "$arguments" == *" ec2 describe-image-attribute "* ]]; then
     exit 2
   elif [[ -f "${AWS_INVOCATIONS_FILE}.image-permission-revoked" ]]; then
     printf 'None\n'
-  elif [[ "${MOCK_PERMISSIONS_GRANTED:-false}" == "true" || -f "${AWS_INVOCATIONS_FILE}.image-permission-added" ]]; then
+  elif [[ "${MOCK_PERMISSIONS_GRANTED:-false}" == "true" || "${MOCK_IMAGE_PERMISSION_GRANTED:-false}" == "true" || -f "${AWS_INVOCATIONS_FILE}.image-permission-added" ]]; then
     printf '883790944456\n'
   else
     printf 'None\n'
@@ -92,7 +92,7 @@ elif [[ "$arguments" == *" ec2 modify-image-attribute "* && "$arguments" == *"Re
 elif [[ "$arguments" == *" ec2 modify-snapshot-attribute "* && "$arguments" == *"--operation-type remove"* ]]; then
   printf 'true\n' >"${AWS_INVOCATIONS_FILE}.${snapshot_id}.permission-revoked"
 elif [[ "$arguments" == *" ec2 describe-images "* && "$arguments" == *"Name=tag:SourceAMI"* ]]; then
-  printf '%s\n' "${MOCK_EXISTING_TARGET_AMI_ID:-None}"
+  printf '%b\n' "${MOCK_EXISTING_TARGET_AMIS:-None}"
 elif [[ "$arguments" == *" ec2 copy-image "* ]]; then
   if [[ "${MOCK_COPY_FAILURE:-false}" == "true" ]]; then
     printf 'copy failed\n' >&2
@@ -181,7 +181,7 @@ teardown() {
 @test "promotion reuses an available Sales AMI and only revokes stale source sharing" {
   run env \
     PATH="$MOCK_BIN:$PATH" \
-    MOCK_EXISTING_TARGET_AMI_ID=ami-0fedcba9876543210 \
+    MOCK_EXISTING_TARGET_AMIS=$'ami-0fedcba9876543210\tavailable' \
     MOCK_PERMISSIONS_GRANTED=true \
     "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" ami-0123456789abcdef0
 
@@ -191,22 +191,23 @@ teardown() {
   grep -F -- 'modify-image-attribute' "$AWS_INVOCATIONS_FILE" | grep -F -- 'Remove=[{UserId=883790944456}]'
 }
 
-@test "promotion rolls back newly added sharing when copy-image fails before starting" {
+@test "promotion preserves sharing when the copy-image request outcome is unknown" {
   run env \
     PATH="$MOCK_BIN:$PATH" \
     MOCK_COPY_FAILURE=true \
     "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" ami-0123456789abcdef0
 
   [ "$status" -ne 0 ]
-  [[ "$output" == *"Revoking temporary Sales access"* ]]
-  grep -F -- 'modify-image-attribute' "$AWS_INVOCATIONS_FILE" | grep -F -- 'Remove=[{UserId=883790944456}]'
-  [ "$(grep -F -- 'modify-snapshot-attribute' "$AWS_INVOCATIONS_FILE" | grep -F -c -- '--operation-type remove')" -eq 2 ]
+  [[ "$output" == *"copy may still be in progress"* ]]
+  [[ "$output" == *"Re-run this command"* ]]
+  ! grep -F -- 'modify-image-attribute' "$AWS_INVOCATIONS_FILE" | grep -F -- 'Remove='
+  [ "$(grep -F -- 'modify-snapshot-attribute' "$AWS_INVOCATIONS_FILE" | grep -F -c -- '--operation-type remove' || true)" -eq 0 ]
 }
 
 @test "promotion preserves restored access when an existing Sales copy is pending" {
   run env \
     PATH="$MOCK_BIN:$PATH" \
-    MOCK_EXISTING_TARGET_AMI_ID=ami-0fedcba9876543210 \
+    MOCK_EXISTING_TARGET_AMIS=$'ami-0fedcba9876543210\tpending' \
     MOCK_TARGET_STATE=pending \
     MOCK_SNAPSHOT_GRANT_FAILURE=true \
     "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" ami-0123456789abcdef0
@@ -217,23 +218,24 @@ teardown() {
   [ "$(grep -F -- 'modify-snapshot-attribute' "$AWS_INVOCATIONS_FILE" | grep -F -c -- '--operation-type remove' || true)" -eq 0 ]
 }
 
-@test "promotion retries cleanup for pre-existing sharing when copy-image fails" {
+@test "promotion retries cleanup for pre-existing sharing when permission grant fails" {
   run env \
     PATH="$MOCK_BIN:$PATH" \
-    MOCK_PERMISSIONS_GRANTED=true \
-    MOCK_COPY_FAILURE=true \
+    MOCK_IMAGE_PERMISSION_GRANTED=true \
+    MOCK_SNAPSHOT_GRANT_FAILURE=true \
     "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" ami-0123456789abcdef0
 
   [ "$status" -ne 0 ]
   [[ "$output" == *"Revoking temporary Sales access"* ]]
   grep -F -- 'modify-image-attribute' "$AWS_INVOCATIONS_FILE" | grep -F -- 'Remove=[{UserId=883790944456}]'
-  [ "$(grep -F -- 'modify-snapshot-attribute' "$AWS_INVOCATIONS_FILE" | grep -F -c -- '--operation-type remove')" -eq 2 ]
+  ! grep -F -- 'ec2 copy-image' "$AWS_INVOCATIONS_FILE"
 }
 
 @test "promotion reports an incomplete permission cleanup for retry" {
   run env \
     PATH="$MOCK_BIN:$PATH" \
-    MOCK_COPY_FAILURE=true \
+    MOCK_IMAGE_PERMISSION_GRANTED=true \
+    MOCK_SNAPSHOT_GRANT_FAILURE=true \
     MOCK_IMAGE_REVOKE_FAILURE=true \
     "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" ami-0123456789abcdef0
 
@@ -279,16 +281,17 @@ teardown() {
   [ "$(grep -F -- 'modify-snapshot-attribute' "$AWS_INVOCATIONS_FILE" | grep -F -c -- '--operation-type remove' || true)" -eq 0 ]
 }
 
-@test "promotion revokes stale source sharing when the Sales copy is in a terminal failure state" {
+@test "promotion replaces a terminal Sales AMI and revokes sharing after success" {
   run env \
     PATH="$MOCK_BIN:$PATH" \
-    MOCK_EXISTING_TARGET_AMI_ID=ami-0fedcba9876543210 \
+    MOCK_EXISTING_TARGET_AMIS=$'ami-0fedcba9876543210\tfailed' \
     MOCK_PERMISSIONS_GRANTED=true \
-    MOCK_TARGET_STATE=failed \
     "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" ami-0123456789abcdef0
 
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"source sharing permissions will be revoked"* ]]
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"creating replacement attempt 1"* ]]
+  grep -F -- '--name QueryPie-Suite-11.6.5-202608071519-ami-0123456789abcdef0-retry-1' "$AWS_INVOCATIONS_FILE"
+  grep -F -- '--client-token querypie-ami-0123456789abcdef0-us-east-1-retry-1' "$AWS_INVOCATIONS_FILE"
   grep -F -- 'modify-image-attribute' "$AWS_INVOCATIONS_FILE" | grep -F -- 'Remove=[{UserId=883790944456}]'
   [ "$(grep -F -- 'modify-snapshot-attribute' "$AWS_INVOCATIONS_FILE" | grep -F -c -- '--operation-type remove')" -eq 2 ]
 }
@@ -315,11 +318,11 @@ teardown() {
 @test "promotion rejects duplicate Sales AMIs before changing source permissions" {
   run env \
     PATH="$MOCK_BIN:$PATH" \
-    MOCK_EXISTING_TARGET_AMI_ID='ami-0fedcba9876543210 ami-0abcdef0123456789' \
+    MOCK_EXISTING_TARGET_AMIS=$'ami-0fedcba9876543210\tavailable\nami-0abcdef0123456789\tpending' \
     "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" ami-0123456789abcdef0
 
   [ "$status" -ne 0 ]
-  [[ "$output" == *"Found 2 Sales AMIs"* ]]
+  [[ "$output" == *"Found 2 active Sales AMIs"* ]]
   ! grep -F -- 'modify-image-attribute' "$AWS_INVOCATIONS_FILE"
   ! grep -F -- 'modify-snapshot-attribute' "$AWS_INVOCATIONS_FILE"
 }

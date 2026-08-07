@@ -35,6 +35,7 @@ TARGET_AMI_NAME=""
 SOURCE_ARCHITECTURE=""
 SOURCE_VERSION=""
 SOURCE_BUILD_DATE=""
+PROMOTION_ATTEMPT=0
 SHARING_ATTEMPTED=false
 COPY_IN_PROGRESS=false
 COPY_AVAILABLE=false
@@ -152,7 +153,7 @@ function source::validate() {
 }
 
 function source::load_metadata() {
-  local max_source_name_length metadata snapshot_ids
+  local metadata snapshot_ids
   metadata=$(aws::qpe ec2 describe-images \
     --owners self \
     --image-ids "$SOURCE_AMI_ID" \
@@ -164,10 +165,6 @@ function source::load_metadata() {
     log::error "Could not determine the name of source AMI $SOURCE_AMI_ID."
     exit 1
   fi
-
-  # Keep the Sales AMI name unique even when the same release version is rebuilt.
-  max_source_name_length=$((128 - 1 - ${#SOURCE_AMI_ID}))
-  TARGET_AMI_NAME="${SOURCE_AMI_NAME:0:max_source_name_length}-${SOURCE_AMI_ID}"
 
   SOURCE_VERSION=$(aws::qpe ec2 describe-images \
     --owners self \
@@ -338,32 +335,60 @@ function permissions::revoke_all() {
 }
 
 function target::find_existing() {
-  local image_ids
-  image_ids=$(aws::sales ec2 describe-images \
+  local image_id image_records state terminal_count=0
+  local -a active_image_ids=()
+  image_records=$(aws::sales ec2 describe-images \
     --owners self \
     --filters \
       "Name=tag:SourceAMI,Values=$SOURCE_AMI_ID" \
       "Name=tag:SourceAccount,Values=$QPE_ACCOUNT_ID" \
       "Name=tag:SourceRegion,Values=$SOURCE_REGION" \
-    --query 'Images[].ImageId' \
+    --query 'Images[].[ImageId,State]' \
     --output text)
 
-  if [[ -z "$image_ids" || "$image_ids" == "None" ]]; then
+  if [[ -z "$image_records" || "$image_records" == "None" ]]; then
     return 0
   fi
 
-  local -a matches=()
-  read -r -a matches <<<"$image_ids"
-  if [[ ${#matches[@]} -ne 1 ]]; then
-    log::error "Found ${#matches[@]} Sales AMIs promoted from $SOURCE_AMI_ID; expected at most one."
+  while IFS=$'\t' read -r image_id state; do
+    [[ -z "$image_id" || "$image_id" == "None" ]] && continue
+    case "$state" in
+    failed | error | invalid | deregistered)
+      terminal_count=$((terminal_count + 1))
+      ;;
+    *)
+      active_image_ids+=("$image_id")
+      ;;
+    esac
+  done <<<"$image_records"
+
+  if [[ ${#active_image_ids[@]} -gt 1 ]]; then
+    log::error "Found ${#active_image_ids[@]} active Sales AMIs promoted from $SOURCE_AMI_ID; expected at most one."
     return 1
   fi
-  TARGET_AMI_ID=${matches[0]}
+
+  if [[ ${#active_image_ids[@]} -eq 1 ]]; then
+    TARGET_AMI_ID=${active_image_ids[0]}
+    return 0
+  fi
+
+  PROMOTION_ATTEMPT=$terminal_count
+  log::warning "Found $terminal_count terminal Sales AMI(s) promoted from $SOURCE_AMI_ID; creating replacement attempt $PROMOTION_ATTEMPT."
 }
 
 function target::copy() {
-  local client_token description image_tags snapshot_tags
+  local client_token description image_tags max_source_name_length name_suffix snapshot_tags
+  name_suffix="-${SOURCE_AMI_ID}"
+  if ((PROMOTION_ATTEMPT > 0)); then
+    name_suffix+="-retry-${PROMOTION_ATTEMPT}"
+  fi
+  max_source_name_length=$((128 - ${#name_suffix}))
+  TARGET_AMI_NAME="${SOURCE_AMI_NAME:0:max_source_name_length}${name_suffix}"
+
   client_token="querypie-${SOURCE_AMI_ID}-${DESTINATION_REGION}"
+  if ((PROMOTION_ATTEMPT > 0)); then
+    client_token+="-retry-${PROMOTION_ATTEMPT}"
+  fi
   description="Marketplace copy of ${SOURCE_AMI_NAME} from ${QPE_ACCOUNT_ID}/${SOURCE_REGION}/${SOURCE_AMI_ID}"
 
   image_tags="ResourceType=image,Tags=[{Key=Name,Value=${TARGET_AMI_NAME}},{Key=SourceAMI,Value=${SOURCE_AMI_ID}},{Key=SourceAccount,Value=${QPE_ACCOUNT_ID}},{Key=SourceRegion,Value=${SOURCE_REGION}},{Key=Architecture,Value=${SOURCE_ARCHITECTURE}}"
@@ -380,6 +405,9 @@ function target::copy() {
   snapshot_tags+="]"
 
   log::info "### Copy the shared AMI into the Sales account ###"
+  # AWS may accept CopyImage even when the CLI loses the response. Until a
+  # later invocation reconciles the idempotent request, preserve source access.
+  COPY_IN_PROGRESS=true
   TARGET_AMI_ID=$(aws::sales ec2 copy-image \
     --source-region "$SOURCE_REGION" \
     --source-image-id "$SOURCE_AMI_ID" \
@@ -395,7 +423,6 @@ function target::copy() {
     log::error "Sales copy request did not return an AMI ID."
     return 1
   fi
-  COPY_IN_PROGRESS=true
 }
 
 function target::state() {
