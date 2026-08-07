@@ -305,6 +305,15 @@ teardown() {
   [[ "$output" == *"Unexpected option: --qpe-profile"* ]]
 }
 
+@test "promotion accepts the AMI ID after the option delimiter" {
+  run env \
+    PATH="$MOCK_BIN:$PATH" \
+    "$BATS_TEST_DIRNAME/../ami-promote-to-sales.sh" -- ami-0123456789abcdef0
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Promoted AMI: ami-0fedcba9876543210"* ]]
+}
+
 @test "promotion rejects invalid AMI IDs before calling AWS" {
   run env \
     PATH="$MOCK_BIN:$PATH" \

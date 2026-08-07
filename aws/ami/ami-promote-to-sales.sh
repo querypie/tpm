@@ -515,6 +515,7 @@ function main() {
       ;;
     --)
       shift
+      arguments+=("$@")
       break
       ;;
     -*)
