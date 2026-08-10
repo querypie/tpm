@@ -2,8 +2,8 @@
 
 ## 문서 범위
 
-이 문서는 `aws/ami` 디렉토리에 구현된 AMI 빌드와 검증의 현재 설정 및 실행 동작을 설명합니다.
-AWS Marketplace 판매자 등록, 계정 간 AMI 공유, 리전 간 AMI 복사, 제품 생성은 이 디렉토리에서 자동화하지 않습니다.
+이 문서는 `aws/ami` 디렉토리에 구현된 AMI 빌드, 검증 및 Sales 계정 승격의 현재 설정과 실행 동작을 설명합니다.
+AWS Marketplace 판매자 등록과 제품 생성은 이 디렉토리에서 자동화하지 않습니다.
 
 ## 현재 실행 컨텍스트
 
@@ -36,7 +36,7 @@ VPN이나 네트워크 정책이 이 연결을 차단하는 환경에서는 dire
 
 ## 파일과 호출 관계
 
-사용자가 직접 실행하는 명령은 다음 네 개입니다.
+사용자가 직접 실행하는 명령은 다음 다섯 개입니다.
 
 | 파일 | 현재 동작 |
 |------|-----------|
@@ -44,6 +44,7 @@ VPN이나 네트워크 정책이 이 연결을 차단하는 환경에서는 dire
 | `ami-verify.sh` | `ami-validate.sh`를 실행한 후 해당 AMI로 검증용 EC2 인스턴스를 기동 |
 | `ami-validate.sh` | 현재 계정이 소유한 AMI와 EBS 스냅샷의 구조적 속성을 AWS API로 검사 |
 | `ami-ls.sh` | 현재 AWS CLI 리전에서 소유자와 이름 조건에 맞는 AMI 목록을 출력 |
+| `ami-promote-to-sales.sh` | 검증된 QPE AMI를 Sales 계정의 `us-east-1` 소유 AMI로 복사하고 임시 공유 권한을 회수 |
 
 다음 파일은 위 명령이 내부에서 사용합니다.
 
@@ -69,6 +70,12 @@ ami-verify.sh
 ├── ami-validate.sh
 └── ami-verify.pkr.hcl
     └── validate-image-runtime.sh
+
+ami-promote-to-sales.sh
+├── QPE AMI와 모든 backing snapshot을 Sales에 임시 공유
+├── Sales 계정의 us-east-1 소유 AMI로 비암호화 복사
+├── ami-validate.sh --marketplace-source
+└── QPE AMI와 snapshot의 Sales 공유 권한 회수
 ```
 
 ## AMI 빌드
@@ -215,8 +222,8 @@ AMI_REGION=us-east-1 \
 ```
 
 이 옵션은 AMI를 판매자 계정으로 공유하거나 복사하지 않습니다.
-판매자 계정 ID와 프로파일은 저장소에 설정되어 있지 않습니다.
 실행 시점의 AWS 자격 증명이 해당 AMI를 소유한 계정이어야 합니다.
+Sales 계정 선택과 복사는 별도의 `ami-promote-to-sales.sh`가 고정된 계정과 프로파일로 수행합니다.
 Marketplace 제출, 스캔 실행 및 제품 등록도 이 옵션의 동작 범위에 포함되지 않습니다.
 
 ## AMI 인스턴스 검증
@@ -244,6 +251,58 @@ AMI_REGION=ap-northeast-2 \
 
 `setup.v2.sh --verify-installation`은 최초 부팅 완료 marker, systemd 서비스 상태, 컨테이너 엔진, 설치 버전 및 QueryPie 컨테이너 준비 상태를 확인합니다.
 검증이 끝나면 `manifest.json`에는 검증 타임스탬프, 검증용 이름 및 리전이 기록됩니다.
+
+## Sales 계정으로 Marketplace AMI 승격
+
+`ami-promote-to-sales.sh`는 기능 검증을 통과한 QPE AMI를 Marketplace 제출에 사용할 Sales 소유 AMI로 승격합니다.
+임의 계정이나 리전에 배포하는 용도가 아니므로 다음 값은 스크립트에 고정되어 있으며 옵션이나 환경 변수로 변경할 수 없습니다.
+
+| 항목 | 고정값 |
+|------|--------|
+| QPE 계정 | `142605707876` |
+| QPE AWS CLI 프로파일 | `qpe` |
+| 소스 리전 | `ap-northeast-2` |
+| Sales 계정 | `883790944456` |
+| Sales AWS CLI 프로파일 | `sales` |
+| 대상 리전 | `us-east-1` |
+| 복사 암호화 | 비활성화 |
+
+AWS CLI의 `qpe`, `sales` 프로파일은 저장소 밖에서 미리 설정하고 로그인해야 합니다.
+스크립트는 두 프로파일의 호출 계정 ID를 검사하며 표의 계정과 다르면 어떤 공유 권한도 변경하지 않고 중단합니다.
+
+승격 전에 QPE 자격 증명으로 기능 검증을 완료해야 합니다.
+
+```bash
+AWS_PROFILE=qpe \
+AMI_REGION=ap-northeast-2 \
+  ./ami-verify.sh <qpe-ami-id>
+```
+
+검증에 성공한 동일 AMI ID만 인자로 전달합니다.
+
+```bash
+./ami-promote-to-sales.sh <qpe-ami-id>
+```
+
+스크립트는 다음 순서로 실행됩니다.
+
+1. `qpe`, `sales` 프로파일의 호출 계정 ID와 Sales `us-east-1`의 EBS 기본 암호화 비활성화를 확인합니다.
+2. QPE AMI에 `ami-validate.sh`를 실행하고 모든 backing snapshot ID를 조회합니다.
+3. QPE AMI의 launch permission과 모든 snapshot의 create-volume permission에 Sales 계정을 임시로 추가합니다.
+4. Sales 자격 증명으로 AMI를 `us-east-1`에 비암호화 상태로 복사하고 AMI와 snapshot에 출처 태그를 적용합니다.
+5. Sales AMI가 `available`이 될 때까지 최대 1시간 기다린 뒤 `ami-validate.sh --marketplace-source`를 실행합니다.
+6. 검증에 성공하면 QPE AMI와 모든 backing snapshot에서 Sales 공유 권한을 제거합니다.
+
+동일 QPE AMI에서 생성된 Sales AMI는 `SourceAMI`, `SourceAccount`, `SourceRegion` 태그로 식별합니다.
+같은 릴리스 버전을 다시 빌드해도 기존 Sales AMI 이름과 충돌하지 않도록 Sales AMI 이름에는 소스 AMI ID가 자동으로 추가됩니다.
+스크립트를 다시 실행했을 때 해당 Sales AMI가 이미 존재하면 새 복사를 만들지 않고 기존 AMI를 검증한 뒤 남은 QPE 공유 권한을 회수합니다.
+
+`CopyImage` 호출 전에 실패하면 이전 실행에서 남은 권한을 포함한 임시 Sales 공유 권한 전체를 회수하고 결과를 검증합니다.
+권한 회수에 실패하면 같은 AMI ID로 다시 실행할 수 있도록 남은 권한과 재시도 방법을 오류로 출력합니다.
+Sales AMI가 이미 `available`인 상태에서 최종 검증이 실패해도 원본 접근은 더 이상 필요하지 않으므로 공유 권한을 회수합니다.
+복사가 아직 `pending`인 상태에서 타임아웃 또는 상태 확인 오류가 발생하면 진행 중인 복사를 방해하지 않도록 공유 권한을 유지하며, 같은 AMI ID로 명령을 다시 실행해 검증과 권한 회수를 재개할 수 있습니다.
+`CopyImage` 호출 자체가 오류로 끝나도 AWS가 요청을 접수했을 가능성이 있으므로 공유 권한을 유지합니다.
+동일 AMI ID로 다시 실행하면 같은 client token과 출처 태그로 기존 요청을 재확인하며, 복사 결과가 terminal 상태이면 `retry-N` 이름과 client token으로 대체 AMI를 자동 생성합니다.
 
 ## 최초 부팅 동작
 
@@ -293,10 +352,5 @@ AMI와 EBS 스냅샷의 구조적 속성은 `ami-validate.sh`가 별도로 검�
 다음 작업은 현재 `aws/ami` 스크립트가 수행하지 않습니다.
 
 - AWS CLI 프로파일 또는 Access Key 생성
-- 호출자 계정 ID와 IAM ARN이 QPE 작업 계정과 일치하는지 강제
 - IAM 정책 생성 또는 사용자 연결
-- 판매자 계정 선택과 자격 증명 전환
-- QPE 빌드 계정에서 판매자 계정으로 AMI와 스냅샷 공유
-- 판매자 계정에서 `us-east-1`로 AMI 복사
-- AMI와 스냅샷 태그 재적용
 - AWS Marketplace 제품 생성, 스캔 실행 및 공개 범위 변경
