@@ -2,7 +2,7 @@
 
 ## 조사 기준일
 
-2026-08-07에 확인한 공식 문서를 기준으로 작성했습니다.
+2026-08-13에 확인한 공식 문서를 기준으로 작성했습니다.
 AWS Marketplace 정책과 포털 필드는 변경될 수 있으므로 실제 제출 직전에 다시 확인해야 합니다.
 
 ## AWS Marketplace 공식 문서
@@ -18,6 +18,10 @@ AWS Marketplace 정책과 포털 필드는 변경될 수 있으므로 실제 제
 - [AMI product checklist](https://docs.aws.amazon.com/marketplace/latest/userguide/aws-marketplace-listing-checklist.html): 출시 전 제품과 이미지 점검표
 - [Creating AMI and container product usage instructions](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-container-product-usage-instructions.html): 사용, 상태 점검, 백업, 암호화, 업그레이드 지침 요구 사항
 - [AMI product pricing](https://docs.aws.amazon.com/marketplace/latest/userguide/pricing-ami-products.html): Free, BYOL, Hourly, Usage, Contract 가격 모델
+- [Contract pricing for AMI products](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-contracts.html): tiered와 non-tiered 계약 차원, 기간, 가격 필드
+- [Associating licenses with AMI products](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-license-manager-integration.html): tiered entitlement, CheckoutLicense, 구매자 IAM 권한과 실행 흐름
+- [Subscribing to an AMI contract product](https://docs.aws.amazon.com/marketplace/latest/buyerguide/sub-public-AMI-contract.html): 구매자의 계약 옵션 선택과 License Manager 라이선스 생성
+- [Buying and launching an AMI product](https://docs.aws.amazon.com/marketplace/latest/buyerguide/tutorial-buying-ami.html): 버전·리전 선택과 EC2 실행 절차
 - [Submitting your product for publication](https://docs.aws.amazon.com/marketplace/latest/userguide/product-submission.html): 로고 규격, PLF, 스캔, 검토 기간, 최종 점검
 - [Refunds and cancellations](https://docs.aws.amazon.com/marketplace/latest/userguide/refunds.html): 유료 상품 환불 정책과 연락 방법 요구 사항
 - [Product categories](https://docs.aws.amazon.com/marketplace/latest/buyerguide/buyer-product-categories.html): `Security` 카테고리 정의

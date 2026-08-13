@@ -13,7 +13,8 @@
 AWS는 Free 또는 Paid AMI 상품이 추가 라이선스를 요구하지 않고, 구매자가 상품 사용을 위해 이메일 같은 개인정보를 제공하지 않아도 되어야 한다고 명시합니다.
 
 Marketplace 상품 코드 또는 AWS entitlement를 인식해 Community 권리를 자동 활성화해야 합니다.
-Standard와 Enterprise를 AWS 과금 상품으로 판매하려면 계약 entitlement를 라이선스 용량과 자동 연동해야 합니다.
+Standard는 `Standard10Users`, `Standard15Users`, `Standard20Users` 중 구매한 tier를 License Manager에서 확인하고 각각 10명, 15명, 20명의 활성 사용자 상한을 자동 적용해야 합니다.
+Enterprise를 AWS 과금 상품으로 판매하려면 별도의 계약 entitlement를 라이선스 용량과 자동 연동해야 합니다.
 외부에서 라이선스를 구매하는 현재 흐름을 유지하려면 BYOL을 선택해야 하지만 AWS Marketplace 소프트웨어 과금은 사용할 수 없습니다.
 
 ### 고정 초기 관리자 비밀번호
@@ -29,6 +30,10 @@ AMI 최초 부팅 시 임의 비밀번호를 생성하고 안전하게 조회하
 세 상품이 같은 애플리케이션 이미지를 사용하더라도 AWS Marketplace에서는 서로 다른 상품 코드와 오퍼를 가집니다.
 런타임이 EC2 instance identity document의 Marketplace product code와 entitlement를 검증해 Community, Standard, Enterprise 권리를 정확히 적용해야 합니다.
 현재 저장소에는 이 연동이 보이지 않으므로 구현과 통합 테스트가 필요합니다.
+
+Standard의 tiered entitlement는 구매 AWS 계정에 발급되며 특정 EC2 인스턴스에 고정되지 않습니다.
+계약 기간에는 구매자가 같은 AMI로 여러 인스턴스를 실행할 수 있으므로, 사용자 상한이 설치별인지 구매 계정 전체인지 출시 전에 확정해야 합니다.
+구매 계정 전체 상한이라면 여러 인스턴스가 공유하는 별도 라이선스 상태 관리가 필요합니다.
 
 ### 상품명과 AMI 설명의 정합성
 

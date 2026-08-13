@@ -8,11 +8,40 @@
 | 상품 | 제안 가격 모델 | 이유 | 확정할 사항 |
 |------|----------------|------|-------------|
 | Community | Free | 소프트웨어 요금 없이 최대 5명의 소규모 자체 운영 환경 제공 | Marketplace 실행 시 외부 신청 없이 자동 사용 가능해야 함 |
-| Standard | AMI with contract pricing | 1년 단위, 최소 10명의 사용자 기반 라이선스와 가장 잘 맞음 | 계약 차원, 수량, 12개월 가격, entitlement 연동 |
+| Standard | AMI with contract pricing, tiered entitlement | 1년 단위로 10, 15, 20 users 중 하나를 선택하는 라이선스 | 각 tier의 12개월 가격, License Manager 연동 |
 | Enterprise | AMI with contract pricing 및 private offer | 고객별 사용자·사용량·사이트·DR 조건 협상에 적합 | 공개 가격 노출 여부, 계약 차원, private offer 운영 정책 |
 
 Standard나 Enterprise를 BYOL로 등록하면 외부 라이선스 URL을 사용할 수 있지만 AWS Marketplace는 소프트웨어 요금을 청구하지 않습니다.
 AWS 통합 청구가 목표라면 BYOL 대신 contract pricing과 AWS entitlement 또는 License Manager 연동을 사용해야 합니다.
+
+## Standard Edition 계약 차원
+
+Standard Edition은 구매자가 임의 수량을 입력하는 configurable entitlement가 아니라, 미리 정의된 세 옵션 중 하나만 선택하는 tiered entitlement를 사용합니다.
+10 users를 최저 기본 플랜으로 제공하지만 구매 화면의 자동 선택값으로 가정하지 않습니다.
+구매자는 계약 생성 전에 10, 15, 20 users 중 하나를 명시적으로 선택해야 합니다.
+
+| 입력 항목 | 공통 값 |
+|-----------|---------|
+| Pricing model | `AMI with contract pricing` |
+| License model | `Tiered` |
+| Contracts category | `Users` |
+| Contract duration | `12 months` |
+| Allow multiple purchases | `false` |
+| Quantity | `1` |
+
+| API name | Display name | 구매 권리 | 12개월 가격 |
+|----------|--------------|-----------|-------------|
+| `Standard10Users` | `Standard 10 Users` | 최대 10 active users | `[STANDARD_10_USERS_12_MONTH_RATE_USD]` |
+| `Standard15Users` | `Standard 15 Users` | 최대 15 active users | `[STANDARD_15_USERS_12_MONTH_RATE_USD]` |
+| `Standard20Users` | `Standard 20 Users` | 최대 20 active users | `[STANDARD_20_USERS_12_MONTH_RATE_USD]` |
+
+API name은 Public 출시 후 변경할 수 없으므로 애플리케이션의 entitlement 이름과 정확히 일치시켜야 합니다.
+License Manager entitlement의 Unit은 `None`이며, QueryPie는 `CheckoutLicense` 응답에 포함된 단일 API name을 10, 15, 20명의 활성 사용자 상한으로 변환합니다.
+유효한 entitlement가 없거나 만료되면 10 users를 자동 부여하지 않고 Standard Edition 활성화를 차단해야 합니다.
+
+고정 tier를 선택한 이유는 세 옵션만 허용하기 위해서입니다.
+Configurable entitlement를 사용하면 구매자가 임의 수량을 입력할 수 있으므로 10, 15, 20 users로 제한할 수 없습니다.
+세부 PLF 입력값과 구매·실행 흐름은 [products/standard/12-contract-pricing.md](products/standard/12-contract-pricing.md)를 따릅니다.
 
 ## 공통 버전 정보
 
@@ -94,7 +123,7 @@ AWS는 단순 실행 절차 외에도 다음 내용을 요구합니다.
 
 | 입력 항목 | Community | Standard | Enterprise |
 |-----------|-----------|----------|------------|
-| Pricing | Free | 12개월 contract dimension과 가격 필요 | 공개 계약 차원 또는 private offer 정책 필요 |
+| Pricing | Free | 10/15/20 users tier의 12개월 가격 필요 | 공개 계약 차원 또는 private offer 정책 필요 |
 | EULA | [QueryPie EULA](https://www.querypie.com/eula) | [QueryPie EULA](https://www.querypie.com/eula) | [QueryPie EULA](https://www.querypie.com/eula); private offer의 추가 협상 조건은 별도 검토 |
 | Country availability | 판매 가능 국가 확정 | 판매 가능 국가 확정 | 판매 가능 국가 확정 |
 | Refund policy | 소프트웨어 요금 없음, AWS 인프라 요금 제외, `support@querypie.com` 명시 | 환불 조건과 기간 확정, 연락처는 `support@querypie.com` | private offer 환불·해지 조건 확정, 연락처는 `support@querypie.com` |
@@ -111,6 +140,9 @@ AWS 인프라 요금은 QueryPie 소프트웨어 환불과 별개임을 명시�
 - [Creating AMI-based products](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-single-ami-products.html)
 - [Managing versions for AMI-based products](https://docs.aws.amazon.com/marketplace/latest/userguide/single-ami-versions.html)
 - [AMI product pricing](https://docs.aws.amazon.com/marketplace/latest/userguide/pricing-ami-products.html)
+- [Contract pricing for AMI products](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-contracts.html)
+- [Associating licenses with AMI products](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-license-manager-integration.html)
+- [Subscribing to an AMI contract product](https://docs.aws.amazon.com/marketplace/latest/buyerguide/sub-public-AMI-contract.html)
 - [Creating AMI and container product usage instructions](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-container-product-usage-instructions.html)
 - [Regions and countries](https://docs.aws.amazon.com/marketplace/latest/userguide/regions-and-countries.html)
 - [Refunds and cancellations](https://docs.aws.amazon.com/marketplace/latest/userguide/refunds.html)
