@@ -40,8 +40,9 @@ AWS Marketplace Product SKU는 사용자 수와 관계없이 `QP1201E-SDS-AWS` �
 | `Standard20Users` | `Standard 20 Users` | 최대 20 active users | `12000.000 USD` |
 
 API name은 Public 출시 후 변경할 수 없으므로 애플리케이션의 entitlement 이름과 정확히 일치시켜야 합니다.
-License Manager entitlement의 Unit은 `None`이며, QueryPie는 `CheckoutLicense` 응답에 포함된 단일 API name을 10, 15, 20명의 활성 사용자 상한으로 변환합니다.
-유효한 entitlement가 없거나 만료되면 10 users를 자동 부여하지 않고 Standard Edition 활성화를 차단해야 합니다.
+License Manager entitlement의 Unit은 `None`이며, QueryPie는 `CheckoutLicense`에 가능한 세 API name을 모두 전달합니다.
+AWS가 안내하는 tiered license model과 같이 응답의 `EntitlementsAllowed`에 반환된 구매 API name 하나를 10, 15, 20명의 활성 사용자 상한으로 변환합니다.
+유효한 entitlement가 없거나, 둘 이상이거나, 알 수 없는 이름이거나, 만료되면 10 users를 자동 부여하지 않고 Standard Edition 활성화를 차단해야 합니다.
 
 고정 tier를 선택한 이유는 세 옵션만 허용하기 위해서입니다.
 Configurable entitlement를 사용하면 구매자가 임의 수량을 입력할 수 있으므로 10, 15, 20 users로 제한할 수 없습니다.

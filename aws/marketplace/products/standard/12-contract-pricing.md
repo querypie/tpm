@@ -40,7 +40,11 @@ VAT, GST, 판매세 같은 간접세의 계산, 징수, 청구 주체는 구매�
 ## 애플리케이션 권리 적용
 
 QueryPie는 최초 부팅과 정기 검증 시 AWS Marketplace가 발급한 License Manager 라이선스를 확인합니다.
-애플리케이션은 `CheckoutLicense` 요청에 세 entitlement name을 모두 전달하고 응답에 포함된 하나의 tier를 적용합니다.
+AWS가 안내하는 tiered license model에 따라 애플리케이션은 `CheckoutLicense` 요청에 가능한 세 entitlement name을 모두 전달하고, 응답의 `EntitlementsAllowed`에 반환된 구매 tier를 적용합니다.
+응답에는 `Standard10Users`, `Standard15Users`, `Standard20Users` 중 정확히 하나만 있어야 합니다.
+checkout이 실패하거나 entitlement가 없거나 둘 이상이거나, 알 수 없는 이름이거나, 라이선스가 만료·비활성 상태이면 활성화를 차단합니다.
+계약 갱신 또는 tier 변경을 반영할 수 있도록 checkout을 정기적으로 반복합니다.
+`ListReceivedLicenses`와 `GetLicense`는 받은 라이선스의 조회, 상태 확인 및 문제 진단에 사용합니다.
 
 | 반환된 entitlement | 적용할 활성 사용자 상한 |
 |---------------------|-------------------------|
@@ -48,7 +52,6 @@ QueryPie는 최초 부팅과 정기 검증 시 AWS Marketplace가 발급한 Lice
 | `Standard15Users` | 15 |
 | `Standard20Users` | 20 |
 
-유효한 entitlement가 없거나 만료되면 Standard Edition을 활성화하지 않습니다.
 외부 신청 폼, 이메일 입력 또는 별도 라이선스 파일 업로드를 요구하지 않습니다.
 EC2 인스턴스 프로파일에는 최소한 다음 작업이 필요합니다.
 
@@ -69,7 +72,7 @@ AWS 공식 예시는 갱신과 반환을 위해 `ExtendLicenseConsumption`과 `C
 6. `Continue to Launch`에서 1-Click 또는 EC2 Console을 선택합니다.
 7. EC2 Console을 사용하는 경우 인스턴스 타입, VPC, 서브넷, 보안 그룹, 키 페어, EBS를 설정하고 Marketplace AMI로 인스턴스를 생성합니다.
 8. 인스턴스에 License Manager 조회 권한이 있는 IAM instance profile을 연결합니다.
-9. QueryPie 최초 부팅 서비스가 entitlement를 확인하고 구매한 활성 사용자 상한을 적용합니다.
+9. QueryPie 최초 부팅 서비스가 세 tier를 checkout 요청하고, 응답에 반환된 구매 entitlement 하나의 활성 사용자 상한을 적용합니다.
 
 계약 라이선스는 특정 EC2 인스턴스에 고정되지 않으며 계약 기간에는 같은 AMI로 여러 인스턴스를 실행할 수 있습니다.
 따라서 10, 15, 20 users가 설치별 상한인지 구매 AWS 계정 전체 상한인지 별도로 확정해야 합니다.
@@ -79,8 +82,9 @@ AWS 공식 예시는 갱신과 반환을 위해 `ExtendLicenseConsumption`과 `C
 
 - Limited 상품에서 세 tier가 동시에 노출되고 구매자가 하나만 선택할 수 있습니다.
 - 각 tier 구매 후 License Manager에 예상 API name의 라이선스가 생성됩니다.
+- QueryPie가 세 tier를 checkout 요청했을 때 구매한 entitlement 하나만 반환됩니다.
 - 10, 15, 20 users 상한이 각각 적용됩니다.
-- entitlement가 없거나 만료되면 Standard Edition이 활성화되지 않습니다.
+- entitlement가 없거나, 둘 이상이거나, 알 수 없는 이름이거나, 만료되면 Standard Edition이 활성화되지 않습니다.
 - 계약 변경으로 상위 tier를 선택하면 QueryPie가 갱신된 권리를 반영합니다.
 - AMI 버전과 리전을 선택해 EC2 인스턴스를 정상 생성할 수 있습니다.
 

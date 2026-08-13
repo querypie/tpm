@@ -13,7 +13,7 @@
 AWS는 Free 또는 Paid AMI 상품이 추가 라이선스를 요구하지 않고, 구매자가 상품 사용을 위해 이메일 같은 개인정보를 제공하지 않아도 되어야 한다고 명시합니다.
 
 Marketplace 상품 코드 또는 AWS entitlement를 인식해 Community 권리를 자동 활성화해야 합니다.
-Standard는 `Standard10Users`, `Standard15Users`, `Standard20Users` 중 구매한 tier를 License Manager에서 확인하고 각각 10명, 15명, 20명의 활성 사용자 상한을 자동 적용해야 합니다.
+Standard는 `Standard10Users`, `Standard15Users`, `Standard20Users`를 License Manager에 checkout 요청하고, 응답에 반환된 구매 tier 하나에 따라 각각 10명, 15명, 20명의 활성 사용자 상한을 자동 적용해야 합니다.
 Enterprise를 AWS 과금 상품으로 판매하려면 별도의 계약 entitlement를 라이선스 용량과 자동 연동해야 합니다.
 외부에서 라이선스를 구매하는 현재 흐름을 유지하려면 BYOL을 선택해야 하지만 AWS Marketplace 소프트웨어 과금은 사용할 수 없습니다.
 

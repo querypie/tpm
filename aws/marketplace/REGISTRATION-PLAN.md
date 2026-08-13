@@ -56,7 +56,7 @@ VAT, GST, 판매세와 AWS 인프라 요금은 소프트웨어 가격과 별도�
 ## 라이선스 적용
 
 Community는 추가 신청 폼, 이메일 입력 또는 별도 라이선스 파일 없이 최대 5명의 권리를 자동 활성화해야 합니다.
-Standard는 AWS License Manager의 `CheckoutLicense` 응답에서 구매한 dimension을 확인합니다.
+Standard는 AWS License Manager의 tiered license model에 따라 가능한 세 dimension을 `CheckoutLicense`에 전달하고, 응답에 반환된 구매 dimension 하나를 확인합니다.
 
 | Entitlement | 활성 사용자 상한 |
 |-------------|------------------|
@@ -64,7 +64,7 @@ Standard는 AWS License Manager의 `CheckoutLicense` 응답에서 구매한 dime
 | `Standard15Users` | 15 |
 | `Standard20Users` | 20 |
 
-Standard entitlement가 없거나 만료되면 10 users를 기본으로 부여하지 않습니다.
+Standard entitlement가 없거나, 둘 이상이거나, 알 수 없는 이름이거나, 만료되면 10 users를 기본으로 부여하지 않습니다.
 이 경우 Standard Edition 활성화를 차단하고 구매 또는 갱신 안내를 제공합니다.
 
 Contract 라이선스는 특정 EC2 인스턴스에 고정되지 않습니다.
