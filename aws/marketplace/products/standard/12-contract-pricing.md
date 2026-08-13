@@ -3,6 +3,7 @@
 ## 결정
 
 QueryPie ACP Standard Edition은 `AMI with contract pricing`과 tiered entitlement를 사용합니다.
+AWS Marketplace Product SKU는 `QP1201E-SDS-AWS` 하나만 사용합니다.
 구매자는 12개월 계약을 생성할 때 10, 15, 20 users 중 하나를 선택합니다.
 10 users는 최저 기본 플랜이지만 AWS 구매 화면에서 자동 선택되는 값으로 가정하지 않습니다.
 
@@ -10,6 +11,7 @@ QueryPie ACP Standard Edition은 `AMI with contract pricing`과 tiered entitleme
 
 | Field | Value |
 |-------|-------|
+| Product SKU | `QP1201E-SDS-AWS` |
 | Pricing model | `AMI with contract pricing` |
 | License model | `Tiered` |
 | Contracts category | `Users` |
@@ -28,6 +30,7 @@ QueryPie ACP Standard Edition은 `AMI with contract pricing`과 tiered entitleme
 세 API name은 Public 출시 후 변경하지 않습니다.
 세 tier 모두 같은 계약 기간을 제공해야 합니다.
 12-month rate에는 숫자 금액을 Product Load Form 또는 Partner Central이 요구하는 형식으로 입력합니다.
+사용자 수별 파생 SKU와 `QP1201E-SAS-AWS`는 AWS Marketplace에 등록하지 않습니다.
 
 Public Listing에는 세전 소프트웨어 가격을 USD로 입력합니다.
 VAT, GST, 판매세 같은 간접세의 계산, 징수, 청구 주체는 구매자 국가와 거래 조건에 따라 달라지므로 VAT를 별도 계약 차원으로 추가하지 않습니다.

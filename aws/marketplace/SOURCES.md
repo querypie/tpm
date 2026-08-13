@@ -30,6 +30,7 @@ AWS Marketplace 정책과 포털 필드는 변경될 수 있으므로 실제 제
 
 ## QueryPie 공식 문서
 
+- [QueryPie ACP 가격 정책 - 2026 최신](https://querypie.atlassian.net/wiki/spaces/QPBusiness/pages/2311061525/QueryPie+ACP+-+2026): Community와 Standard의 기준 SKU, 기본 사용자 수, 연간 구독 정책
 - [QueryPie EULA](https://www.querypie.com/eula): 모든 에디션의 일반 사용권 조항과 Community License 추가 조항
 - [QueryPie ACP product page](https://www.querypie.com/en/solutions/acp): ACP 범위, 핵심 기능, 통합 대상
 - [QueryPie ACP overview](https://docs.querypie.com/en/overview): 세분화된 접근 제어, 통합 인터페이스, 모니터링, 워크플로

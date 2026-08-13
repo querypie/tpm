@@ -14,7 +14,7 @@ AWS 판매자 가이드와 Catalog API의 한도가 다른 경우, 판매자 포
 | 입력 항목 | 필수 여부 | 적용 기준 | 파일 |
 |-----------|-----------|-----------|------|
 | Product title | 필수 | ASCII, 최대 72자, 상품과 에디션을 이름만으로 식별 | `01-product-title.md` |
-| SKU | 선택 | 최대 100자, 구매자에게 비노출 | `02-sku.md` |
+| SKU | 선택 | 최대 100자, 상품 단위 내부 참조값이며 가격 dimension과 분리 | `02-sku.md` |
 | Short description | 필수 | API 최대 1,000자, 본 초안은 작성 가이드의 350자 이내 적용 | `03-short-description.md` |
 | Long description | 필수 | 최대 5,000자, 기능·효익·사용 방식·구체 정보 포함 | `04-long-description.md` |
 | Product logo image URL | 필수 | 공개 S3 HTTPS URL, 투명 또는 흰 배경, 120~640px, 1:1 또는 2:1 | `05-product-logo.md` |

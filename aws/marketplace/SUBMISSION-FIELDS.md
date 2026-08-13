@@ -17,6 +17,8 @@ AWS 통합 청구가 목표라면 BYOL 대신 contract pricing과 AWS entitlemen
 ## Standard Edition 계약 차원
 
 Standard Edition은 구매자가 임의 수량을 입력하는 configurable entitlement가 아니라, 미리 정의된 세 옵션 중 하나만 선택하는 tiered entitlement를 사용합니다.
+AWS Marketplace Product SKU는 사용자 수와 관계없이 `QP1201E-SDS-AWS` 하나만 사용합니다.
+10, 15, 20 users는 별도 SKU가 아니라 Contract pricing dimension으로 등록합니다.
 10 users를 최저 기본 플랜으로 제공하지만 구매 화면의 자동 선택값으로 가정하지 않습니다.
 구매자는 계약 생성 전에 10, 15, 20 users 중 하나를 명시적으로 선택해야 합니다.
 
@@ -45,6 +47,10 @@ License Manager entitlement의 Unit은 `None`이며, QueryPie는 `CheckoutLicens
 Configurable entitlement를 사용하면 구매자가 임의 수량을 입력할 수 있으므로 10, 15, 20 users로 제한할 수 없습니다.
 세부 PLF 입력값과 구매·실행 흐름은 [products/standard/12-contract-pricing.md](products/standard/12-contract-pricing.md)를 따릅니다.
 
+`QP1201E-SDS-AWS10`, `QP1201E-SDS-AWS15`, `QP1201E-SDS-AWS20`은 AWS Marketplace SKU로 등록하지 않습니다.
+`QP1201E-SAS-AWS`도 별도 Marketplace SKU나 dimension으로 등록하지 않습니다.
+내부 ERP에서 추가 사용자 매출을 분해해야 할 때만 내부 관리 코드로 사용할 수 있습니다.
+
 Public Listing에는 세전 소프트웨어 가격을 USD로 입력합니다.
 VAT, GST, 판매세 같은 간접세의 계산, 징수, 청구 주체는 구매자 국가, 판매자 소재지, 등록 상태와 Marketplace 운영 법인에 따라 달라집니다.
 따라서 VAT를 별도 가격 차원으로 추가하지 않고 상품 설명과 계약에는 `applicable taxes are additional`로 안내합니다.
@@ -54,7 +60,7 @@ VAT, GST, 판매세 같은 간접세의 계산, 징수, 청구 주체는 구매�
 
 | 입력 항목 | 제안 또는 현재 값 | 상태 |
 |-----------|-------------------|------|
-| Version title | 실제 출시 버전, 예: `11.6.5` | 출시 시 확정 |
+| Version title | `11.5.7`, `11.6.4` | 두 버전 등록 계획 확정, AMI 준비 상태 확인 필요 |
 | Release notes | 해당 버전의 보안, 기능, 수정 사항과 업데이트 중요도 | 작성 필요 |
 | Delivery option | `AMI (standalone)` | 제안 확정 |
 | Architecture | `x86_64` | 초기 출시 제안 |
