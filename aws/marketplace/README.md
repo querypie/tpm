@@ -15,7 +15,7 @@ Community, Standard, Enterprise가 같은 컨테이너 이미지를 사용하더
 | 상품 | 제안 가격 모델 | 상태 |
 |------|----------------|------|
 | QueryPie ACP Community Edition | Free | 라이선스 자동화 선행 필요 |
-| QueryPie ACP Standard Edition | AMI with contract pricing | 10/15/20 users tier 확정, 12개월 가격과 권리 연동 필요 |
+| QueryPie ACP Standard Edition | AMI with contract pricing | 10/15/20 users tier와 12개월 선불 가격 확정, 권리 연동 필요 |
 | QueryPie ACP Enterprise Edition | AMI with contract pricing 및 private offer | 계약 차원, 지원 범위, 공개 가격 정책 확정 필요 |
 
 가격 모델 선택 근거와 대안은 [SUBMISSION-FIELDS.md](SUBMISSION-FIELDS.md)에 정리했습니다.

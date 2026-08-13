@@ -8,7 +8,7 @@
 | 상품 | 제안 가격 모델 | 이유 | 확정할 사항 |
 |------|----------------|------|-------------|
 | Community | Free | 소프트웨어 요금 없이 최대 5명의 소규모 자체 운영 환경 제공 | Marketplace 실행 시 외부 신청 없이 자동 사용 가능해야 함 |
-| Standard | AMI with contract pricing, tiered entitlement | 1년 단위로 10, 15, 20 users 중 하나를 선택하는 라이선스 | 각 tier의 12개월 가격, License Manager 연동 |
+| Standard | AMI with contract pricing, tiered entitlement | 1년 단위로 10, 15, 20 users 중 하나를 선택하는 라이선스 | License Manager 연동 |
 | Enterprise | AMI with contract pricing 및 private offer | 고객별 사용자·사용량·사이트·DR 조건 협상에 적합 | 공개 가격 노출 여부, 계약 차원, private offer 운영 정책 |
 
 Standard나 Enterprise를 BYOL로 등록하면 외부 라이선스 URL을 사용할 수 있지만 AWS Marketplace는 소프트웨어 요금을 청구하지 않습니다.
@@ -26,14 +26,16 @@ Standard Edition은 구매자가 임의 수량을 입력하는 configurable enti
 | License model | `Tiered` |
 | Contracts category | `Users` |
 | Contract duration | `12 months` |
+| Billing | 12개월 사용료 선불 |
+| Unit price basis | 사용자 1명당 연간 `USD 600`, 관련 세금 별도 |
 | Allow multiple purchases | `false` |
 | Quantity | `1` |
 
 | API name | Display name | 구매 권리 | 12개월 가격 |
 |----------|--------------|-----------|-------------|
-| `Standard10Users` | `Standard 10 Users` | 최대 10 active users | `[STANDARD_10_USERS_12_MONTH_RATE_USD]` |
-| `Standard15Users` | `Standard 15 Users` | 최대 15 active users | `[STANDARD_15_USERS_12_MONTH_RATE_USD]` |
-| `Standard20Users` | `Standard 20 Users` | 최대 20 active users | `[STANDARD_20_USERS_12_MONTH_RATE_USD]` |
+| `Standard10Users` | `Standard 10 Users` | 최대 10 active users | `6000.000 USD` |
+| `Standard15Users` | `Standard 15 Users` | 최대 15 active users | `9000.000 USD` |
+| `Standard20Users` | `Standard 20 Users` | 최대 20 active users | `12000.000 USD` |
 
 API name은 Public 출시 후 변경할 수 없으므로 애플리케이션의 entitlement 이름과 정확히 일치시켜야 합니다.
 License Manager entitlement의 Unit은 `None`이며, QueryPie는 `CheckoutLicense` 응답에 포함된 단일 API name을 10, 15, 20명의 활성 사용자 상한으로 변환합니다.
@@ -42,6 +44,11 @@ License Manager entitlement의 Unit은 `None`이며, QueryPie는 `CheckoutLicens
 고정 tier를 선택한 이유는 세 옵션만 허용하기 위해서입니다.
 Configurable entitlement를 사용하면 구매자가 임의 수량을 입력할 수 있으므로 10, 15, 20 users로 제한할 수 없습니다.
 세부 PLF 입력값과 구매·실행 흐름은 [products/standard/12-contract-pricing.md](products/standard/12-contract-pricing.md)를 따릅니다.
+
+Public Listing에는 세전 소프트웨어 가격을 USD로 입력합니다.
+VAT, GST, 판매세 같은 간접세의 계산, 징수, 청구 주체는 구매자 국가, 판매자 소재지, 등록 상태와 Marketplace 운영 법인에 따라 달라집니다.
+따라서 VAT를 별도 가격 차원으로 추가하지 않고 상품 설명과 계약에는 `applicable taxes are additional`로 안내합니다.
+실제 세금 처리는 AWS Marketplace Seller Tax Grid와 QueryPie 세무 검토 결과를 따릅니다.
 
 ## 공통 버전 정보
 
@@ -123,7 +130,7 @@ AWS는 단순 실행 절차 외에도 다음 내용을 요구합니다.
 
 | 입력 항목 | Community | Standard | Enterprise |
 |-----------|-----------|----------|------------|
-| Pricing | Free | 10/15/20 users tier의 12개월 가격 필요 | 공개 계약 차원 또는 private offer 정책 필요 |
+| Pricing | Free | 10 users `6000`, 15 users `9000`, 20 users `12000` USD, 12개월 선불 | 공개 계약 차원 또는 private offer 정책 필요 |
 | EULA | [QueryPie EULA](https://www.querypie.com/eula) | [QueryPie EULA](https://www.querypie.com/eula) | [QueryPie EULA](https://www.querypie.com/eula); private offer의 추가 협상 조건은 별도 검토 |
 | Country availability | 판매 가능 국가 확정 | 판매 가능 국가 확정 | 판매 가능 국가 확정 |
 | Refund policy | 소프트웨어 요금 없음, AWS 인프라 요금 제외, `support@querypie.com` 명시 | 환불 조건과 기간 확정, 연락처는 `support@querypie.com` | private offer 환불·해지 조건 확정, 연락처는 `support@querypie.com` |

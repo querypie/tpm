@@ -14,18 +14,25 @@ QueryPie ACP Standard Edition은 `AMI with contract pricing`과 tiered entitleme
 | License model | `Tiered` |
 | Contracts category | `Users` |
 | Contract duration | `12 months` |
+| Billing | 12개월 사용료 선불 |
+| Unit price basis | 사용자 1명당 연간 `USD 600`, 관련 세금 별도 |
 | Contracts Dimension Allow Multiple Purchases | `false` |
 | Contracts Dimension Quantity | `1` |
 
 | API name | Display name | Description | Entitlement unit | 12-month rate |
 |----------|--------------|-------------|------------------|---------------|
-| `Standard10Users` | `Standard 10 Users` | `QueryPie ACP Standard Edition for up to 10 active users` | `None` | `[STANDARD_10_USERS_12_MONTH_RATE_USD]` |
-| `Standard15Users` | `Standard 15 Users` | `QueryPie ACP Standard Edition for up to 15 active users` | `None` | `[STANDARD_15_USERS_12_MONTH_RATE_USD]` |
-| `Standard20Users` | `Standard 20 Users` | `QueryPie ACP Standard Edition for up to 20 active users` | `None` | `[STANDARD_20_USERS_12_MONTH_RATE_USD]` |
+| `Standard10Users` | `Standard 10 Users` | `QueryPie ACP Standard Edition for up to 10 active users` | `None` | `6000.000 USD` |
+| `Standard15Users` | `Standard 15 Users` | `QueryPie ACP Standard Edition for up to 15 active users` | `None` | `9000.000 USD` |
+| `Standard20Users` | `Standard 20 Users` | `QueryPie ACP Standard Edition for up to 20 active users` | `None` | `12000.000 USD` |
 
 세 API name은 Public 출시 후 변경하지 않습니다.
 세 tier 모두 같은 계약 기간을 제공해야 합니다.
-대괄호로 표시한 USD 가격을 확정한 뒤 Product Load Form 또는 Partner Central에 입력합니다.
+12-month rate에는 숫자 금액을 Product Load Form 또는 Partner Central이 요구하는 형식으로 입력합니다.
+
+Public Listing에는 세전 소프트웨어 가격을 USD로 입력합니다.
+VAT, GST, 판매세 같은 간접세의 계산, 징수, 청구 주체는 구매자 국가와 거래 조건에 따라 달라지므로 VAT를 별도 계약 차원으로 추가하지 않습니다.
+상품과 계약 문안에는 `Applicable taxes are additional and handled according to AWS Marketplace tax rules.`를 사용합니다.
+세금 처리는 AWS Marketplace Seller Tax Grid와 QueryPie 세무 검토 결과를 따릅니다.
 
 ## 애플리케이션 권리 적용
 
@@ -77,6 +84,8 @@ AWS 공식 예시는 갱신과 반환을 위해 `ExtendLicenseConsumption`과 `C
 ## 공식 근거
 
 - [Contract pricing for AMI products](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-contracts.html)
+- [Product pricing](https://docs.aws.amazon.com/marketplace/latest/userguide/pricing.html)
 - [Associating licenses with AMI products](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-license-manager-integration.html)
 - [Subscribing to an AMI contract product](https://docs.aws.amazon.com/marketplace/latest/buyerguide/sub-public-AMI-contract.html)
 - [Buying and launching an AMI product](https://docs.aws.amazon.com/marketplace/latest/buyerguide/tutorial-buying-ami.html)
+- [AWS Marketplace Seller Tax Grid](https://aws.amazon.com/tax-help/marketplace-sellers/tax-grid/)
