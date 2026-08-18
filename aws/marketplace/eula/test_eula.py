@@ -51,6 +51,7 @@ class EulaPdfTest(unittest.TestCase):
 
             self.assertEqual(result["expected_tokens"], result["actual_tokens"])
             self.assertGreaterEqual(result["pages"], 2)
+            self.assertEqual(result["last_page"], result["pages"])
 
 
 if __name__ == "__main__":

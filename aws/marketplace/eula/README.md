@@ -14,6 +14,7 @@ AWS Marketplace에 제출할 QueryPie Custom EULA PDF를 동일한 형식으로 
 표지 제목은 `End User License Agreement` 한 줄로 표시하고 부제는 `QueryPie Software Products`로 표기합니다.
 문서 버전은 표시하지 않으며 `Last updated: April 10, 2026`과 원문 출처 URL을 표시합니다.
 PDF 생성일은 PDF 메타데이터에 별도로 기록되며 EULA 최종 변경일을 바꾸지 않습니다.
+본문 페이지 푸터는 `Page X of Y` 형식으로 표시하여 문서의 마지막 페이지를 식별할 수 있게 합니다.
 
 ## 파일 구성
 
@@ -84,6 +85,7 @@ make -C aws/marketplace/eula verify
 - 표지 제목이 한 줄이고 부제가 올바른 대소문자로 표시되는지
 - 표지에 `Last updated: April 10, 2026`이 있는지
 - 원문 출처 URL이 표시되고 클릭 가능한지
+- 모든 본문 페이지가 `Page X of Y` 형식이며 마지막 페이지 번호가 전체 페이지 수와 일치하는지
 - PDF 본문 전체가 입력 Markdown과 단어 단위로 일치하는지
 - PDF 제목, 법인명과 Subject 메타데이터가 올바른지
 

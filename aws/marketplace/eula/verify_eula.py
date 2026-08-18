@@ -65,10 +65,17 @@ def verify_pdf(pdf_path: Path, input_path: Path, config_path: Path) -> dict[str,
         raise ValueError("Cover source URL is not a clickable link.")
 
     body_lines: list[str] = []
-    for page in reader.pages[1:]:
+    total_pages = len(reader.pages)
+    for page_number, page in enumerate(reader.pages[1:], start=2):
+        page_text = page.extract_text() or ""
+        expected_footer = f"Page {page_number} of {total_pages}"
+        if expected_footer not in page_text:
+            raise ValueError(f"Page footer is missing: {expected_footer}")
         for line in (page.extract_text() or "").splitlines():
             stripped = line.strip()
-            if stripped == "QUERYPIE EULA" or re.fullmatch(r"Page \d+", stripped):
+            if stripped == "QUERYPIE EULA" or re.fullmatch(
+                r"Page \d+ of \d+", stripped
+            ):
                 continue
             body_lines.append(line)
 
@@ -101,6 +108,7 @@ def verify_pdf(pdf_path: Path, input_path: Path, config_path: Path) -> dict[str,
         "pages": len(reader.pages),
         "expected_tokens": len(expected_tokens),
         "actual_tokens": len(actual_tokens),
+        "last_page": len(reader.pages),
     }
 
 
@@ -110,6 +118,7 @@ def main() -> None:
     print(
         "verified "
         f"pages={result['pages']} body_tokens={result['actual_tokens']} "
+        f"last_footer=Page_{result['last_page']}_of_{result['last_page']} "
         "encrypted=false version_field=false"
     )
 

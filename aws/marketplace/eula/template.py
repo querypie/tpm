@@ -45,6 +45,40 @@ class OutlineParagraph(Paragraph):
         self.outline_text = text
 
 
+class NumberedCanvas(canvas.Canvas):
+    """Render body page numbers after the total PDF page count is known."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+        self._saved_page_states: list[dict[str, object]] = []
+
+    def showPage(self) -> None:
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self) -> None:
+        body_page_count = len(self._saved_page_states)
+        total_page_count = body_page_count + 1
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self._draw_page_number(total_page_count)
+            super().showPage()
+        super().save()
+
+    def _draw_page_number(self, total_page_count: int) -> None:
+        width, _ = A4
+        pdf_page_number = self._pageNumber + 1
+        self.saveState()
+        self.setFillColor(colors.HexColor("#667085"))
+        self.setFont("Helvetica", 7.5)
+        self.drawRightString(
+            width - 24 * mm,
+            11 * mm,
+            f"Page {pdf_page_number} of {total_page_count}",
+        )
+        self.restoreState()
+
+
 class LegalDocumentTemplate(BaseDocTemplate):
     def __init__(self, target: BytesIO) -> None:
         super().__init__(
@@ -69,13 +103,12 @@ class LegalDocumentTemplate(BaseDocTemplate):
         )
         self._outline_sequence = 0
 
-    def _draw_page_chrome(self, pdf: canvas.Canvas, doc: BaseDocTemplate) -> None:
-        width, height = A4
+    def _draw_page_chrome(self, pdf: canvas.Canvas, _doc: BaseDocTemplate) -> None:
+        _, height = A4
         pdf.saveState()
         pdf.setFillColor(colors.HexColor("#667085"))
         pdf.setFont("Helvetica", 7.5)
         pdf.drawString(self.leftMargin, height - 13 * mm, "QUERYPIE EULA")
-        pdf.drawRightString(width - self.rightMargin, 11 * mm, f"Page {doc.page + 1}")
         pdf.restoreState()
 
     def afterFlowable(self, flowable: object) -> None:
@@ -201,7 +234,7 @@ def _build_body(blocks: list[DocumentBlock]) -> BytesIO:
             story.append(Paragraph(escape(block.text), styles["body"]))
 
     story.append(Spacer(1, 4 * mm))
-    document.build(story)
+    document.build(story, canvasmaker=NumberedCanvas)
     data.seek(0)
     return data
 
