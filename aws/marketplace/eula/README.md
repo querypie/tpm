@@ -64,6 +64,12 @@ CLI를 직접 실행하면서 상대 경로를 지정할 수도 있습니다.
 
 상대 경로는 명령을 실행한 현재 디렉토리를 기준으로 해석합니다.
 Makefile은 저장소 루트에서 명령을 실행하므로 `../corp-web-v2/...` 형식을 그대로 사용할 수 있습니다.
+`CONFIG`를 재정의할 때 상대 경로는 저장소 루트를 기준으로 해석하며, 절대 경로도 사용할 수 있습니다.
+
+```bash
+make -C aws/marketplace/eula pdf \
+  CONFIG=aws/marketplace/eula/document.json
+```
 
 ## 원문 보존 원칙
 
