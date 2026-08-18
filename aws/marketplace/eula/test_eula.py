@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from build_eula import load_document
+from build_eula import EULA_DIR, default_output, load_document
 from template import render_pdf
 from verify_eula import verify_pdf
 
@@ -52,6 +52,9 @@ class EulaPdfTest(unittest.TestCase):
             self.assertEqual(result["expected_tokens"], result["actual_tokens"])
             self.assertGreaterEqual(result["pages"], 2)
             self.assertEqual(result["last_page"], result["pages"])
+            self.assertEqual(
+                default_output(metadata), EULA_DIR / "eula-2026-04-10.pdf"
+            )
 
 
 if __name__ == "__main__":

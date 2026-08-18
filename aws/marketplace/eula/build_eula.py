@@ -18,9 +18,8 @@ from template import DocumentBlock, DocumentMetadata, render_pdf
 
 
 EULA_DIR = Path(__file__).resolve().parent
-REPO_ROOT = EULA_DIR.parents[2]
 DEFAULT_INPUT = (
-    REPO_ROOT.parent / "corp-web-v2/src/content/legal/eula/en/index.md"
+    EULA_DIR.parents[3] / "corp-web-v2/src/content/legal/eula/en/index.md"
 )
 DEFAULT_CONFIG = EULA_DIR / "document.json"
 
@@ -44,7 +43,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        help="Output PDF path. Defaults to output/pdf/eula-<last-updated>.pdf.",
+        help="Output PDF path. Defaults beside this script as eula-<last-updated>.pdf.",
     )
     return parser.parse_args()
 
@@ -121,7 +120,7 @@ def load_document(
 
 
 def default_output(metadata: DocumentMetadata) -> Path:
-    return REPO_ROOT / "output/pdf" / f"eula-{metadata.last_updated}.pdf"
+    return EULA_DIR / f"eula-{metadata.last_updated}.pdf"
 
 
 def main() -> None:

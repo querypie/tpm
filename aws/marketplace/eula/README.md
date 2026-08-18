@@ -5,7 +5,7 @@ AWS Marketplace에 제출할 QueryPie Custom EULA PDF를 동일한 형식으로 
 
 ## 기준 정보
 
-- 원문 기본 경로: `../corp-web-v2/src/content/legal/eula/en/index.md`
+- 원문 기본 경로: `../../../../corp-web-v2/src/content/legal/eula/en/index.md`
 - 최종 변경일: `2026-04-10`
 - 법인명: `CHEQUER Global, Inc.`
 - 출처: `https://www.querypie.com/eula`
@@ -20,13 +20,15 @@ PDF 생성일은 PDF 메타데이터에 별도로 기록되며 EULA 최종 변�
 
 ```text
 aws/marketplace/eula/
+├── .gitignore
 ├── README.md
 ├── Makefile
 ├── document.json
 ├── build_eula.py
 ├── template.py
 ├── verify_eula.py
-└── test_eula.py
+├── test_eula.py
+└── eula-2026-04-10.pdf  # 생성 파일, Git 제외
 ```
 
 - `document.json`: 표지 정보와 마지막 변경일을 명시합니다.
@@ -37,38 +39,32 @@ aws/marketplace/eula/
 
 ## 생성
 
-저장소 루트에서 다음 명령을 실행합니다.
+먼저 Makefile이 있는 EULA 디렉토리로 이동한 후 모든 명령을 실행합니다.
 
 ```bash
-make -C aws/marketplace/eula pdf
+cd aws/marketplace/eula
+make pdf
 ```
 
-기본 출력 위치는 `output/pdf/eula-2026-04-10.pdf`입니다.
-`output/`과 `tmp/`는 로컬 검토 산출물이므로 Git에 포함하지 않습니다.
+기본 출력 파일은 Makefile과 같은 디렉토리의 `eula-2026-04-10.pdf`입니다.
+이 디렉토리의 `.gitignore`에서 `*.pdf`와 `__pycache__/`를 제외합니다.
+저장소 최상위 디렉토리나 별도 `output/` 디렉토리에는 산출물을 만들지 않습니다.
 
-CLI를 직접 실행하면서 상대 경로를 지정할 수도 있습니다.
+CLI를 직접 실행할 때도 EULA 디렉토리에서 실행합니다.
 
 ```bash
-./aws/marketplace/eula/build_eula.py \
-  --input ../corp-web-v2/src/content/legal/eula/en/index.md \
-  --output output/pdf/eula-2026-04-10.pdf
+cd aws/marketplace/eula
+./build_eula.py \
+  --input ../../../../corp-web-v2/src/content/legal/eula/en/index.md \
+  --output eula-2026-04-10.pdf
 ```
 
-임시로 복제한 Markdown도 같은 방식으로 사용할 수 있습니다.
+상대 경로는 Makefile이 있는 `aws/marketplace/eula/`를 기준으로 해석합니다.
+원문에는 `../../../../corp-web-v2/...` 형식을 사용합니다.
+`CONFIG`를 재정의할 때 상대 경로는 EULA 디렉토리를 기준으로 해석하며, 절대 경로도 사용할 수 있습니다.
 
 ```bash
-./aws/marketplace/eula/build_eula.py \
-  --input /tmp/querypie-marketplace-eula.md \
-  --output output/pdf/eula-2026-04-10.pdf
-```
-
-상대 경로는 명령을 실행한 현재 디렉토리를 기준으로 해석합니다.
-Makefile은 저장소 루트에서 명령을 실행하므로 `../corp-web-v2/...` 형식을 그대로 사용할 수 있습니다.
-`CONFIG`를 재정의할 때 상대 경로는 저장소 루트를 기준으로 해석하며, 절대 경로도 사용할 수 있습니다.
-
-```bash
-make -C aws/marketplace/eula pdf \
-  CONFIG=aws/marketplace/eula/document.json
+make pdf CONFIG=document.json
 ```
 
 ## 원문 보존 원칙
@@ -80,8 +76,8 @@ make -C aws/marketplace/eula pdf \
 ## 검증
 
 ```bash
-make -C aws/marketplace/eula test
-make -C aws/marketplace/eula verify
+make test
+make verify
 ```
 
 검증 명령은 다음 항목을 확인합니다.
@@ -95,11 +91,7 @@ make -C aws/marketplace/eula verify
 - PDF 본문 전체가 입력 Markdown과 단어 단위로 일치하는지
 - PDF 제목, 법인명과 Subject 메타데이터가 올바른지
 
-페이지를 PNG로 렌더링해 검토하려면 Poppler의 `pdftoppm`이 설치된 환경에서 실행합니다.
-
-```bash
-make -C aws/marketplace/eula preview
-```
+생성된 PDF는 운영체제의 PDF 뷰어에서 직접 열어 검토합니다. 별도 미리보기 파일은 생성하지 않습니다.
 
 ## 변경 절차
 

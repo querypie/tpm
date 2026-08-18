@@ -21,8 +21,3 @@
 
 # Ignore AWS private key files
 *.pem
-
-# Ignore locally generated review artifacts
-/output/
-/tmp/
-__pycache__/
