@@ -4,6 +4,7 @@
 
 | Resource name | URL |
 |---------------|-----|
+| QueryPie ACP AWS Marketplace Usage Guide | [AWS_MARKETPLACE_USAGE_GUIDE_URL] |
 | QueryPie ACP Documentation | https://docs.querypie.com/en |
 | QueryPie ACP Administrator Manual | https://docs.querypie.com/en/administrator-manual |
 | QueryPie ACP User Manual | https://docs.querypie.com/en/user-manual |
@@ -13,6 +14,7 @@
 
 | 자료명 | URL |
 |--------|-----|
+| QueryPie ACP AWS Marketplace 사용 가이드 | [AWS_MARKETPLACE_USAGE_GUIDE_URL_KO] |
 | QueryPie ACP 제품 문서 | https://docs.querypie.com/ko |
 | QueryPie ACP 관리자 매뉴얼 | https://docs.querypie.com/ko/administrator-manual |
 | QueryPie ACP 사용자 매뉴얼 | https://docs.querypie.com/ko/user-manual |

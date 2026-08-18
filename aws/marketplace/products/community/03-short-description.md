@@ -2,13 +2,15 @@
 
 ## English - AWS source
 
-QueryPie ACP Community Edition is a self-managed access control platform for up to five active users, delivered as a preconfigured AMI.
-It governs databases, servers, Kubernetes, and MCP tools with least-privilege policies, approvals, and audit trails, plus a browser-based Web SQL Editor, Web Terminal, and Kubernetes Web Client (beta).
+QueryPie ACP Community Edition is a production-ready, self-managed access control platform delivered as a preconfigured AMI.
+It is available for ongoing use and governs databases, servers, Kubernetes, and MCP tools with policies, approvals, and audit trails.
+Its only edition-level limit is a maximum of five active users.
 
 ## 한국어 리뷰용 번역
 
-QueryPie ACP Community Edition은 최대 5명의 활성 사용자를 위한 자체 운영형 접근 제어 플랫폼으로, 사전 구성된 AMI로 제공됩니다.
-데이터베이스, 서버, Kubernetes, MCP 도구에 최소 권한 정책, 승인, 감사 추적을 적용하며 브라우저 기반의 Web SQL Editor, Web Terminal, Kubernetes Web Client(베타)를 제공합니다.
+QueryPie ACP Community Edition은 사전 구성된 AMI로 제공되는 프로덕션용 자체 운영형 접근 제어 플랫폼입니다.
+지속적으로 사용할 수 있으며 데이터베이스, 서버, Kubernetes, MCP 도구에 정책, 승인, 감사 추적을 적용합니다.
+유일한 에디션 한도는 최대 5명의 활성 사용자입니다.
 
 ## 검증
 

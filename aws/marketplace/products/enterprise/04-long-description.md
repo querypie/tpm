@@ -13,7 +13,10 @@ Proxy-based controls help organizations enforce policy while reducing reliance o
 
 The product is delivered as a preconfigured AMI on Amazon Linux 2023 and runs containerized application, database, and cache components in the buyer's AWS account.
 Enterprise agreements can address negotiated user or usage scope, site and disaster recovery licensing, and premium support through the QueryPie Customer Portal.
-Exact services, response targets, and commercial terms follow the applicable AWS Marketplace offer and EULA.
+This product is sold only through buyer-specific AWS Marketplace private offers and has no public offer.
+After accepting a private offer, customers receive a signed `.crt` file for the negotiated rights and upload it to the web console.
+The QueryPie ACP container validates the license locally using PKI and does not require an ongoing connection to an external license service after activation.
+Exact services, response targets, pricing, and commercial terms follow the accepted private offer and EULA.
 AWS Marketplace software charges and AWS infrastructure charges are billed separately.
 
 ## 한국어 리뷰용 번역
@@ -29,5 +32,8 @@ QueryPie ACP Enterprise Edition은 유연한 라이선스, 복원력을 고려�
 
 이 상품은 Amazon Linux 2023 기반의 사전 구성된 AMI로 제공되며, 구매자의 AWS 계정에서 컨테이너화된 애플리케이션, 데이터베이스, 캐시 구성 요소를 실행합니다.
 Enterprise 계약은 협의된 사용자 또는 사용량 범위, 사이트 및 재해 복구 라이선스, QueryPie Customer Portal을 통한 프리미엄 지원을 포함할 수 있습니다.
-정확한 서비스, 응답 목표, 상업 조건은 해당 AWS Marketplace 오퍼와 EULA를 따릅니다.
+이 상품은 구매자별 AWS Marketplace Private Offer로만 판매하며 Public Offer를 제공하지 않습니다.
+구매자는 Private Offer를 수락한 뒤 협의된 권리가 포함된 서명 `.crt` 파일을 받아 웹 콘솔에 등록합니다.
+QueryPie ACP 컨테이너는 활성화 후 지속적인 외부 라이선스 서비스 연결 없이 PKI 방식으로 라이선스를 로컬에서 검증합니다.
+정확한 서비스, 응답 목표, 가격과 상업 조건은 수락한 Private Offer와 EULA를 따릅니다.
 AWS Marketplace 소프트웨어 요금과 AWS 인프라 요금은 별도로 청구됩니다.

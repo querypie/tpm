@@ -2,7 +2,7 @@
 
 ## 조사 기준일
 
-2026-08-13에 확인한 공식 문서를 기준으로 작성했습니다.
+2026-08-19에 확인한 공식 문서를 기준으로 작성했습니다.
 AWS Marketplace 정책과 포털 필드는 변경될 수 있으므로 실제 제출 직전에 다시 확인해야 합니다.
 
 ## AWS Marketplace 공식 문서
@@ -17,11 +17,13 @@ AWS Marketplace 정책과 포털 필드는 변경될 수 있으므로 실제 제
 - [AMI-based product requirements](https://docs.aws.amazon.com/marketplace/latest/userguide/product-and-ami-policies.html): AMI 보안, 구조, 사용, 외부 의존성 정책
 - [AMI product checklist](https://docs.aws.amazon.com/marketplace/latest/userguide/aws-marketplace-listing-checklist.html): 출시 전 제품과 이미지 점검표
 - [Creating AMI and container product usage instructions](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-container-product-usage-instructions.html): 사용, 상태 점검, 백업, 암호화, 업그레이드 지침 요구 사항
-- [AMI product pricing](https://docs.aws.amazon.com/marketplace/latest/userguide/pricing-ami-products.html): Free, BYOL, Hourly, Usage, Contract 가격 모델
+- [AMI product pricing](https://docs.aws.amazon.com/marketplace/latest/userguide/pricing-ami-products.html): BYOL 상품의 외부 라이선스 취득과 Marketplace 소프트웨어 요금 미부과
+- [Bring Your Own License pricing](https://docs.aws.amazon.com/marketplace/latest/userguide/BYOL-pricing.html): BYOL paid option 요구와 최초 90일 완화 규정
 - [Product pricing](https://docs.aws.amazon.com/marketplace/latest/userguide/pricing.html): Public Listing의 USD 가격과 Marketplace 소프트웨어 요금 수납
-- [Contract pricing for AMI products](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-contracts.html): tiered와 non-tiered 계약 차원, 기간, 가격 필드
-- [Associating licenses with AMI products](https://docs.aws.amazon.com/marketplace/latest/userguide/ami-license-manager-integration.html): tiered entitlement, CheckoutLicense, 구매자 IAM 권한과 실행 흐름
-- [Subscribing to an AMI contract product](https://docs.aws.amazon.com/marketplace/latest/buyerguide/sub-public-AMI-contract.html): 구매자의 계약 옵션 선택과 License Manager 라이선스 생성
+- [Preparing a private offer](https://docs.aws.amazon.com/marketplace/latest/userguide/private-offers-overview.html): 구매자 계정별 Private Offer의 가시성과 오퍼 동작
+- [Creating and managing private offers](https://docs.aws.amazon.com/marketplace/latest/userguide/creating-private-offer.html): 활성 Public listing 선행 조건과 Private Offer 생성 절차
+- [Supported product types for private offers](https://docs.aws.amazon.com/marketplace/latest/userguide/private-offers-supported-product-types.html): AMI Contract Private Offer의 기간과 가격 조건
+- [Private offer FAQ](https://docs.aws.amazon.com/marketplace/latest/userguide/private-offer-faq.html): AMI Limited listing 구매자 allowlist 요구 사항
 - [Buying and launching an AMI product](https://docs.aws.amazon.com/marketplace/latest/buyerguide/tutorial-buying-ami.html): 버전·리전 선택과 EC2 실행 절차
 - [AWS Marketplace Seller Tax Grid](https://aws.amazon.com/tax-help/marketplace-sellers/tax-grid/): 구매자·판매자 국가별 간접세 징수와 청구 주체
 - [Submitting your product for publication](https://docs.aws.amazon.com/marketplace/latest/userguide/product-submission.html): 로고 규격, PLF, 스캔, 검토 기간, 최종 점검

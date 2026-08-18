@@ -4,7 +4,7 @@
 
 이 문서는 Single AMI 상품을 AWS Partner Central의 self-service 방식으로 등록할 때 필요한 입력을 정리합니다.
 상품 소개 항목은 각 에디션 디렉토리에서 파일별로 관리합니다.
-버전, 배포, 공개 오퍼 입력은 [SUBMISSION-FIELDS.md](SUBMISSION-FIELDS.md)에서 관리합니다.
+버전, 배포와 오퍼 입력은 [SUBMISSION-FIELDS.md](SUBMISSION-FIELDS.md)에서 관리합니다.
 
 ## 상품 소개 정보
 
@@ -44,17 +44,21 @@ AWS의 메타데이터 작성 지침에 따라 제목과 제출 원문에는 ASC
 하나의 Single AMI 상품 버전에는 하나의 AMI가 연결됩니다.
 초기 출시는 `x86_64` AMI 하나로 시작하고 ARM64 제공 방식은 별도로 결정하는 것을 권장합니다.
 
-## 공개 오퍼 정보
+## 오퍼 정보
 
 상품 최초 생성 시 다음 공개 오퍼 정보가 필요합니다.
 
 | 그룹 | 입력 항목 |
 |------|-----------|
-| Pricing | 가격 모델, 활성 인스턴스 타입별 가격 또는 계약 차원과 기간별 가격 |
+| Pricing | Community BYOL URL, Standard Contract 가격 차원, Enterprise Private Offer 가격 조건 |
 | EULA | 자체 EULA URL: [QueryPie EULA](https://www.querypie.com/eula) |
 | Country availability | 구매 허용 또는 제외 국가 |
 | Refund policy | 소프트웨어 환불 조건과 판매자 연락 방법 |
 | Allowlist | Limited 상태에서 테스트할 AWS 계정 ID 목록, 선택 사항 |
+
+Community만 Public 전환 대상으로 사용합니다.
+Standard 입력값은 준비 자료이며 별도 검토 전에는 상품 생성이나 제출에 사용하지 않습니다.
+Enterprise는 Limited 상태와 구매자 allowlist를 유지하고 Private Offer에만 사용합니다.
 
 AWS 리전은 상품을 배포할 위치이고, 국가는 구매자의 계정 소재지를 의미합니다.
 두 값은 별도로 설정해야 합니다.
