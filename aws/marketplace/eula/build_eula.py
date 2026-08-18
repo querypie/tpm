@@ -56,6 +56,7 @@ def load_metadata(config_path: Path) -> DocumentMetadata:
         "subtitle",
         "last_updated",
         "licensor",
+        "source_url",
     }
     missing = required - raw.keys()
     if missing:
@@ -68,6 +69,7 @@ def load_metadata(config_path: Path) -> DocumentMetadata:
         last_updated=updated.isoformat(),
         last_updated_display=f"{updated.strftime('%B')} {updated.day}, {updated.year}",
         licensor=raw["licensor"],
+        source_url=raw["source_url"],
     )
 
 

@@ -35,6 +35,7 @@ class DocumentMetadata:
     last_updated: str
     last_updated_display: str
     licensor: str
+    source_url: str
 
 
 class OutlineParagraph(Paragraph):
@@ -147,12 +148,11 @@ def _build_cover(metadata: DocumentMetadata) -> BytesIO:
 
     pdf.setFillColor(navy)
     pdf.setFont("Helvetica-Bold", 28)
-    pdf.drawCentredString(width / 2, 626, "End User License")
-    pdf.drawCentredString(width / 2, 592, "Agreement")
+    pdf.drawCentredString(width / 2, 612, metadata.title)
 
     pdf.setFillColor(gray)
     pdf.setFont("Helvetica", 12)
-    pdf.drawCentredString(width / 2, 556, metadata.subtitle)
+    pdf.drawCentredString(width / 2, 572, metadata.subtitle)
 
     pdf.setFillColor(body)
     pdf.setFont("Helvetica", 9.5)
@@ -164,6 +164,19 @@ def _build_cover(metadata: DocumentMetadata) -> BytesIO:
     pdf.drawString(56.7, 418, "Licensor")
     pdf.setFont("Helvetica", 10)
     pdf.drawString(56.7, 400, metadata.licensor)
+
+    pdf.setFillColor(body)
+    pdf.setFont("Helvetica", 9.5)
+    pdf.drawString(56.7, 356, "Source")
+    pdf.setFillColor(blue)
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(56.7, 338, metadata.source_url)
+    pdf.linkURL(
+        metadata.source_url,
+        (56.7, 335, 225, 350),
+        relative=0,
+        thickness=0,
+    )
 
     pdf.showPage()
     pdf.save()

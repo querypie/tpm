@@ -41,9 +41,13 @@ def verify_pdf(pdf_path: Path, input_path: Path, config_path: Path) -> dict[str,
 
     cover_text = reader.pages[0].extract_text() or ""
     required_cover = {
+        metadata.title,
+        metadata.subtitle,
         "Last updated",
         metadata.last_updated_display,
         metadata.licensor,
+        "Source",
+        metadata.source_url,
     }
     missing_cover = sorted(value for value in required_cover if value not in cover_text)
     if missing_cover:
@@ -52,6 +56,13 @@ def verify_pdf(pdf_path: Path, input_path: Path, config_path: Path) -> dict[str,
     present_forbidden = sorted(value for value in forbidden_cover if value in cover_text)
     if present_forbidden:
         raise ValueError(f"Cover contains forbidden version fields: {present_forbidden}")
+
+    source_links = {
+        annotation.get_object().get("/A", {}).get("/URI")
+        for annotation in reader.pages[0].get("/Annots", [])
+    }
+    if metadata.source_url not in source_links:
+        raise ValueError("Cover source URL is not a clickable link.")
 
     body_lines: list[str] = []
     for page in reader.pages[1:]:

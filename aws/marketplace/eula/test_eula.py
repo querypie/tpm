@@ -36,9 +36,10 @@ class EulaPdfTest(unittest.TestCase):
                 json.dumps(
                     {
                         "title": "End User License Agreement",
-                        "subtitle": "QueryPie software products",
+                        "subtitle": "QueryPie Software Products",
                         "last_updated": "2026-04-10",
                         "licensor": "CHEQUER Global, Inc.",
+                        "source_url": "https://www.querypie.com/eula",
                     }
                 ),
                 encoding="utf-8",
