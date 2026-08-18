@@ -15,14 +15,13 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from build_eula import DEFAULT_CONFIG, DEFAULT_INPUT, load_document
+from build_eula import load_document
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verify a generated QueryPie EULA PDF.")
-    parser.add_argument("--pdf", type=Path, required=True)
-    parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
-    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--input", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
 
@@ -31,9 +30,9 @@ def tokens(value: str) -> list[str]:
     return re.findall(r"[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*", normalized.lower())
 
 
-def verify_pdf(pdf_path: Path, input_path: Path, config_path: Path) -> dict[str, int]:
-    blocks, metadata = load_document(input_path, config_path)
-    reader = PdfReader(pdf_path.expanduser().resolve())
+def verify_pdf(output_path: Path, input_path: Path) -> dict[str, int]:
+    blocks, metadata = load_document(input_path)
+    reader = PdfReader(output_path.expanduser().resolve())
     if reader.is_encrypted:
         raise ValueError("Generated PDF must not be encrypted.")
     if len(reader.pages) < 2:
@@ -114,7 +113,7 @@ def verify_pdf(pdf_path: Path, input_path: Path, config_path: Path) -> dict[str,
 
 def main() -> None:
     args = parse_args()
-    result = verify_pdf(args.pdf, args.input, args.config)
+    result = verify_pdf(args.output, args.input)
     print(
         "verified "
         f"pages={result['pages']} body_tokens={result['actual_tokens']} "

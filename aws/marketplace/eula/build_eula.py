@@ -18,10 +18,7 @@ from template import DocumentBlock, DocumentMetadata, render_pdf
 
 
 EULA_DIR = Path(__file__).resolve().parent
-DEFAULT_INPUT = (
-    EULA_DIR.parents[3] / "corp-web-v2/src/content/legal/eula/en/index.md"
-)
-DEFAULT_CONFIG = EULA_DIR / "document.json"
+DOCUMENT_CONFIG = EULA_DIR / "document.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,25 +28,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--input",
         type=Path,
-        default=DEFAULT_INPUT,
+        required=True,
         help="Markdown source path. Relative paths are resolved from the current directory.",
-    )
-    parser.add_argument(
-        "--config",
-        type=Path,
-        default=DEFAULT_CONFIG,
-        help="Document metadata JSON path.",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        help="Output PDF path. Defaults beside this script as eula-<last-updated>.pdf.",
+        required=True,
+        help="Output PDF path. Relative paths are resolved from the current directory.",
     )
     return parser.parse_args()
 
 
-def load_metadata(config_path: Path) -> DocumentMetadata:
-    raw = json.loads(config_path.read_text(encoding="utf-8"))
+def load_metadata() -> DocumentMetadata:
+    raw = json.loads(DOCUMENT_CONFIG.read_text(encoding="utf-8"))
     required = {
         "title",
         "subtitle",
@@ -104,29 +96,22 @@ def parse_markdown(markdown: str) -> list[DocumentBlock]:
     return blocks
 
 
-def load_document(
-    input_path: Path, config_path: Path
-) -> tuple[list[DocumentBlock], DocumentMetadata]:
+def load_document(input_path: Path) -> tuple[list[DocumentBlock], DocumentMetadata]:
     input_path = input_path.expanduser().resolve()
-    config_path = config_path.expanduser().resolve()
     if not input_path.is_file():
         raise FileNotFoundError(f"Markdown source not found: {input_path}")
-    if not config_path.is_file():
-        raise FileNotFoundError(f"Document configuration not found: {config_path}")
+    if not DOCUMENT_CONFIG.is_file():
+        raise FileNotFoundError(f"Document configuration not found: {DOCUMENT_CONFIG}")
 
-    metadata = load_metadata(config_path)
+    metadata = load_metadata()
     markdown = input_path.read_text(encoding="utf-8")
     return parse_markdown(markdown), metadata
 
 
-def default_output(metadata: DocumentMetadata) -> Path:
-    return EULA_DIR / f"eula-{metadata.last_updated}.pdf"
-
-
 def main() -> None:
     args = parse_args()
-    blocks, metadata = load_document(args.input, args.config)
-    output = (args.output or default_output(metadata)).expanduser().resolve()
+    blocks, metadata = load_document(args.input)
+    output = args.output.expanduser().resolve()
     render_pdf(blocks, metadata, output)
     print(output)
 

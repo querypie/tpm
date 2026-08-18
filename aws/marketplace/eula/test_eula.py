@@ -8,12 +8,11 @@
 # ///
 from __future__ import annotations
 
-import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from build_eula import EULA_DIR, default_output, load_document
+from build_eula import load_document
 from template import render_pdf
 from verify_eula import verify_pdf
 
@@ -23,7 +22,6 @@ class EulaPdfTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "eula.md"
-            config = root / "document.json"
             output = root / "eula-2026-04-10.pdf"
 
             source.write_text(
@@ -32,29 +30,14 @@ class EulaPdfTest(unittest.TestCase):
                 "The source text must remain unchanged in the generated PDF.\n",
                 encoding="utf-8",
             )
-            config.write_text(
-                json.dumps(
-                    {
-                        "title": "End User License Agreement",
-                        "subtitle": "QueryPie Software Products",
-                        "last_updated": "2026-04-10",
-                        "licensor": "CHEQUER Global, Inc.",
-                        "source_url": "https://www.querypie.com/eula",
-                    }
-                ),
-                encoding="utf-8",
-            )
-
-            blocks, metadata = load_document(source, config)
+            blocks, metadata = load_document(source)
             render_pdf(blocks, metadata, output)
-            result = verify_pdf(output, source, config)
+            result = verify_pdf(output, source)
 
             self.assertEqual(result["expected_tokens"], result["actual_tokens"])
             self.assertGreaterEqual(result["pages"], 2)
             self.assertEqual(result["last_page"], result["pages"])
-            self.assertEqual(
-                default_output(metadata), EULA_DIR / "eula-2026-04-10.pdf"
-            )
+            self.assertEqual(metadata.last_updated, "2026-04-10")
 
 
 if __name__ == "__main__":

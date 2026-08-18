@@ -31,7 +31,7 @@ aws/marketplace/eula/
 └── eula-2026-04-10.pdf  # 생성 파일, Git 제외
 ```
 
-- `document.json`: 표지 정보와 마지막 변경일을 명시합니다.
+- `document.json`: 표지 정보와 마지막 변경일을 명시하는 고정 설정입니다.
 - `template.py`: A4 표지, 본문, 머리글, 바닥글과 북마크 형식을 정의합니다.
 - `build_eula.py`: Markdown을 읽고 PDF를 생성하는 CLI입니다.
 - `verify_eula.py`: 원문과 PDF 본문이 일치하는지 검증합니다.
@@ -61,11 +61,7 @@ cd aws/marketplace/eula
 
 상대 경로는 Makefile이 있는 `aws/marketplace/eula/`를 기준으로 해석합니다.
 원문에는 `../../../../corp-web-v2/...` 형식을 사용합니다.
-`CONFIG`를 재정의할 때 상대 경로는 EULA 디렉토리를 기준으로 해석하며, 절대 경로도 사용할 수 있습니다.
-
-```bash
-make pdf CONFIG=document.json
-```
+CLI는 `--input`과 `--output`만 받습니다. 표지 정보는 같은 디렉토리의 `document.json`을 항상 사용하며 경로를 재정의하지 않습니다.
 
 ## 원문 보존 원칙
 
