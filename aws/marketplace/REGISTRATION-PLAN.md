@@ -58,10 +58,11 @@ Version title은 에디션이나 라이선스 권리를 구분하는 용도로 �
 2. 판매자 계정 `us-east-1`에 검증할 Community AMI를 준비합니다.
 3. 첫 버전과 AMI standalone deployment를 입력해 Limited 상품을 생성합니다.
 4. 내부 구매 계정을 allowlist에 추가하고 `Test Add Version`과 보안 스캔을 완료합니다.
-5. Marketplace 전용 사용 지침으로 EC2 실행, 최초 관리자 설정과 무료 `.crt` 발급·등록을 검증합니다.
-6. 라이선스 등록 이후 외부 라이선스 서버 연결 없이 최대 5 active users 권리가 적용되는지 확인합니다.
-7. 영어 원문과 AWS 자동 번역을 검수합니다.
-8. Community만 Public 전환을 요청합니다.
+5. Marketplace 사용 지침으로 EC2 인스턴스가 `Running` 상태가 된 시점부터 일반적으로 3분 이내에 `https://<instance-address>:8443/` 웹 콘솔에 접속되는지 검증합니다.
+6. 판매자 내부 검증에서는 별도로 라이선스 등록 이후 외부 라이선스 서버 연결 없이 최대 5 active users 권리가 적용되는지 확인합니다.
+7. `ec2-user`로 SSH 접속한 뒤 `/usr/local/bin/setup.v2.sh --verify-installation`이 성공하는지 확인합니다.
+8. 영어 원문과 AWS 자동 번역을 검수합니다.
+9. Community만 Public 전환을 요청합니다.
 
 ### Community Public 제출 게이트
 
@@ -69,9 +70,13 @@ Version title은 에디션이나 라이선스 권리를 구분하는 용도로 �
 - 유일한 에디션 용량 제한이 최대 5 active users로 명시됩니다.
 - 무료 `.crt` 발급이 자동화되고 별도의 판매자 승인을 기다리지 않습니다.
 - 공통 초기 관리자 비밀번호를 사용하지 않습니다.
-- Marketplace 전용 사용 지침이 실행, 라이선스 등록, 상태 확인, 백업, 복구와 업그레이드를 설명합니다.
+- Marketplace 사용 지침이 EC2 실행 후 일반적으로 3분 이내에 `https://<instance-address>:8443/` 접속을 확인하는 방법을 설명합니다.
+- 선택적 SSH 지침이 `ec2-user` 접속과 `/usr/local/bin/setup.v2.sh --verify-installation` 실행 방법을 설명합니다.
+- 접속 이후의 자세한 설정과 사용 방법을 QueryPie ACP Community Edition 공개 문서로 안내합니다.
+- AWS가 요구하는 민감 정보, 암호화, 백업, 복구, 할당량, 비용과 업그레이드 정보가 Marketplace 지침 또는 연결된 공개 문서에서 제공됩니다.
 - BYOL 제품에 필요한 동등한 AWS Marketplace paid option과 적용 시점을 Seller Operations와 확인했습니다.
 - 실제 AMI 소유권, 이름, Description과 스캔 결과를 확인했습니다.
+- 지원할 인스턴스 타입과 초기 출시 리전에서 `Running` 상태 이후 통상적인 3분 이내 접속 시간을 반복 검증했습니다.
 
 위 항목이 해결되기 전에는 Community Public 전환 요청을 제출하지 않습니다.
 

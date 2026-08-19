@@ -63,18 +63,17 @@ Enterprise 발급 절차는 다음을 보장해야 합니다.
 - Private Offer가 없거나 만료·취소되었거나 구매자 정보가 일치하지 않으면 발급하지 않습니다.
 - 발급 후 런타임 검증은 컨테이너 내부에서 오프라인으로 수행합니다.
 
-## 구매자 문서 요구 사항
+## Community 구매자 문서 경계
 
-Marketplace 전용 사용 지침에는 다음 내용을 명시합니다.
+Community의 Marketplace 사용 지침은 AMI 실행부터 `https://<instance-address>:8443/` 접속 확인까지만 설명합니다.
+Marketplace 사용 지침에는 라이선스 발급 또는 `.crt` 설치 절차를 포함하지 않습니다.
+접속 이후의 자세한 설정과 사용 방법은 [QueryPie ACP Community Edition 설치 및 사용 가이드](https://docs.querypie.com/installation/querypie-acp-community-edition)로 안내합니다.
 
-- AMI에 QueryPie ACP와 필요한 컨테이너 이미지가 사전 설치되어 있음
-- 구매자가 외부 설치 스크립트를 실행하지 않음
-- 해당 에디션의 라이선스 발급 조건과 `.crt` 등록 절차
-- 컨테이너 내부의 로컬 PKI 검증
-- 실행 중 외부 라이선스 서버 연결이 없음
-- 라이선스 파일의 저장, 교체, 갱신, 백업과 복구 절차
-- 라이선스 검증용 공개 키의 교체 정책
-- 라이선스 서명 private key가 구매자 환경에 제공되지 않음
+Marketplace AMI에는 QueryPie ACP와 필요한 컨테이너 이미지가 사전 설치되어 있습니다.
+구매자는 연결된 가이드의 일반 Linux 설치 스크립트를 다시 실행하지 않습니다.
+
+라이선스 발급과 PKI 검증 구조는 Marketplace 사용 지침과 분리해 이 문서에서 관리합니다.
+판매자 내부 검증에서는 `.crt` 등록, 최대 5 active users 권리, 외부 라이선스 서버 없이 실행되는 동작을 계속 확인합니다.
 
 ## 공식 근거
 
