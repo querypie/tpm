@@ -88,26 +88,31 @@ MySQL `3306`, Redis `6379`, tools `8050`은 외부 인바운드 규칙에 포함
 사용하지 않는 QueryPie ACP 프록시 포트도 열지 않습니다.
 AWS Marketplace 스캔에 필요한 최신 내부 CIDR은 제출 시 AWS 포털 안내와 대조합니다.
 
-## Usage instructions에 포함할 내용
+## Community Usage instructions
 
-Marketplace 입력 필드에는 구매자가 제품을 시작할 수 있는 핵심 절차를 직접 입력합니다.
-상세 운영 내용은 Marketplace 전용 공개 문서로 연결합니다.
-일반 Linux 설치용 `setup.v2.sh` 가이드를 Marketplace 구매자 지침으로 사용하지 않습니다.
+Marketplace 입력 필드에는 Community AMI 실행 후 일반적으로 3분 이내에 웹 콘솔 접속을 확인하는 핵심 절차를 직접 입력합니다.
+제출 원문은 [Community Usage instructions](products/community/12-usage-instructions.md)에서 관리합니다.
 
-- QueryPie ACP가 AMI에 사전 설치되어 있다는 설명
-- 최초 부팅 완료와 애플리케이션 상태 점검 절차
-- 웹 콘솔에 접속하고 최초 관리자를 안전하게 생성하는 절차
-- 에디션별 구매 권리를 확인하는 라이선스 발급 절차와 `.crt` 등록 방법
-- `.crt`가 컨테이너 내부에서 로컬 PKI 방식으로 검증되고 지속적인 외부 연결이 없다는 설명
-- 민감 정보와 라이선스 파일의 저장 위치
-- 암호화 구성과 키 교체 요구 사항
-- 내부 데이터 저장소의 구성, 백업, 복구 절차
-- 업그레이드 시 데이터와 설정 보존 절차
-- AWS 서비스 할당량 관리와 추가 AWS 인프라 비용
-- 지원 연락처와 장애 진단 자료 수집 방법
+지침의 범위는 다음과 같습니다.
 
-AWS는 Usage instructions 필드에 지침 또는 상세 문서 링크를 허용합니다.
-링크를 사용하는 경우에도 연결된 문서는 위 내용을 모두 포함하고 Marketplace AMI의 실제 실행 흐름과 일치해야 합니다.
+- QueryPie ACP Community Edition AMI를 EC2 인스턴스로 실행
+- 신뢰된 접근 네트워크에서 TCP `8443` 인바운드 허용
+- EC2 인스턴스가 `Running` 상태가 된 시점부터 일반적으로 3분 이내에 `https://<instance-address>:8443/` 접속
+- QueryPie ACP 초기 화면 표시 확인
+- 필요한 경우 신뢰된 관리자 네트워크에만 TCP `22`를 허용하고 `ec2-user`로 SSH 접속
+- `/usr/local/bin/setup.v2.sh --verify-installation`으로 최초 부팅 서비스, 컨테이너와 애플리케이션 준비 상태 확인
+
+Marketplace 지침에는 라이선스 발급 또는 설치 과정을 포함하지 않습니다.
+접속 확인 이후의 자세한 설정과 사용 방법은 [QueryPie ACP Community Edition 설치 및 사용 가이드](https://docs.querypie.com/installation/querypie-acp-community-edition)를 참조하도록 안내합니다.
+Marketplace AMI는 사전 설치된 제품이므로 구매자가 연결된 가이드의 일반 Linux 설치 명령을 다시 실행하지 않도록 명시합니다.
+
+AWS는 별도로 민감 정보 위치, 암호화 구성, 암호화 자료 교체, 내부 데이터 저장소의 백업과 복구, 상태 점검, 서비스 할당량, 추가 비용과 업그레이드 지침을 요구합니다.
+위 운영 정보는 Marketplace 지침 또는 연결된 공개 문서에서 구매자가 확인할 수 있어야 합니다.
+현재 QueryPie ACP Community Edition 설치 문서만으로 이 AWS 전용 운영 정보가 모두 충족되는지는 Public 제출 전에 보완하고 검증해야 합니다.
+
+`Running` 상태 이후 일반적으로 3분 이내 접속 가능하다는 문구는 구매자에게 통상적인 부팅 시간 기대치를 제시합니다.
+이 시간은 보장된 제한 시간이나 SLA가 아닙니다.
+Public 제출 전에는 지원할 인스턴스 타입과 초기 출시 리전에서 반복 측정해 이 설명을 뒷받침해야 합니다.
 
 ## 리전과 국가
 
