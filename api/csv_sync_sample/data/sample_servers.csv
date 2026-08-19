@@ -1,0 +1,7 @@
+host,name,osType,sshport,server_group,account_name
+10.10.10.10,server1,AWS_LINUX,22,WEB_GROUP,ec2-user
+10.10.10.11,server2,AWS_LINUX,22,WEB_GROUP,ec2-user
+10.10.10.12,server3,CENTOS,22,DB_GROUP,ec2-user
+10.10.10.13,server4,CENTOS,22,DB_GROUP,ec2-user
+10.10.10.14,server5,WINDOWS,3389,APP_GROUP,ec2-user
+10.10.10.15,server6,WINDOWS,3389,APP_GROUP,ec2-user 
