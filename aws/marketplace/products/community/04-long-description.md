@@ -4,6 +4,8 @@
 
 QueryPie ACP Community Edition is a self-managed access control platform for up to five active users.
 It unifies access governance for databases, servers, Kubernetes clusters, and MCP tools in a single administrative interface.
+It is a production-ready Community product for ongoing use, not a trial, evaluation, beta, or time-limited edition.
+Its only edition-level capacity limit is a maximum of five active users.
 
 Users can execute database queries and inspect results in the Web SQL Editor, run server commands in the Web Terminal, and use the Kubernetes Web Client (beta) to browse cluster resources, stream Pod logs, and open Pod shells from a browser.
 Each client operates under the applicable QueryPie access controls and complements proxy, Agent, and local-tool connection methods.
@@ -13,12 +15,15 @@ Proxy-based controls help teams grant access based on policy while reducing reli
 
 The product is delivered as a preconfigured AMI on Amazon Linux 2023 and runs containerized application, database, and cache components in the buyer's AWS account.
 It is intended for small teams that want to operate QueryPie ACP directly on AWS with community-based support.
-AWS infrastructure charges apply even though the software edition is free.
+The free BYOL license is delivered as a signed `.crt` file and validated locally inside the QueryPie ACP container without an ongoing connection to an external license service.
+AWS Marketplace does not charge a software fee for this BYOL product, but AWS infrastructure charges apply.
 
 ## 한국어 리뷰용 번역
 
 QueryPie ACP Community Edition은 최대 5명의 활성 사용자를 위한 자체 운영형 접근 제어 플랫폼입니다.
 하나의 관리 인터페이스에서 데이터베이스, 서버, Kubernetes 클러스터, MCP 도구의 접근 거버넌스를 통합합니다.
+평가판, 체험판, 베타판 또는 기간 제한 에디션이 아니라 지속적으로 사용할 수 있는 프로덕션용 Community 제품입니다.
+에디션에 적용되는 유일한 용량 제한은 최대 5명의 활성 사용자입니다.
 
 사용자는 브라우저의 Web SQL Editor에서 데이터베이스 쿼리를 실행하고 결과를 확인하며, Web Terminal에서 서버 명령을 실행하고, Kubernetes Web Client(베타)에서 클러스터 리소스를 탐색하고 Pod 로그를 스트리밍하며 Pod 셸을 열 수 있습니다.
 각 클라이언트에는 해당 QueryPie 접근 제어가 적용되며 프록시, Agent, 로컬 도구 연결 방식을 보완합니다.
@@ -28,4 +33,5 @@ QueryPie ACP Community Edition은 최대 5명의 활성 사용자를 위한 자�
 
 이 상품은 Amazon Linux 2023 기반의 사전 구성된 AMI로 제공되며, 구매자의 AWS 계정에서 컨테이너화된 애플리케이션, 데이터베이스, 캐시 구성 요소를 실행합니다.
 AWS에서 QueryPie ACP를 직접 운영하고 커뮤니티 기반 지원을 이용하려는 소규모 팀에 적합합니다.
-소프트웨어 에디션은 무료이지만 AWS 인프라 요금은 발생합니다.
+무료 BYOL 라이선스는 서명된 `.crt` 파일로 제공되고, 지속적인 외부 라이선스 서비스 연결 없이 QueryPie ACP 컨테이너 내부에서 로컬로 검증됩니다.
+AWS Marketplace는 이 BYOL 제품의 소프트웨어 요금을 청구하지 않지만 AWS 인프라 요금은 발생합니다.

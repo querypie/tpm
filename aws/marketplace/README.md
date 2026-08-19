@@ -8,17 +8,20 @@
 
 ## 등록 전제
 
-현재 저장소의 구현을 기준으로 세 상품 모두 Single AMI 방식으로 등록하는 안을 사용합니다.
+현재 저장소의 구현을 기준으로 세 상품 모두 Single AMI 방식으로 준비합니다.
 각 상품은 별도의 AWS Marketplace 상품 ID와 상품 코드를 가져야 합니다.
 Community, Standard, Enterprise가 같은 컨테이너 이미지를 사용하더라도 에디션별 가격, 라이선스 권리, 지원 조건이 다르므로 별도 상품으로 관리합니다.
+QueryPie ACP Community Edition은 평가판이 아니라 지속적으로 사용할 수 있는 정식 제품이며, 유일한 에디션 한도는 최대 5명의 활성 사용자입니다.
 
-| 상품 | 제안 가격 모델 | 상태 |
-|------|----------------|------|
-| QueryPie ACP Community Edition | Free | 라이선스 자동화 선행 필요 |
-| QueryPie ACP Standard Edition | AMI with contract pricing | 가격 차원과 권리 연동 확정 필요 |
-| QueryPie ACP Enterprise Edition | AMI with contract pricing 및 private offer | 계약 차원, 지원 범위, 공개 가격 정책 확정 필요 |
+| 상품 | SKU | 가격 모델 | 출시 정책 |
+|------|-----|-----------|-----------|
+| QueryPie ACP Community Edition | `QP1201E-CDS-AWS` | BYOL | 먼저 Limited 검증을 마치고 Public 등록 |
+| QueryPie ACP Standard Edition | `QP1201E-SDS-AWS` | AMI with contract pricing | 유료 상품 자료와 AMI만 준비하고, 별도 검토 전에는 생성·제출하지 않음 |
+| QueryPie ACP Enterprise Edition | 미확정 | AMI with contract pricing | Limited 상품을 유지하고 allowlist된 구매자에게 Private Offer로만 판매 |
 
 가격 모델 선택 근거와 대안은 [SUBMISSION-FIELDS.md](SUBMISSION-FIELDS.md)에 정리했습니다.
+세 제품의 `.crt` 라이선스 구조와 AWS 가격 모델의 경계는 [LICENSE-FULFILLMENT.md](LICENSE-FULFILLMENT.md)에 정리했습니다.
+세 제품의 준비와 출시 순서는 [REGISTRATION-PLAN.md](REGISTRATION-PLAN.md)에 정리했습니다.
 
 ## 상품별 입력 파일
 
@@ -39,6 +42,8 @@ products/<edition>/
 └── 11-support-information.md
 ```
 
+QueryPie ACP Standard Edition의 유료 계약 초안은 `products/standard/12-contract-pricing.md`에서 별도로 관리합니다.
+
 영어 섹션은 실제 Marketplace 제출 원문입니다.
 한국어 섹션은 한국어 사용 개발자가 영어 원문을 검토하기 위한 번역입니다.
 지원 이메일은 `support@querypie.com`이고 기술지원 정보 웹사이트는 `https://docs.querypie.com/support`입니다.
@@ -49,14 +54,16 @@ products/<edition>/
 
 - [FIELD-CATALOG.md](FIELD-CATALOG.md): 필수 입력 항목, 제한, 파일 위치
 - [LOCALIZATION.md](LOCALIZATION.md): 영어 원문과 AWS 기본 자동 번역 운영 방식
+- [LICENSE-FULFILLMENT.md](LICENSE-FULFILLMENT.md): `.crt` 발급·검증과 AWS 가격 모델의 경계
 - [SUBMISSION-FIELDS.md](SUBMISSION-FIELDS.md): 버전, AMI, 배포, 가격, EULA, 국가와 리전 입력값
+- [REGISTRATION-PLAN.md](REGISTRATION-PLAN.md): Community 우선 등록, Standard 보류, Enterprise Private Offer 계획
 - [RELEASE-READINESS.md](RELEASE-READINESS.md): 현재 구현에서 등록 전에 해결해야 할 이슈
 - [SOURCES.md](SOURCES.md): AWS와 QueryPie 공식 근거 자료
 
 ## 사용 순서
 
-1. [RELEASE-READINESS.md](RELEASE-READINESS.md)의 차단 항목을 해결합니다.
-2. [SUBMISSION-FIELDS.md](SUBMISSION-FIELDS.md)의 미확정 값을 결정합니다.
-3. 상품별 입력 파일의 영어 문안을 AWS Partner Central에 입력합니다.
-4. 상품을 Limited 상태로 만든 뒤 영어 원문과 AWS 자동 번역이 정상적으로 노출되는지 확인합니다.
-5. AMI 스캔과 실제 구매·실행 테스트를 마친 뒤 Public 전환을 요청합니다.
+1. Community의 [RELEASE-READINESS.md](RELEASE-READINESS.md) 차단 항목을 해결합니다.
+2. Community를 Limited 상태로 만들고 AMI 스캔과 실제 실행을 검증합니다.
+3. Community만 Public 전환을 요청합니다.
+4. Standard는 상품 자료와 AMI 검증 결과를 준비하되 별도 검토 전에는 Partner Central에 생성·제출하지 않습니다.
+5. Community가 Public이 된 뒤 Enterprise를 Limited 상품으로 준비하고, 구매자 allowlist와 Private Offer로만 판매합니다.
