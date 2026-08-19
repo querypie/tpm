@@ -42,6 +42,7 @@ products/<edition>/
 └── 11-support-information.md
 ```
 
+QueryPie ACP Community Edition의 AMI 실행 지침은 `products/community/12-usage-instructions.md`에서 관리합니다.
 QueryPie ACP Standard Edition의 유료 계약 초안은 `products/standard/12-contract-pricing.md`에서 별도로 관리합니다.
 
 영어 섹션은 실제 Marketplace 제출 원문입니다.

@@ -65,10 +65,23 @@ Enterprise 상품을 Public으로 전환하거나 Public Offer를 제공하지 �
 ### Marketplace 전용 사용 지침
 
 AWS는 민감 정보 위치, 암호화 구성, 키 교체, 내부 저장소의 백업과 복구, 상태 점검, 할당량과 추가 비용을 포함한 상세 사용 지침을 요구합니다.
-현재 공개 QueryPie ACP Community Edition 가이드는 일반 Linux 서버에 새로 설치하는 절차를 설명하므로 사전 설치된 Marketplace AMI의 구매자 지침으로 사용할 수 없습니다.
+Marketplace 입력 필드에는 EC2 인스턴스가 `Running` 상태가 된 시점부터 일반적으로 3분 이내에 `https://<instance-address>:8443/` 접속을 확인하는 절차를 직접 입력합니다.
+선택적 진단 절차로 `ec2-user` SSH 접속과 `/usr/local/bin/setup.v2.sh --verify-installation` 실행 방법을 안내합니다.
+라이선스 설치 과정은 Marketplace 사용 지침에서 생략하고, 접속 이후의 자세한 설정과 사용 방법은 [QueryPie ACP Community Edition 설치 및 사용 가이드](https://docs.querypie.com/installation/querypie-acp-community-edition)로 안내합니다.
 
-Marketplace 전용 영어 사용 지침을 작성하고 실제 Limited 구매 흐름으로 검증해야 합니다.
-Marketplace 입력 필드에는 핵심 실행 절차를 직접 적고 상세 운영 문서로 연결합니다.
+현재 연결 문서는 일반 Linux 설치 명령, 라이선스 등록, 고정 초기 관리자 비밀번호와 평가판처럼 읽힐 수 있는 일부 표현을 함께 포함합니다.
+Marketplace AMI 구매자가 설치 명령을 다시 실행하지 않도록 지침에 명시해야 합니다.
+Public 제출 전에는 연결 문서의 제품명을 `QueryPie ACP Community Edition`으로 통일하고, 지속 사용 가능한 제품이며 유일한 에디션 제한이 최대 5 active users라는 설명과 충돌하는 표현을 수정해야 합니다.
+
+연결 문서만으로 AWS가 요구하는 민감 정보, 암호화, 키 교체, 백업, 복구, 상태 점검, 할당량, 추가 비용과 업그레이드 정보가 모두 제공되는지도 확인해야 합니다.
+부족한 항목은 Marketplace 사용 지침 또는 별도의 공개 운영 문서로 보완하고 실제 Limited 구매 흐름으로 검증합니다.
+
+### 일반적인 3분 이내 접속 기준
+
+`Running` 상태 이후 3분은 일반적인 환경에서 애플리케이션이 접근 가능한 상태가 되는 통상 시간입니다.
+현재 최초 부팅 서비스의 600초 제한은 실패 방지를 위한 최대 실행 한도이며 일반적인 준비 시간을 의미하지 않습니다.
+Marketplace 문구는 3분을 보장된 제한 시간이나 SLA로 표현하지 않고 `typically`를 사용합니다.
+지원할 인스턴스 타입과 초기 출시 리전에서 반복 측정해 통상적인 3분 설명을 뒷받침해야 합니다.
 
 ### 제품명과 AMI 설명의 정합성
 
@@ -115,7 +128,8 @@ Marketplace 소스 스냅샷의 비암호화 요구와 구매자 런타임 EBS �
 - Standard Contract 또는 Enterprise Private Offer 권리를 확인한 뒤 수행하는 `.crt` 발급 절차
 - 컨테이너 내부의 로컬 PKI 라이선스 검증
 
-Community의 라이선스 발급 URL은 구매자에게 필요한 일회성 BYOL fulfillment 경로이므로 BYOL URL과 사용 지침에 표시합니다.
+Community의 라이선스 발급 URL은 구매자에게 필요한 일회성 BYOL fulfillment 경로이므로 Marketplace의 BYOL URL 필드에 표시합니다.
+라이선스 발급 또는 설치 단계는 Community Marketplace 사용 지침에 반복해서 작성하지 않습니다.
 Standard와 Enterprise의 발급 절차는 각각 수락된 Contract 또는 Private Offer 권리를 확인해야 합니다.
 
 ## 현재 구현에서 이미 반영된 항목

@@ -36,7 +36,7 @@ AWS의 메타데이터 작성 지침에 따라 제목과 제출 원문에는 ASC
 |------|-----------|
 | Version information | Version title, release notes |
 | AMI | AMI ID, IAM access role ARN, OS, OS version, OS user name, scanning port |
-| Delivery option | AMI standalone, recommended instance type, usage instructions |
+| Delivery option | AMI standalone, recommended instance type, usage instructions; Community 초안은 `products/community/12-usage-instructions.md` |
 | Endpoint | Protocol, relative URL, port |
 | Security group | Protocol, port 범위, 권장 IPv4 CIDR |
 | Availability | 배포 가능 AWS 리전, 향후 리전 자동 포함 여부, 허용 인스턴스 타입 |
